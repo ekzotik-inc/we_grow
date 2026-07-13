@@ -90,19 +90,15 @@ async def on_confirm(cb: CallbackQuery, state: FSMContext) -> None:
     points = points_for_steps(steps)
     review = needs_review(steps)
     upd = update_streak(await db.get_streak(tg_id), day, steps)
-    total_points_for_day = points + upd.bonus_points
 
     await db.save_entry_and_streak(
-        tg_id, day, steps, total_points_for_day,
+        tg_id, day, steps, points,
         source="manual", screenshot_file_id=screenshot,
         needs_review=review, new_streak=upd.state,
     )
 
     await cb.message.edit_reply_markup(reply_markup=None)
-    await cb.message.answer(
-        texts.feedback(steps, points, upd.state.current_len, upd.bonus_points, upd.days_to_next_bonus),
-        parse_mode="Markdown",
-    )
+    await cb.message.answer(texts.feedback(steps, points, upd), parse_mode="Markdown")
     await state.clear()
     await cb.answer()
 

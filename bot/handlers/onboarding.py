@@ -37,7 +37,8 @@ async def cmd_start(message: Message, state: FSMContext) -> None:
         return
 
     await message.answer(texts.WELCOME, parse_mode="Markdown")
-    await message.answer(texts.RULES, parse_mode="Markdown", reply_markup=keyboards.consent_kb())
+    await message.answer(texts.RULES, disable_web_page_preview=True,
+                         reply_markup=keyboards.consent_kb())
 
 
 @router.callback_query(F.data == "consent")

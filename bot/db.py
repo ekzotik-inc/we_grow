@@ -6,7 +6,7 @@
 from __future__ import annotations
 
 import ssl as ssl_module
-from datetime import date, datetime, timezone
+from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 
 import asyncpg
@@ -130,8 +130,8 @@ async def get_entry(tg_id: int, day: date) -> asyncpg.Record | None:
 async def get_streak(tg_id: int) -> StreakState:
     row = await pool().fetchrow("SELECT * FROM streaks WHERE participant_id=$1", tg_id)
     if row is None:
-        return StreakState(0, None, 0)
-    return StreakState(row["current_len"], row["last_qualifying_date"], row["bonus_awarded_cycles"])
+        return StreakState(0, None)
+    return StreakState(row["current_len"], row["last_qualifying_date"])
 
 
 async def save_entry_and_streak(
@@ -151,18 +151,43 @@ async def save_entry_and_streak(
                 tg_id, day, steps, points, source, screenshot_file_id, needs_review,
             )
             await conn.execute(
-                """INSERT INTO streaks (participant_id, current_len, last_qualifying_date, bonus_awarded_cycles)
-                   VALUES ($1,$2,$3,$4)
+                """INSERT INTO streaks (participant_id, current_len, last_qualifying_date)
+                   VALUES ($1,$2,$3)
                    ON CONFLICT (participant_id) DO UPDATE
-                     SET current_len=$2, last_qualifying_date=$3, bonus_awarded_cycles=$4""",
+                     SET current_len=$2, last_qualifying_date=$3""",
                 tg_id, new_streak.current_len, new_streak.last_qualifying_date,
-                new_streak.bonus_awarded_cycles,
             )
 
 
+async def week_steps(tg_id: int, monday: date) -> list[int]:
+    """Шаги участника за 7 дней недели (пн..вс), 0 для несданных дней."""
+    rows = await pool().fetch(
+        """SELECT entry_date, steps FROM daily_entries
+            WHERE participant_id=$1 AND entry_date >= $2 AND entry_date < $2 + 7""",
+        tg_id, monday,
+    )
+    by_date = {r["entry_date"]: r["steps"] for r in rows}
+    return [by_date.get(monday + timedelta(days=i), 0) for i in range(7)]
+
+
+async def award_weekly_bonus(tg_id: int, monday: date, bonus: int, week_total: int) -> None:
+    """Начисляет/обновляет недельный бонус за серию (идемпотентно по неделе)."""
+    await pool().execute(
+        """INSERT INTO weekly_summaries
+             (participant_id, week_start, reported_total, computed_total, reconciled, bonus_points)
+           VALUES ($1,$2,$3,$3,false,$4)
+           ON CONFLICT (participant_id, week_start) DO UPDATE
+             SET computed_total=$3, bonus_points=$4""",
+        tg_id, monday, week_total, bonus,
+    )
+
+
 async def total_points(tg_id: int) -> int:
+    """Сумма баллов участника: дневные + недельные бонусы за серию."""
     val = await pool().fetchval(
-        "SELECT COALESCE(sum(points),0) FROM daily_entries WHERE participant_id=$1", tg_id
+        """SELECT COALESCE((SELECT sum(points) FROM daily_entries WHERE participant_id=$1),0)
+                + COALESCE((SELECT sum(bonus_points) FROM weekly_summaries WHERE participant_id=$1),0)""",
+        tg_id,
     )
     return int(val)
 
@@ -182,22 +207,29 @@ async def ids_without_entry_today(day: date) -> list[int]:
 # ---- Лидерборд -----------------------------------------------------------
 
 async def team_leaderboard() -> list[asyncpg.Record]:
+    # Дневные баллы и недельные бонусы считаем отдельными подзапросами,
+    # чтобы join'ы не размножали строки.
     return await pool().fetch(
         """SELECT t.name,
-                  COALESCE(sum(d.points),0) AS points
-             FROM teams t
-             LEFT JOIN participants p ON p.team_id = t.id AND p.disqualified_at IS NULL
-             LEFT JOIN daily_entries d ON d.participant_id = p.telegram_id
-            GROUP BY t.id ORDER BY points DESC, t.name"""
+                  COALESCE((SELECT sum(d.points) FROM daily_entries d
+                              JOIN participants p ON p.telegram_id=d.participant_id
+                             WHERE p.team_id=t.id AND p.disqualified_at IS NULL),0)
+                + COALESCE((SELECT sum(w.bonus_points) FROM weekly_summaries w
+                              JOIN participants p ON p.telegram_id=w.participant_id
+                             WHERE p.team_id=t.id AND p.disqualified_at IS NULL),0) AS points
+             FROM teams t ORDER BY points DESC, t.name"""
     )
 
 
 async def top_participants(limit: int = 10) -> list[asyncpg.Record]:
     return await pool().fetch(
-        """SELECT p.full_name, COALESCE(sum(d.points),0) AS points
+        """SELECT p.full_name,
+                  COALESCE((SELECT sum(d.points) FROM daily_entries d
+                             WHERE d.participant_id=p.telegram_id),0)
+                + COALESCE((SELECT sum(w.bonus_points) FROM weekly_summaries w
+                             WHERE w.participant_id=p.telegram_id),0) AS points
              FROM participants p
-             LEFT JOIN daily_entries d ON d.participant_id = p.telegram_id
             WHERE p.disqualified_at IS NULL AND p.consent_at IS NOT NULL
-            GROUP BY p.telegram_id ORDER BY points DESC, p.full_name LIMIT $1""",
+            ORDER BY points DESC, p.full_name LIMIT $1""",
         limit,
     )

@@ -43,9 +43,8 @@ CREATE INDEX IF NOT EXISTS daily_review_idx ON daily_entries(needs_review) WHERE
 
 CREATE TABLE IF NOT EXISTS streaks (
     participant_id        bigint PRIMARY KEY REFERENCES participants(telegram_id),
-    current_len           int  NOT NULL DEFAULT 0,   -- дней подряд по 10 000+
-    last_qualifying_date  date,
-    bonus_awarded_cycles  int  NOT NULL DEFAULT 0    -- сколько раз начислен +4 за 7 дней
+    current_len           int  NOT NULL DEFAULT 0,   -- дней подряд по 10 000+ (для мотивации)
+    last_qualifying_date  date
 );
 
 CREATE TABLE IF NOT EXISTS weekly_summaries (
@@ -55,9 +54,13 @@ CREATE TABLE IF NOT EXISTS weekly_summaries (
     reported_total     int     NOT NULL,
     computed_total     int     NOT NULL,
     reconciled         boolean NOT NULL DEFAULT false,
+    bonus_points       int     NOT NULL DEFAULT 0,   -- недельный бонус за серию (правило 10)
     screenshot_file_id text,
     UNIQUE (participant_id, week_start)
 );
+
+-- Миграция для баз, созданных до появления bonus_points (напр. на Render).
+ALTER TABLE weekly_summaries ADD COLUMN IF NOT EXISTS bonus_points int NOT NULL DEFAULT 0;
 
 CREATE TABLE IF NOT EXISTS broadcasts (
     id            bigserial PRIMARY KEY,
