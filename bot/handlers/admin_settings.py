@@ -169,7 +169,12 @@ async def labels_pick(cb: CallbackQuery, state: FSMContext) -> None:
         return await cb.answer()
     await state.set_state(Labels.waiting)
     await state.update_data(label_name=name)
-    await cb.message.answer(f"Пришли новый текст для кнопки «{settings.label(name)}». /cancel — отмена.")
+    await cb.message.answer(
+        f"Текущее название: «{settings.label(name)}»\n\n"
+        "Пришли <b>новое название</b> — оно полностью заменит старое.\n"
+        "Хочешь оставить только премиум-иконку — напиши текст <b>без эмодзи</b>.\n"
+        "/cancel — отмена."
+    )
     await cb.answer()
 
 
@@ -181,7 +186,8 @@ async def labels_save(message: Message, state: FSMContext) -> None:
     if not name:
         return
     await settings.set(f"label_{name}", message.text.strip())
-    await message.answer(f"Кнопка обновлена: {escape(message.text.strip())} ✅ (обновится при /start)")
+    await message.answer("Кнопка переименована ✅ Вот обновлённое меню:",
+                         reply_markup=keyboards.main_kb())
 
 
 # ---- Премиум-иконки кнопок (Bot API 9.4) ----------------------------------
@@ -230,7 +236,7 @@ async def icons_clear(message: Message, state: FSMContext) -> None:
     name = data.get("icon_name")
     if name:
         await settings.set(f"icon_{name}", None)
-    await message.answer("Иконка убрана ✅ (обновится при /start)")
+    await message.answer("Иконка убрана ✅ Вот обновлённое меню:", reply_markup=keyboards.main_kb())
 
 
 @router.message(Icons.waiting)
@@ -246,7 +252,12 @@ async def icons_save(message: Message, state: FSMContext) -> None:
         return
     await state.clear()
     await settings.set(f"icon_{name}", cid)
-    await message.answer("Иконка кнопки сохранена ✅ (обновится при /start)")
+    await message.answer(
+        "Иконка кнопки сохранена ✅ Вот обновлённое меню:\n"
+        "(если рядом дублируется обычный эмодзи — переименуй кнопку без эмодзи "
+        "через «✏️ Кнопки меню»)",
+        reply_markup=keyboards.main_kb(),
+    )
 
 
 # ---- Панель управления пользователями -------------------------------------

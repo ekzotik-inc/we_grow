@@ -39,9 +39,13 @@ def teams_kb(teams: list[asyncpg.Record]) -> InlineKeyboardMarkup:
 
 def _mbtn(name: str) -> KeyboardButton:
     """Кнопка меню: подпись из настроек + премиум-иконка (Bot API 9.4),
-    если премиум включён и иконка задана (иначе Telegram отклонит)."""
+    если премиум включён и иконка задана. Прогресс/Лидерборд открывают
+    Mini App напрямую (web_app)."""
     icon = settings.icon(name) if premium_emoji.ENABLED else None
-    return KeyboardButton(text=settings.label(name), icon_custom_emoji_id=icon)
+    web_app = None
+    if name in ("progress", "board") and config.webapp_url:
+        web_app = WebAppInfo(url=config.webapp_url)
+    return KeyboardButton(text=settings.label(name), icon_custom_emoji_id=icon, web_app=web_app)
 
 
 def main_kb() -> ReplyKeyboardMarkup:
