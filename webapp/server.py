@@ -156,6 +156,11 @@ async def api_leaderboard(x_init_data: str | None = Header(default=None)):
     }
 
 
+@app.get("/health")
+async def health():
+    return {"ok": True}
+
+
 @app.get("/")
 async def index():
     return FileResponse(_STATIC / "index.html")

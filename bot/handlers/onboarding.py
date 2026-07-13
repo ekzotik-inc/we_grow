@@ -16,8 +16,9 @@ from aiogram.types import (
     ReplyKeyboardRemove,
 )
 
-from bot import db, keyboards, texts
+from bot import db, keyboards, settings, texts
 from bot.config import config
+from bot.menu import send_main_menu
 
 router = Router()
 
@@ -40,8 +41,7 @@ async def cmd_start(message: Message, state: FSMContext) -> None:
     p = await db.get_participant(tg_id)
     if p and p["team_id"]:
         if p["approved_at"]:
-            await message.answer("С возвращением, чемпион! 👟 Готов к новым шагам?",
-                                 reply_markup=keyboards.main_kb())
+            await send_main_menu(message.bot, tg_id, "С возвращением, чемпион! 👟 Готов к новым шагам?")
         else:
             await message.answer(texts.NOT_APPROVED_YET, reply_markup=ReplyKeyboardRemove())
         return
@@ -52,18 +52,18 @@ async def cmd_start(message: Message, state: FSMContext) -> None:
 
 
 @router.message(Command("rules"))
-@router.message(F.text == texts.MENU_RULES)
+@router.message(lambda m: bool(m.text) and m.text == settings.label("rules"))
 async def cmd_rules(message: Message) -> None:
     await message.answer(texts.RULES, disable_web_page_preview=True)
 
 
 @router.message(Command("help"))
-@router.message(F.text == texts.MENU_HELP)
+@router.message(lambda m: bool(m.text) and m.text == settings.label("help"))
 async def cmd_help(message: Message) -> None:
     await message.answer(texts.HELP, disable_web_page_preview=True)
 
 
-@router.message(F.text == texts.MENU_BOARD)
+@router.message(lambda m: bool(m.text) and m.text == settings.label("board"))
 async def menu_board(message: Message) -> None:
     # Лидерборд прямо в чате + inline-кнопка открыть в приложении.
     teams = await db.team_leaderboard()
@@ -74,7 +74,7 @@ async def menu_board(message: Message) -> None:
     )
 
 
-@router.message(F.text == texts.MENU_PROGRESS)
+@router.message(lambda m: bool(m.text) and m.text == settings.label("progress"))
 async def menu_progress(message: Message) -> None:
     kb = keyboards.open_app_kb("📊 Открыть мой прогресс")
     if kb:

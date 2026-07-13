@@ -50,4 +50,18 @@ def setup_scheduler(bot: Bot) -> AsyncIOScheduler:
     sched.add_job(weekly_summary_reminder, "cron", day_of_week="sun", hour=21, minute=0, args=[bot])
     sched.add_job(award_weekly_bonuses, "cron", day_of_week="sun", hour=23, minute=55, args=[bot])
     sched.add_job(monday_leaderboard, "cron", day_of_week="mon", hour=10, minute=0, args=[bot])
+    if config.webapp_url:
+        sched.add_job(keep_webapp_awake, "interval", minutes=10)
     return sched
+
+
+async def keep_webapp_awake() -> None:
+    """Пинг веб-сервиса, чтобы free-инстанс Render не засыпал."""
+    import aiohttp
+    url = config.webapp_url.rstrip("/") + "/health"
+    try:
+        async with aiohttp.ClientSession() as s:
+            async with s.get(url, timeout=aiohttp.ClientTimeout(total=20)) as r:
+                await r.read()
+    except Exception:  # noqa: BLE001 — сеть/сон, не критично
+        pass

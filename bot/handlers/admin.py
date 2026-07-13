@@ -45,7 +45,8 @@ async def approve_registration(cb: CallbackQuery) -> None:
     await db.set_approved(target)
     await cb.message.edit_text(cb.message.html_text + f"\n\n✅ Подтверждено ({escape(cb.from_user.first_name)})")
     try:
-        await cb.bot.send_message(target, texts.APPROVED, reply_markup=keyboards.main_kb())
+        from bot.menu import send_main_menu
+        await send_main_menu(cb.bot, target, texts.APPROVED)
     except Exception:  # noqa: BLE001
         pass
     await cb.answer("Подтверждено ✅")
@@ -75,15 +76,6 @@ async def adm_board(cb: CallbackQuery) -> None:
     teams = await db.team_leaderboard()
     top = await db.top_participants(10)
     await cb.message.answer(texts.render_leaderboard(teams, top, top_title="Топ-10 участников"))
-    await cb.answer()
-
-
-@router.callback_query(F.data == "adm:broadcast")
-async def adm_broadcast(cb: CallbackQuery, state: FSMContext) -> None:
-    if not _is_admin(cb.from_user.id):
-        return await cb.answer()
-    await cb.message.answer("Напиши текст рассылки одним сообщением (или /cancel).")
-    await state.set_state(Broadcast.text)
     await cb.answer()
 
 
@@ -128,10 +120,6 @@ async def cmd_stats(message: Message) -> None:
     await message.answer(await _stats_text())
 
 
-class Broadcast(StatesGroup):
-    text = State()
-
-
 class EmojiCapture(StatesGroup):
     waiting = State()
 
@@ -171,34 +159,10 @@ async def emojiid_capture(message: Message, state: FSMContext) -> None:
     )
 
 
-@router.message(Command("broadcast"))
-async def broadcast_start(message: Message, state: FSMContext) -> None:
-    if not _is_admin(message.from_user.id):
-        return
-    await message.answer("Напиши текст рассылки одним сообщением (или /cancel).")
-    await state.set_state(Broadcast.text)
-
-
 @router.message(Command("cancel"))
 async def cancel(message: Message, state: FSMContext) -> None:
     await state.clear()
     await message.answer("Отменено.")
-
-
-@router.message(Broadcast.text, F.text)
-async def broadcast_send(message: Message, state: FSMContext) -> None:
-    await state.clear()
-    text = message.text
-    ids = await db.all_active_ids()
-    await message.answer(f"Отправляю {len(ids)} участникам…")
-    # Текст рассылки — произвольный ввод админа, шлём без разметки.
-    sent = await notify.broadcast(message.bot, ids, text, parse_mode=None)
-    await db.pool().execute(
-        """INSERT INTO broadcasts (admin_id, text, audience, recipients)
-           VALUES ($1,$2,'all',$3)""",
-        message.from_user.id, text, sent,
-    )
-    await message.answer(f"Доставлено: {sent}/{len(ids)}.")
 
 
 @router.message(Command("dq"))

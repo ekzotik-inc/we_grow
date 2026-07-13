@@ -14,7 +14,7 @@ from aiogram.fsm.state import State, StatesGroup
 from aiogram.types import CallbackQuery, Message
 
 from backend.scoring import needs_review, points_for_steps, update_streak
-from bot import db, keyboards, texts
+from bot import db, keyboards, settings, texts
 from bot.config import config
 
 router = Router()
@@ -48,7 +48,7 @@ async def _require_approved(message: Message) -> bool:
     return True
 
 
-@router.message(F.text == texts.STEPS_BUTTON)
+@router.message(lambda m: bool(m.text) and m.text == settings.label("steps"))
 async def ask_steps(message: Message, state: FSMContext) -> None:
     if not await _require_approved(message):
         return

@@ -32,3 +32,17 @@ def pe(emoji: str) -> str:
     if ENABLED and cid:
         return f'<tg-emoji emoji-id="{cid}">{emoji}</tg-emoji>'
     return emoji
+
+
+def enrich(text: str) -> str:
+    """Заменяет в готовом HTML-тексте известные эмодзи на премиум-версии.
+
+    Применяется к произвольному тексту (рассылки, подписи) — чтобы премиум-эмодзи
+    работали и там. При выключенном премиуме возвращает текст без изменений.
+    """
+    if not ENABLED or not _IDS or not text:
+        return text
+    for emoji, cid in _IDS.items():
+        if emoji in text:
+            text = text.replace(emoji, f'<tg-emoji emoji-id="{cid}">{emoji}</tg-emoji>')
+    return text

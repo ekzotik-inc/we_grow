@@ -105,6 +105,42 @@ async def set_role(tg_id: int, role: str) -> None:
     )
 
 
+async def all_settings() -> dict[str, str]:
+    rows = await pool().fetch("SELECT key, value FROM settings")
+    return {r["key"]: r["value"] for r in rows}
+
+
+async def set_setting(key: str, value: str | None) -> None:
+    if value is None:
+        await pool().execute("DELETE FROM settings WHERE key=$1", key)
+    else:
+        await pool().execute(
+            "INSERT INTO settings (key, value) VALUES ($1,$2) "
+            "ON CONFLICT (key) DO UPDATE SET value=$2", key, value,
+        )
+
+
+async def move_to_team(tg_id: int, team_id: int) -> None:
+    await pool().execute("UPDATE participants SET team_id=$2 WHERE telegram_id=$1", tg_id, team_id)
+
+
+async def find_participants(query: str, limit: int = 10) -> list[asyncpg.Record]:
+    """Поиск участника по ID или части ФИО/username для перевода в команду."""
+    if query.isdigit():
+        rows = await pool().fetch(
+            """SELECT p.telegram_id, p.full_name, t.name AS team_name
+                 FROM participants p LEFT JOIN teams t ON t.id=p.team_id
+                WHERE p.telegram_id=$1""", int(query))
+        if rows:
+            return rows
+    pat = f"%{query}%"
+    return await pool().fetch(
+        """SELECT p.telegram_id, p.full_name, t.name AS team_name
+             FROM participants p LEFT JOIN teams t ON t.id=p.team_id
+            WHERE p.full_name ILIKE $1 OR p.username ILIKE $1
+            ORDER BY p.full_name LIMIT $2""", pat, limit)
+
+
 async def set_approved(tg_id: int) -> None:
     await pool().execute(
         "UPDATE participants SET approved_at=$2 WHERE telegram_id=$1",

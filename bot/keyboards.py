@@ -11,7 +11,7 @@ from aiogram.types import (
 )
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 
-from bot import texts
+from bot import settings, texts
 from bot.config import config
 
 
@@ -38,14 +38,14 @@ def teams_kb(teams: list[asyncpg.Record]) -> InlineKeyboardMarkup:
 
 
 def main_kb() -> ReplyKeyboardMarkup:
-    """Главное reply-меню участника. Админ-функции — по команде /admin.
-    Mini App открываем inline-кнопкой (reply-web_app в части клиентов даёт
-    пустой initData)."""
+    """Главное reply-меню участника. Подписи кнопок берутся из настроек
+    (переименовываются через /admin). Админ-функции — по команде /admin."""
+    L = settings.label
     return ReplyKeyboardMarkup(
         keyboard=[
-            [KeyboardButton(text=texts.STEPS_BUTTON)],
-            [KeyboardButton(text=texts.MENU_PROGRESS), KeyboardButton(text=texts.MENU_BOARD)],
-            [KeyboardButton(text=texts.MENU_RULES), KeyboardButton(text=texts.MENU_HELP)],
+            [KeyboardButton(text=L("steps"))],
+            [KeyboardButton(text=L("progress")), KeyboardButton(text=L("board"))],
+            [KeyboardButton(text=L("rules")), KeyboardButton(text=L("help"))],
         ],
         resize_keyboard=True,
     )
@@ -70,11 +70,62 @@ def approve_kb(tg_id: int) -> InlineKeyboardMarkup:
 def admin_panel_kb() -> InlineKeyboardMarkup:
     b = InlineKeyboardBuilder()
     b.button(text="🏆 Лидерборд", callback_data="adm:board")
-    b.button(text="📣 Рассылка", callback_data="adm:broadcast")
-    b.button(text="🔎 На проверку", callback_data="adm:review")
     b.button(text="📊 Вовлечённость", callback_data="adm:stats")
+    b.button(text="🔎 На проверку", callback_data="adm:review")
+    b.button(text="📣 Рассылка", callback_data="adm:broadcast")
+    b.button(text="🖼 Медиа меню", callback_data="adm:media")
+    b.button(text="🔀 Перевод в команду", callback_data="adm:move")
+    b.button(text="✏️ Кнопки меню", callback_data="adm:labels")
     b.adjust(2)
     return b.as_markup()
+
+
+def bc_builder_kb(draft: dict) -> InlineKeyboardMarkup:
+    """Клавиатура билдера рассылки. draft: {text, media, buttons}."""
+    b = InlineKeyboardBuilder()
+    media = "🖼 Медиа ✅" if draft.get("media") else "🖼 Добавить медиа"
+    nbtn = len(draft.get("buttons", []))
+    b.button(text=media, callback_data="bc:media")
+    b.button(text=f"🔘 Кнопки ({nbtn})", callback_data="bc:buttons")
+    b.button(text="👁 Предпросмотр", callback_data="bc:preview")
+    b.button(text="🚀 Отправить всем", callback_data="bc:send")
+    b.button(text="✖️ Отмена", callback_data="bc:cancel")
+    b.adjust(2, 1, 1, 1)
+    return b.as_markup()
+
+
+def bc_buttons_kb() -> InlineKeyboardMarkup:
+    b = InlineKeyboardBuilder()
+    b.button(text="➕ Своя кнопка (текст + ссылка)", callback_data="bc:btn_custom")
+    if config.webapp_url:
+        b.button(text="📊 Кнопка «Открыть приложение»", callback_data="bc:btn_app")
+    b.button(text="🗑 Очистить кнопки", callback_data="bc:btn_clear")
+    b.button(text="⬅️ Назад", callback_data="bc:back")
+    b.adjust(1)
+    return b.as_markup()
+
+
+def teams_pick_kb(teams: list[asyncpg.Record], prefix: str) -> InlineKeyboardMarkup:
+    b = InlineKeyboardBuilder()
+    for t in teams:
+        b.button(text=f"{t['name']} — {t['taken']}/{t['capacity']}", callback_data=f"{prefix}:{t['id']}")
+    b.adjust(1)
+    return b.as_markup()
+
+
+def labels_pick_kb() -> InlineKeyboardMarkup:
+    b = InlineKeyboardBuilder()
+    for name, cur in settings.all_labels().items():
+        b.button(text=cur, callback_data=f"lbl:{name}")
+    b.button(text="↩️ Сбросить к стандартным", callback_data="lbl:reset")
+    b.adjust(1)
+    return b.as_markup()
+
+
+def open_app_inline(text: str) -> InlineKeyboardButton | None:
+    if not config.webapp_url:
+        return None
+    return InlineKeyboardButton(text=text, web_app=WebAppInfo(url=config.webapp_url))
 
 
 def confirm_steps_kb(steps: int) -> InlineKeyboardMarkup:

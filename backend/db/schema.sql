@@ -78,6 +78,12 @@ CREATE TABLE IF NOT EXISTS broadcasts (
     recipients    int     NOT NULL DEFAULT 0
 );
 
+-- Настройки, управляемые из админ-панели (медиа меню, подписи кнопок и т.п.).
+CREATE TABLE IF NOT EXISTS settings (
+    key   text PRIMARY KEY,
+    value text
+);
+
 -- Стартовые команды (тема «растения»).
 INSERT INTO teams (name, capacity) VALUES
     ('Бамбук', 10),
