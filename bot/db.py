@@ -5,6 +5,7 @@
 """
 from __future__ import annotations
 
+import ssl as ssl_module
 from datetime import date, datetime, timezone
 from pathlib import Path
 
@@ -16,9 +17,23 @@ _pool: asyncpg.Pool | None = None
 _SCHEMA = Path(__file__).resolve().parent.parent / "backend" / "db" / "schema.sql"
 
 
+def _ssl_for(dsn: str):
+    """Render (и большинство облачных Postgres) требуют TLS для внешних
+    подключений. Определяем по sslmode в строке или по хосту render.com.
+    Для локального Postgres SSL не нужен."""
+    if "sslmode=disable" in dsn:
+        return None
+    if "sslmode=require" in dsn or "render.com" in dsn:
+        ctx = ssl_module.create_default_context()
+        ctx.check_hostname = False
+        ctx.verify_mode = ssl_module.CERT_NONE
+        return ctx
+    return None
+
+
 async def connect(dsn: str) -> None:
     global _pool
-    _pool = await asyncpg.create_pool(dsn, min_size=1, max_size=10)
+    _pool = await asyncpg.create_pool(dsn, min_size=1, max_size=10, ssl=_ssl_for(dsn))
     # Идемпотентная схема — применяем на старте, чтобы бот поднимался «из коробки».
     async with _pool.acquire() as conn:
         await conn.execute(_SCHEMA.read_text(encoding="utf-8"))

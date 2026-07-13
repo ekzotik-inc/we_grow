@@ -62,6 +62,7 @@ python -m bot.main
 - [docs/notifications.md](docs/notifications.md) — триггерные, регулярные, ручные рассылки
 - [docs/admin.md](docs/admin.md) — админ-режим P&C
 - [docs/mvp-plan.md](docs/mvp-plan.md) — план сборки и что выносим во вторую итерацию
+- [docs/deploy-render.md](docs/deploy-render.md) — деплой базы на Render
 
 ## Структура репозитория
 
