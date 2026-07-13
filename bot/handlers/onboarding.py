@@ -4,10 +4,16 @@ from __future__ import annotations
 import random
 
 from aiogram import F, Router
-from aiogram.filters import CommandStart
+from aiogram.filters import Command, CommandStart
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
-from aiogram.types import CallbackQuery, Message
+from aiogram.types import (
+    CallbackQuery,
+    InlineKeyboardButton,
+    InlineKeyboardMarkup,
+    Message,
+    ReplyKeyboardRemove,
+)
 
 from bot import db, keyboards, texts
 from bot.config import config
@@ -39,6 +45,35 @@ async def cmd_start(message: Message, state: FSMContext) -> None:
     await message.answer(texts.WELCOME, parse_mode="Markdown")
     await message.answer(texts.RULES, disable_web_page_preview=True,
                          reply_markup=keyboards.consent_kb())
+
+
+@router.message(Command("reset"))
+async def cmd_reset(message: Message, state: FSMContext) -> None:
+    await state.clear()
+    if await db.get_participant(message.from_user.id) is None:
+        await message.answer(texts.RESET_NOTHING)
+        return
+    kb = InlineKeyboardMarkup(inline_keyboard=[[
+        InlineKeyboardButton(text=texts.RESET_YES, callback_data="reset_yes"),
+        InlineKeyboardButton(text=texts.RESET_NO, callback_data="reset_no"),
+    ]])
+    await message.answer(texts.RESET_CONFIRM, parse_mode="Markdown", reply_markup=kb)
+
+
+@router.callback_query(F.data == "reset_no")
+async def reset_no(cb: CallbackQuery) -> None:
+    await cb.message.edit_reply_markup(reply_markup=None)
+    await cb.message.answer(texts.RESET_CANCELLED)
+    await cb.answer()
+
+
+@router.callback_query(F.data == "reset_yes")
+async def reset_yes(cb: CallbackQuery, state: FSMContext) -> None:
+    await state.clear()
+    await db.reset_participant(cb.from_user.id)
+    await cb.message.edit_reply_markup(reply_markup=None)
+    await cb.message.answer(texts.RESET_DONE, reply_markup=ReplyKeyboardRemove())
+    await cb.answer()
 
 
 @router.callback_query(F.data == "consent")

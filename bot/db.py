@@ -69,6 +69,16 @@ async def upsert_participant_start(tg_id: int) -> None:
     )
 
 
+async def reset_participant(tg_id: int) -> None:
+    """Полностью удаляет участника и все его данные — /start начнётся заново."""
+    async with pool().acquire() as conn:
+        async with conn.transaction():
+            await conn.execute("DELETE FROM daily_entries WHERE participant_id=$1", tg_id)
+            await conn.execute("DELETE FROM weekly_summaries WHERE participant_id=$1", tg_id)
+            await conn.execute("DELETE FROM streaks WHERE participant_id=$1", tg_id)
+            await conn.execute("DELETE FROM participants WHERE telegram_id=$1", tg_id)
+
+
 async def set_consent(tg_id: int) -> None:
     await pool().execute(
         "UPDATE participants SET consent_at=$2 WHERE telegram_id=$1",
