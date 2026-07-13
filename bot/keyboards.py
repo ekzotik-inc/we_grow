@@ -81,14 +81,23 @@ def admin_panel_kb() -> InlineKeyboardMarkup:
     b = InlineKeyboardBuilder()
     b.button(text="🏆 Лидерборд", callback_data="adm:board")
     b.button(text="📊 Вовлечённость", callback_data="adm:stats")
-    b.button(text="🔎 На проверку", callback_data="adm:review")
     b.button(text="📣 Рассылка", callback_data="adm:broadcast")
     b.button(text="🖼 Медиа меню", callback_data="adm:media")
     b.button(text="🔀 Перевод в команду", callback_data="adm:move")
     b.button(text="✏️ Кнопки меню", callback_data="adm:labels")
     b.button(text="🎨 Иконки кнопок", callback_data="adm:icons")
     b.button(text="👥 Пользователи", callback_data="adm:users")
+    b.button(text="🧾 Проверить результаты", callback_data="adm:subs")
     b.adjust(2)
+    return b.as_markup()
+
+
+def moderate_kb(entry_id: int) -> InlineKeyboardMarkup:
+    b = InlineKeyboardBuilder()
+    b.button(text="✅ Принять", callback_data=f"mod_ok:{entry_id}")
+    b.button(text="❌ Отклонить", callback_data=f"mod_no:{entry_id}")
+    b.button(text="⚠️ Предупреждение", callback_data=f"mod_warn:{entry_id}")
+    b.adjust(2, 1)
     return b.as_markup()
 
 
@@ -190,10 +199,3 @@ def open_app_inline(text: str) -> InlineKeyboardButton | None:
     if not config.webapp_url:
         return None
     return InlineKeyboardButton(text=text, web_app=WebAppInfo(url=config.webapp_url))
-
-
-def confirm_steps_kb(steps: int) -> InlineKeyboardMarkup:
-    return InlineKeyboardMarkup(inline_keyboard=[[
-        InlineKeyboardButton(text="Верно ✅", callback_data=f"steps_ok:{steps}"),
-        InlineKeyboardButton(text="Исправить", callback_data="steps_fix"),
-    ]])

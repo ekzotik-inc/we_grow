@@ -1,19 +1,18 @@
-"""Приём шагов: скрин или число → подтверждение → начисление → обратная связь.
+"""Приём шагов через модерацию P&C.
 
-OCR — вторая итерация. Сейчас: если пришло фото, сохраняем file_id и просим
-ввести число вручную; если пришло число — подтверждаем сразу.
+Флоу участника: шаг 1 — число шагов, шаг 2 — скриншот из Fitbit,
+шаг 3 — ожидание. Результат уходит на модерацию (status=pending) и
+засчитывается только после принятия сотрудником P&C.
 """
 from __future__ import annotations
 
 from datetime import datetime
-from html import escape
 
 from aiogram import F, Router
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
-from aiogram.types import CallbackQuery, Message
+from aiogram.types import Message
 
-from backend.scoring import needs_review, points_for_steps, update_streak
 from bot import db, keyboards, settings, texts
 from bot.config import config
 
@@ -21,7 +20,8 @@ router = Router()
 
 
 class Steps(StatesGroup):
-    waiting_number = State()
+    number = State()
+    screenshot = State()
 
 
 def _today():
@@ -36,16 +36,15 @@ def _parse_steps(text: str) -> int | None:
     return val if 0 < val < 200_000 else None
 
 
-async def _require_approved(message: Message) -> bool:
-    """Пускаем к приёму шагов только подтверждённых участников."""
+async def _require_approved(message: Message):
     p = await db.get_participant(message.from_user.id)
     if p is None or not p["team_id"]:
         await message.answer("Сначала зарегистрируйся: /start 🌱")
-        return False
+        return None
     if not p["approved_at"]:
         await message.answer(texts.NOT_APPROVED_YET)
-        return False
-    return True
+        return None
+    return p
 
 
 @router.message(lambda m: bool(m.text) and m.text == settings.label("steps"))
@@ -53,75 +52,49 @@ async def ask_steps(message: Message, state: FSMContext) -> None:
     if not await _require_approved(message):
         return
     existing = await db.get_entry(message.from_user.id, _today())
-    if existing:
-        await message.answer(texts.ALREADY_TODAY.format(steps=existing["steps"]))
+    if existing and existing["status"] == "accepted":
+        await message.answer(texts.ALREADY_ACCEPTED.format(steps=existing["steps"]))
         return
-    await message.answer(texts.ASK_STEPS_PHOTO)
-    await state.set_state(Steps.waiting_number)
+    if existing and existing["status"] == "pending":
+        await message.answer(texts.ALREADY_PENDING.format(steps=existing["steps"]))
+        return
+    # нет записи или отклонена — начинаем отправку
+    await message.answer(texts.STEP1_NUMBER)
+    await state.set_state(Steps.number)
 
 
-@router.message(F.photo)
-async def on_photo(message: Message, state: FSMContext) -> None:
-    # Сохраняем скрин как доказательство, число просим ввести вручную (OCR — later).
-    file_id = message.photo[-1].file_id
-    await state.update_data(screenshot=file_id)
-    await message.answer(texts.ASK_MANUAL)
-    await state.set_state(Steps.waiting_number)
-
-
-@router.message(Steps.waiting_number, F.text)
+@router.message(Steps.number, F.text)
 async def on_number(message: Message, state: FSMContext) -> None:
     steps = _parse_steps(message.text)
     if steps is None:
-        await message.answer(texts.ASK_MANUAL)
+        await message.answer(texts.STEP1_BAD)
         return
     await state.update_data(steps=steps)
-    await message.answer(texts.CONFIRM_STEPS.format(steps=steps),
-                         reply_markup=keyboards.confirm_steps_kb(steps))
+    await message.answer(texts.STEP2_SCREENSHOT.format(steps=steps))
+    await state.set_state(Steps.screenshot)
 
 
-@router.callback_query(F.data == "steps_fix")
-async def on_fix(cb: CallbackQuery, state: FSMContext) -> None:
-    await cb.message.edit_reply_markup(reply_markup=None)
-    await cb.message.answer(texts.ASK_MANUAL)
-    await state.set_state(Steps.waiting_number)
-    await cb.answer()
-
-
-@router.callback_query(F.data.startswith("steps_ok:"))
-async def on_confirm(cb: CallbackQuery, state: FSMContext) -> None:
-    tg_id = cb.from_user.id
-    day = _today()
-    p = await db.get_participant(tg_id)
-    if p is None or not p["approved_at"]:
-        await cb.answer("Заявка ещё не подтверждена P&C.", show_alert=True)
-        await state.clear()
-        return
-    if await db.get_entry(tg_id, day):
-        await cb.answer("Уже засчитано на сегодня.", show_alert=True)
-        await state.clear()
-        return
-
-    steps = int(cb.data.split(":")[1])
+@router.message(Steps.screenshot, F.photo)
+async def on_screenshot(message: Message, state: FSMContext) -> None:
     data = await state.get_data()
-    screenshot = data.get("screenshot")
-
-    points = points_for_steps(steps)
-    review = needs_review(steps)
-    upd = update_streak(await db.get_streak(tg_id), day, steps)
-
-    await db.save_entry_and_streak(
-        tg_id, day, steps, points,
-        source="manual", screenshot_file_id=screenshot,
-        needs_review=review, new_streak=upd.state,
-    )
-
-    await cb.message.edit_reply_markup(reply_markup=None)
-    await cb.message.answer(texts.feedback(steps, points, upd))
+    steps = data.get("steps")
     await state.clear()
-    await cb.answer()
+    if steps is None:
+        await message.answer(texts.STEP1_NUMBER)
+        await state.set_state(Steps.number)
+        return
+    tg_id = message.from_user.id
+    file_id = message.photo[-1].file_id
+    entry_id = await db.save_submission(tg_id, _today(), steps, file_id)
+    await message.answer(texts.STEP3_WAIT.format(steps=steps))
 
-    if review:
-        from bot.notify import notify_admins
-        p = await db.get_participant(tg_id)
-        await notify_admins(cb.bot, f"⚠️ Проверка: {escape(p['full_name'])} прислал {steps} шагов (&gt;30k).")
+    # Уведомляем P&C: скриншот + карточка + кнопки модерации.
+    from bot import notify
+    entry = await db.entry_by_id(entry_id)
+    await notify.admins_submission(message.bot, file_id, texts.admin_new_submission(entry),
+                                   keyboards.moderate_kb(entry_id))
+
+
+@router.message(Steps.screenshot)
+async def need_screenshot(message: Message) -> None:
+    await message.answer(texts.STEP2_NEED_PHOTO)

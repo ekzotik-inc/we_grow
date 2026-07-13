@@ -80,5 +80,14 @@ async def notify_admins(bot: Bot, text: str, **kw) -> None:
         await _send(bot, admin_id, text, **kw)
 
 
+async def admins_submission(bot: Bot, file_id: str, caption: str, markup) -> None:
+    """Шлёт админам скриншот-заявку с кнопками модерации."""
+    for admin_id in config.admin_ids:
+        try:
+            await bot.send_photo(admin_id, file_id, caption=caption, reply_markup=markup)
+        except Exception as e:  # noqa: BLE001
+            log.warning("submission to admin %s failed: %s", admin_id, e)
+
+
 async def broadcast_all(bot: Bot, text: str, **kw) -> int:
     return await broadcast(bot, await db.all_active_ids(), text, **kw)

@@ -15,7 +15,8 @@ from aiogram.types import (
     Message,
 )
 
-from bot import db, keyboards, notify, premium_emoji, settings, textfmt
+from backend.scoring import points_for_steps
+from bot import db, keyboards, notify, premium_emoji, settings, textfmt, texts
 from bot.config import config
 
 router = Router()
@@ -407,6 +408,105 @@ async def user_del(cb: CallbackQuery) -> None:
     await db.reset_participant(tg)
     await cb.message.edit_text("🗑 Участник удалён.")
     await cb.answer("Удалён")
+
+
+# ---- Модерация результатов (шаги) -----------------------------------------
+
+class Warn(StatesGroup):
+    waiting = State()
+
+
+@router.callback_query(F.data == "adm:subs")
+async def subs_queue(cb: CallbackQuery) -> None:
+    if not _is_admin(cb.from_user.id):
+        return await cb.answer()
+    rows = await db.pending_submissions(15)
+    if not rows:
+        await cb.message.answer("🧾 Результатов на проверку нет ✅")
+        return await cb.answer()
+    await cb.message.answer(f"🧾 <b>На проверку: {len(rows)}</b>")
+    for r in rows:
+        e = await db.entry_by_id(r["id"])
+        await cb.bot.send_photo(cb.from_user.id, r["screenshot_file_id"],
+                                caption=texts.admin_new_submission(e),
+                                reply_markup=keyboards.moderate_kb(r["id"]))
+    await cb.answer()
+
+
+async def _mark_caption(cb: CallbackQuery, suffix: str) -> None:
+    try:
+        await cb.message.edit_caption(caption=(cb.message.caption or "") + suffix,
+                                      reply_markup=None)
+    except Exception:  # noqa: BLE001
+        pass
+
+
+@router.callback_query(F.data.startswith("mod_ok:"))
+async def mod_accept(cb: CallbackQuery) -> None:
+    if not _is_admin(cb.from_user.id):
+        return await cb.answer()
+    e = await db.entry_by_id(int(cb.data.split(":")[1]))
+    if e is None:
+        return await cb.answer("Запись не найдена.", show_alert=True)
+    if e["status"] != "pending":
+        await _mark_caption(cb, "\n\nℹ️ уже обработано")
+        return await cb.answer("Уже обработано.")
+    pts = points_for_steps(e["steps"])
+    await db.set_entry_status(e["id"], "accepted", pts)
+    st = await db.recompute_streak(e["participant_id"])
+    try:
+        await cb.bot.send_message(e["participant_id"],
+                                  texts.accepted_note(e["steps"], pts, st.current_len))
+    except Exception:  # noqa: BLE001
+        pass
+    await _mark_caption(cb, f"\n\n✅ Принято, +{pts} ({escape(cb.from_user.first_name)})")
+    await cb.answer("Принято ✅")
+
+
+@router.callback_query(F.data.startswith("mod_no:"))
+async def mod_reject(cb: CallbackQuery) -> None:
+    if not _is_admin(cb.from_user.id):
+        return await cb.answer()
+    e = await db.entry_by_id(int(cb.data.split(":")[1]))
+    if e is None:
+        return await cb.answer("Запись не найдена.", show_alert=True)
+    if e["status"] != "pending":
+        await _mark_caption(cb, "\n\nℹ️ уже обработано")
+        return await cb.answer("Уже обработано.")
+    await db.set_entry_status(e["id"], "rejected", 0)
+    await db.recompute_streak(e["participant_id"])
+    try:
+        await cb.bot.send_message(e["participant_id"], texts.REJECTED_NOTE)
+    except Exception:  # noqa: BLE001
+        pass
+    await _mark_caption(cb, f"\n\n❌ Отклонено ({escape(cb.from_user.first_name)})")
+    await cb.answer("Отклонено ❌")
+
+
+@router.callback_query(F.data.startswith("mod_warn:"))
+async def mod_warn(cb: CallbackQuery, state: FSMContext) -> None:
+    if not _is_admin(cb.from_user.id):
+        return await cb.answer()
+    await state.set_state(Warn.waiting)
+    await state.update_data(warn_entry=int(cb.data.split(":")[1]))
+    await cb.message.answer("✍️ Напиши текст предупреждения участнику. "
+                            "Результат при этом НЕ принимается. /cancel — отмена.")
+    await cb.answer()
+
+
+@router.message(Warn.waiting, F.text)
+async def warn_send(message: Message, state: FSMContext) -> None:
+    data = await state.get_data()
+    await state.clear()
+    e = await db.entry_by_id(data.get("warn_entry"))
+    if e is None:
+        return await message.answer("Запись не найдена.")
+    try:
+        await message.bot.send_message(e["participant_id"], texts.warning_note(escape(message.text)))
+    except Exception:  # noqa: BLE001
+        pass
+    await message.answer("Предупреждение отправлено ⚠️ Результат остаётся на проверке — "
+                         "прими или отклони его кнопками под скриншотом.")
 
 
 # ---- Билдер рассылки ------------------------------------------------------

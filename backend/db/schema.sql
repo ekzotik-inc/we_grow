@@ -37,15 +37,21 @@ CREATE TABLE IF NOT EXISTS daily_entries (
     participant_id     bigint  NOT NULL REFERENCES participants(telegram_id),
     entry_date         date    NOT NULL,
     steps              int     NOT NULL,
-    points             int     NOT NULL,
-    source             text    NOT NULL,          -- ocr | manual
+    points             int     NOT NULL DEFAULT 0,   -- начисляется при принятии P&C
+    status             text    NOT NULL DEFAULT 'pending',  -- pending | accepted | rejected
+    source             text    NOT NULL,          -- manual | ocr
     screenshot_file_id text,
     needs_review       boolean NOT NULL DEFAULT false,
     created_at         timestamptz NOT NULL DEFAULT now(),
+    reviewed_at        timestamptz,
     UNIQUE (participant_id, entry_date)
 );
 
-CREATE INDEX IF NOT EXISTS daily_review_idx ON daily_entries(needs_review) WHERE needs_review;
+-- Миграции для баз, созданных ранее (существующие записи считаем принятыми).
+ALTER TABLE daily_entries ADD COLUMN IF NOT EXISTS status text NOT NULL DEFAULT 'accepted';
+ALTER TABLE daily_entries ADD COLUMN IF NOT EXISTS reviewed_at timestamptz;
+
+CREATE INDEX IF NOT EXISTS daily_status_idx ON daily_entries(status) WHERE status='pending';
 
 CREATE TABLE IF NOT EXISTS streaks (
     participant_id        bigint PRIMARY KEY REFERENCES participants(telegram_id),

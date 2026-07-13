@@ -107,10 +107,52 @@ def admin_new_registration(p, team_name: str) -> str:
     )
 
 
-ASK_STEPS_PHOTO = "👟 Кидай скрин из Fitbit или просто напиши число шагов."
-CONFIRM_STEPS = "Вижу <b>{steps}</b> шагов — верно?"
-ASK_MANUAL = "Не разобрал число. Напиши цифрами, например <code>12340</code>."
-ALREADY_TODAY = "✅ Сегодня уже засчитано: <b>{steps}</b> шагов. До завтра! 🌙"
+# Флоу отправки результата (2 шага + ожидание модерации)
+STEP1_NUMBER = (
+    "👟 <b>Шаг 1 из 2 — количество шагов</b>\n"
+    "Напиши, сколько шагов ты прошёл сегодня.\n"
+    "<blockquote>Только цифры, например: 12340</blockquote>"
+)
+STEP1_BAD = "Нужно число 🙂 Напиши количество шагов цифрами, например <code>12340</code>."
+STEP2_SCREENSHOT = (
+    "📸 <b>Шаг 2 из 2 — скриншот</b>\n"
+    "Принял: <b>{steps}</b> шагов.\n"
+    "Теперь пришли <b>скриншот</b> из Fitbit за сегодня (с датой и числом шагов)."
+)
+STEP2_NEED_PHOTO = "Нужен именно скриншот 📸 Пришли фото из приложения Fitbit."
+STEP3_WAIT = (
+    "✅ <b>Отправлено на проверку!</b>\n"
+    "{steps} шагов + скриншот ушли сотруднику P&amp;C.\n"
+    "Как только результат примут — баллы засчитаются. Спасибо! 🌱"
+)
+ALREADY_ACCEPTED = "✅ Сегодня уже засчитано: <b>{steps}</b> шагов. До завтра! 🌙"
+ALREADY_PENDING = "⏳ Твой результат за сегодня (<b>{steps}</b> шагов) уже на проверке у P&amp;C. Дождись решения 🙌"
+
+
+def accepted_note(steps: int, points: int, streak_len: int) -> str:
+    s = f"\n{pe('👣')} Серия: <b>{streak_len}</b> дн. подряд" if streak_len > 0 else ""
+    return (f"{pe('🎉')} <b>Результат принят!</b>\n"
+            f"{steps} шагов = <b>+{points}</b> балл(а).{s}")
+
+
+REJECTED_NOTE = ("❌ <b>Результат отклонён P&amp;C.</b>\n"
+                 "Проверь данные и пришли заново кнопкой «👟 Шаги за сегодня».")
+
+
+def warning_note(comment: str) -> str:
+    return f"⚠️ <b>Предупреждение от P&amp;C</b>\n<blockquote>{comment}</blockquote>"
+
+
+def admin_new_submission(e) -> str:
+    uname = f"@{escape(e['username'])}" if e["username"] else "—"
+    return (
+        "🧾 <b>Результат на проверку</b>\n"
+        f"👤 <b>{escape(e['full_name'])}</b> · {uname}\n"
+        f"🌳 {escape(e['team_name'] or '—')}\n"
+        f"📅 {e['entry_date']}\n"
+        f"👟 Шагов заявлено: <b>{e['steps']}</b>\n\n"
+        "Проверь скриншот и прими решение."
+    )
 
 REMINDER_2100 = (
     "⏰ <b>Шаги за сегодня ещё не сданы!</b>\n"
