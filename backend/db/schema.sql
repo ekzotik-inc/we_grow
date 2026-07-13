@@ -1,13 +1,14 @@
 -- We Grow Marathon — схема БД (PostgreSQL). MVP.
--- Времена дней считаются в TZ марафона (см. backend/config).
+-- Идемпотентна: можно применять повторно.
+-- Времена дней считаются в TZ марафона (см. bot/config.py).
 
-CREATE TABLE teams (
+CREATE TABLE IF NOT EXISTS teams (
     id       serial PRIMARY KEY,
     name     text NOT NULL UNIQUE,
     capacity int  NOT NULL DEFAULT 10
 );
 
-CREATE TABLE participants (
+CREATE TABLE IF NOT EXISTS participants (
     telegram_id     bigint PRIMARY KEY,
     full_name       text        NOT NULL,
     is_asr          boolean     NOT NULL DEFAULT false,
@@ -18,9 +19,9 @@ CREATE TABLE participants (
     created_at      timestamptz NOT NULL DEFAULT now()
 );
 
-CREATE INDEX participants_team_idx ON participants(team_id);
+CREATE INDEX IF NOT EXISTS participants_team_idx ON participants(team_id);
 
-CREATE TABLE daily_entries (
+CREATE TABLE IF NOT EXISTS daily_entries (
     id                 bigserial PRIMARY KEY,
     participant_id     bigint  NOT NULL REFERENCES participants(telegram_id),
     entry_date         date    NOT NULL,
@@ -33,16 +34,16 @@ CREATE TABLE daily_entries (
     UNIQUE (participant_id, entry_date)
 );
 
-CREATE INDEX daily_review_idx ON daily_entries(needs_review) WHERE needs_review;
+CREATE INDEX IF NOT EXISTS daily_review_idx ON daily_entries(needs_review) WHERE needs_review;
 
-CREATE TABLE streaks (
+CREATE TABLE IF NOT EXISTS streaks (
     participant_id        bigint PRIMARY KEY REFERENCES participants(telegram_id),
     current_len           int  NOT NULL DEFAULT 0,   -- дней подряд по 10 000+
     last_qualifying_date  date,
     bonus_awarded_cycles  int  NOT NULL DEFAULT 0    -- сколько раз начислен +4 за 7 дней
 );
 
-CREATE TABLE weekly_summaries (
+CREATE TABLE IF NOT EXISTS weekly_summaries (
     id                 bigserial PRIMARY KEY,
     participant_id     bigint  NOT NULL REFERENCES participants(telegram_id),
     week_start         date    NOT NULL,
@@ -53,7 +54,7 @@ CREATE TABLE weekly_summaries (
     UNIQUE (participant_id, week_start)
 );
 
-CREATE TABLE broadcasts (
+CREATE TABLE IF NOT EXISTS broadcasts (
     id            bigserial PRIMARY KEY,
     admin_id      bigint  NOT NULL REFERENCES participants(telegram_id),
     text          text    NOT NULL,
@@ -68,4 +69,5 @@ INSERT INTO teams (name, capacity) VALUES
     ('Бамбук', 10),
     ('Секвойи', 10),
     ('Баобабы', 10),
-    ('Эвкалипты', 10);
+    ('Эвкалипты', 10)
+ON CONFLICT (name) DO NOTHING;
