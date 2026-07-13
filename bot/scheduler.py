@@ -9,6 +9,7 @@ from apscheduler.schedulers.asyncio import AsyncIOScheduler
 
 from backend.scoring import weekly_streak_bonus
 from bot import db, notify, texts
+from bot.premium_emoji import pe
 from bot.config import config
 
 
@@ -40,10 +41,11 @@ async def monday_leaderboard(bot: Bot) -> None:
     """Пн 10:00 — итоги недели: топ-3 команд и топ-3 участников."""
     teams = await db.team_leaderboard()
     top = await db.top_participants(3)
-    lines = [f"{texts.GROW} <b>Итоги недели</b>", "", "🏆 Команды:"]
+    lines = [f"{texts.GROW} <b>Итоги недели</b>", "", f"{pe('📊')} Команды:"]
     for i, t in enumerate(teams[:3], 1):
-        lines.append(f"{i}. {escape(t['name'])} — {t['points']}")
-    lines.append("\n👟 Участники:")
+        prefix = pe("👑") if i == 1 else f"{i}."
+        lines.append(f"{prefix} {escape(t['name'])} — {t['points']}")
+    lines.append(f"\n{pe('👣')} Участники:")
     for i, p in enumerate(top, 1):
         lines.append(f"{i}. {escape(p['full_name'] or '—')} — {p['points']}")
     await notify.broadcast_all(bot, "\n".join(lines))
