@@ -60,7 +60,14 @@ async def cmd_rules(message: Message) -> None:
 @router.message(Command("help"))
 @router.message(lambda m: bool(m.text) and m.text == settings.label("help"))
 async def cmd_help(message: Message) -> None:
-    await message.answer(texts.HELP, disable_web_page_preview=True)
+    await message.answer(texts.HELP, disable_web_page_preview=True,
+                         reply_markup=keyboards.feedback_kb())
+
+
+@router.message(Command("feedback"))
+@router.message(lambda m: bool(m.text) and m.text == settings.label("feedback"))
+async def cmd_feedback(message: Message) -> None:
+    await message.answer(texts.FEEDBACK, reply_markup=keyboards.feedback_kb())
 
 
 @router.message(lambda m: bool(m.text) and m.text == settings.label("board"))

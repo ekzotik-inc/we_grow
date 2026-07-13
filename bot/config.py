@@ -22,6 +22,8 @@ class Config:
     admin_ids: frozenset[int] = field(default_factory=lambda: frozenset(_admin_ids()))
     tz_name: str = os.getenv("TZ", "Europe/Moscow")
     webapp_url: str = os.getenv("WEBAPP_URL", "").strip()
+    # Прямой контакт сотрудника P&C для обратной связи.
+    feedback_url: str = os.getenv("FEEDBACK_URL", "https://t.me/DaryaPMI").strip()
 
     @property
     def tz(self) -> ZoneInfo:

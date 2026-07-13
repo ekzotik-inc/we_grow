@@ -194,6 +194,8 @@ const hsel = ()=>{ try{ tg?.HapticFeedback?.selectionChanged(); }catch(e){} };
 
 const FIT_A="https://play.google.com/store/apps/details?id=com.fitbit.FitbitMobile";
 const FIT_I="https://apps.apple.com/us/app/fitbit-health-fitness/id462638897";
+const FEEDBACK="https://t.me/DaryaPMI";
+function openPC(){ try{ tg?.openTelegramLink?.(FEEDBACK); }catch(e){ location.href=FEEDBACK; } }
 
 async function api(path){
   const r = await fetch(path, {headers:{"X-Init-Data": INIT}});
@@ -318,6 +320,13 @@ function renderRules(){
       <div class="badge">🥇 Бонус за серию (за неделю)</div>
       <div class="scoregrid"><div class="k">5 дней подряд 10 000+</div><div class="v">+2 балла</div>
         <div class="k">7 дней подряд 10 000+</div><div class="v">+4 балла</div></div>
+    </div>
+    <div class="card d3" style="text-align:center">
+      <div class="sec-title" style="justify-content:center;margin-bottom:6px">💬 Остались вопросы?</div>
+      <p class="muted" style="margin:0 0 12px">Напиши сотруднику P&amp;C напрямую — поможем.</p>
+      <button onclick="openPC()" style="background:var(--grad);color:#06222b;border:none;
+        border-radius:14px;padding:12px 20px;font-weight:800;font-size:14px;cursor:pointer">
+        💬 Написать P&amp;C</button>
     </div></div>`;
 }
 

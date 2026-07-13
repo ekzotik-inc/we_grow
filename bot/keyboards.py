@@ -56,9 +56,16 @@ def main_kb() -> ReplyKeyboardMarkup:
             [_mbtn("steps")],
             [_mbtn("progress"), _mbtn("board")],
             [_mbtn("rules"), _mbtn("help")],
+            [_mbtn("feedback")],
         ],
         resize_keyboard=True,
     )
+
+
+def feedback_kb() -> InlineKeyboardMarkup:
+    return InlineKeyboardMarkup(inline_keyboard=[[
+        InlineKeyboardButton(text="💬 Написать сотруднику P&C", url=config.feedback_url)
+    ]])
 
 
 def open_app_kb(text: str = "🌱 Открыть приложение") -> InlineKeyboardMarkup | None:
