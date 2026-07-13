@@ -1,6 +1,7 @@
 """Админ-режим P&C: /broadcast и /leaderboard. Дисквалификация — /dq <id>."""
 from __future__ import annotations
 
+import json
 from datetime import datetime, timezone
 from html import escape
 
@@ -22,6 +23,45 @@ def _is_admin(tg_id: int) -> bool:
 
 class Broadcast(StatesGroup):
     text = State()
+
+
+class EmojiCapture(StatesGroup):
+    waiting = State()
+
+
+@router.message(Command("emojiid"))
+async def emojiid_start(message: Message, state: FSMContext) -> None:
+    """Достаёт custom_emoji_id из присланных премиум-эмодзи (для emoji_ids.json)."""
+    if not _is_admin(message.from_user.id):
+        return
+    await message.answer(
+        "Пришли одним сообщением премиум-эмодзи (спорт/бег и т.п.), которые хочешь "
+        "использовать. Я верну их emoji-id для bot/emoji_ids.json.\n"
+        "⚠️ Отправлять премиум-эмодзи может только аккаунт с Telegram Premium."
+    )
+    await state.set_state(EmojiCapture.waiting)
+
+
+@router.message(EmojiCapture.waiting)
+async def emojiid_capture(message: Message, state: FSMContext) -> None:
+    await state.clear()
+    text = message.text or message.caption or ""
+    entities = message.entities or message.caption_entities or []
+    pairs: dict[str, str] = {}
+    for e in entities:
+        if e.type == "custom_emoji" and e.custom_emoji_id:
+            pairs[e.extract_from(text)] = e.custom_emoji_id
+    if not pairs:
+        await message.answer(
+            "Не вижу премиум-эмодзи в сообщении. Нужен Telegram Premium, "
+            "чтобы их отправлять, и это должны быть именно кастомные эмодзи."
+        )
+        return
+    snippet = json.dumps(pairs, ensure_ascii=False, indent=2)
+    await message.answer(
+        "Готово! Впиши эти пары в <b>bot/emoji_ids.json</b> "
+        "и выставь PREMIUM_EMOJI=true:\n\n<pre>" + escape(snippet) + "</pre>"
+    )
 
 
 @router.message(Command("broadcast"))
