@@ -121,6 +121,21 @@
     background:var(--grad);color:#06222b;margin-bottom:4px}
   a.link{color:var(--tq);text-decoration:none}
 
+  /* Призы — загадочные карточки */
+  .gift{font-size:74px;line-height:1;margin:4px 0 6px;position:relative;z-index:1;
+    animation:sprout .7s cubic-bezier(.2,1.4,.4,1) both, shake 3.2s ease-in-out 1s infinite}
+  @keyframes shake{0%,88%,100%{transform:rotate(0)}91%{transform:rotate(-8deg)}94%{transform:rotate(8deg)}97%{transform:rotate(-4deg)}}
+  .mysteries{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+  .myst{margin:0;text-align:center;padding:20px 8px;position:relative;overflow:hidden}
+  .myst .q{font-size:34px;font-weight:800;background:var(--grad);
+    -webkit-background-clip:text;background-clip:text;color:transparent}
+  .myst .ml{font-size:12px;font-weight:700;margin-top:6px}
+  .myst .ms{font-size:10px;color:var(--muted);margin-top:2px}
+  .myst::after{content:"";position:absolute;inset:0;
+    background:linear-gradient(120deg,transparent 30%,rgba(255,255,255,.07) 50%,transparent 70%);
+    transform:translateX(-100%);animation:shine 3s ease-in-out infinite}
+  @keyframes shine{0%{transform:translateX(-100%)}60%,100%{transform:translateX(100%)}}
+
   /* Нижняя навигация */
   .nav{position:fixed;left:0;right:0;bottom:0;z-index:20;
     padding:8px 10px calc(8px + var(--safe-bottom));
@@ -160,6 +175,8 @@
     <svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.2"/><path d="M3.5 19a5.5 5.5 0 0 1 11 0"/><path d="M16 5.2a3 3 0 0 1 0 5.6"/><path d="M18 19a5.5 5.5 0 0 0-3-4.9"/></svg>Команда</button>
   <button data-tab="board">
     <svg viewBox="0 0 24 24"><path d="M8 21h8"/><path d="M12 17v4"/><path d="M7 4h10v5a5 5 0 0 1-10 0z"/><path d="M17 5h3v2a3 3 0 0 1-3 3"/><path d="M7 5H4v2a3 3 0 0 0 3 3"/></svg>Лидерборд</button>
+  <button data-tab="prizes">
+    <svg viewBox="0 0 24 24"><rect x="3" y="8" width="18" height="4" rx="1"/><path d="M5 12v8a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-8"/><path d="M12 8v13"/><path d="M12 8S10.5 3 8 3a2.5 2.5 0 0 0 0 5z"/><path d="M12 8s1.5-5 4-5a2.5 2.5 0 0 1 0 5z"/></svg>Призы</button>
   <button data-tab="rules">
     <svg viewBox="0 0 24 24"><path d="M6 3h9l4 4v14a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1z"/><path d="M14 3v5h5"/><path d="M9 13h6M9 17h6"/></svg>Правила</button>
 </nav>
@@ -304,6 +321,28 @@ function renderRules(){
     </div></div>`;
 }
 
+function renderPrizes(){
+  V.innerHTML=`<div class="view">
+    <div class="card hero d1" style="padding:26px 18px">
+      <div class="gift">🎁</div>
+      <div class="stage" style="font-size:18px">Призы держатся в секрете</div>
+      <p class="muted" style="margin:10px auto 0;max-width:360px;line-height:1.5">
+        Награды за марафон пока скрыты под покровом тайны 🤫<br>
+        Дойди до финиша — и узнаешь, какой <b style="color:var(--text)">сюрприз</b> ждёт лучших.
+        Обещаем: это стоит каждого шага ✨</p>
+    </div>
+    <div class="mysteries">
+      <div class="myst card d1"><div class="q">?</div><div class="ml">🥇 1 место</div><div class="ms">скоро откроется</div></div>
+      <div class="myst card d2"><div class="q">?</div><div class="ml">🥈 2 место</div><div class="ms">скоро откроется</div></div>
+      <div class="myst card d3"><div class="q">?</div><div class="ml">🥉 3 место</div><div class="ms">скоро откроется</div></div>
+    </div>
+    <div class="card d3" style="text-align:center">
+      <div class="badge">✨ Подсказка</div>
+      <p class="muted" style="margin-top:10px;line-height:1.5">
+        Стабильность и командный дух повышают шансы.<br>Двигайся каждый день — и будь в топе 🚀</p>
+    </div></div>`;
+}
+
 const emptyRow=()=>`<div class="muted" style="padding:8px 0">— пока пусто —</div>`;
 function regNotice(){ V.innerHTML=`<div class="center">Ты ещё не в марафоне 🌱<br><br>Открой бота и нажми <b>/start</b>, чтобы зарегистрироваться.</div>`; }
 function notice(e){
@@ -311,11 +350,11 @@ function notice(e){
   V.innerHTML=`<div class="center">Не удалось загрузить 😔<br><br><span class="muted">${esc(e&&e.message||e||"")}</span><br><br>Потяни вниз, чтобы обновить.</div>`;
 }
 
-const views={progress:renderProgress,team:renderTeam,board:renderBoard,rules:renderRules};
+const views={progress:renderProgress,team:renderTeam,board:renderBoard,rules:renderRules,prizes:renderPrizes};
 const loaded={};
 function show(tab){
   document.querySelectorAll(".nav button").forEach(b=>b.classList.toggle("on",b.dataset.tab===tab));
-  if(tab==="rules"){ renderRules(); return; }   // всегда свежие (статичны)
+  if(tab==="rules"||tab==="prizes"){ views[tab](); return; }   // статичны — всегда свежие
   if(loaded[tab]&&V.dataset.tab===tab) return;
   V.dataset.tab=tab; loaded[tab]=true; views[tab]();
 }
