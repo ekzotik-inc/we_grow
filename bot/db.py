@@ -419,7 +419,7 @@ async def participant_card(tg_id: int) -> asyncpg.Record | None:
 async def entries_list(tg_id: int) -> list[asyncpg.Record]:
     """Все дневные записи участника (для календаря марафона)."""
     return await pool().fetch(
-        "SELECT entry_date, steps, points FROM daily_entries "
+        "SELECT entry_date, steps, points, status FROM daily_entries "
         "WHERE participant_id=$1 ORDER BY entry_date",
         tg_id,
     )

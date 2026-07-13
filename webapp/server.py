@@ -97,6 +97,9 @@ async def api_me(x_init_data: str | None = Header(default=None)):
     entries = await db.entries_list(tg_id)
     steps_by_date = {e["entry_date"]: e["steps"] for e in entries}
     points_by_date = {e["entry_date"]: e["points"] for e in entries}
+    status_by_date = {e["entry_date"]: e["status"] for e in entries}
+    # серию считаем только по принятым дням
+    accepted_steps = {e["entry_date"]: e["steps"] for e in entries if e["status"] == "accepted"}
     today = datetime.now(config.tz).date()
     streak = await db.get_streak(tg_id)
 
@@ -107,6 +110,7 @@ async def api_me(x_init_data: str | None = Header(default=None)):
             "date": d.isoformat(),
             "steps": steps_by_date.get(d, 0),
             "points": points_by_date.get(d, 0),
+            "status": status_by_date.get(d),          # accepted | pending | rejected | None
             "is_today": d == today,
             "future": d > today,
         })
@@ -117,9 +121,9 @@ async def api_me(x_init_data: str | None = Header(default=None)):
         "full_name": card["full_name"],
         "team_name": card["team_name"],
         "total_points": await db.total_points(tg_id),
-        "today_done": today in steps_by_date,
+        "today_status": status_by_date.get(today),    # для плитки «Сегодня»
         "current_streak": streak.current_len,
-        "best_streak": _best_streak(steps_by_date),
+        "best_streak": _best_streak(accepted_steps),
         "calendar": calendar,
         "marathon": {"start": MARATHON_START.isoformat(), "end": MARATHON_END.isoformat()},
     }
