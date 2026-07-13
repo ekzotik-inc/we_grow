@@ -1,31 +1,28 @@
 # Render Blueprint для We Grow Marathon.
-# Сейчас: только бесплатная PostgreSQL. Бот-воркер (требует платный план)
-# добавите позже, раскомментировав блок services ниже.
 #
-# Как применить: Render Dashboard → New → Blueprint → выбрать этот репозиторий.
+# Разворачивает бота как Background Worker, который подключается к УЖЕ
+# существующей базе test_bd (её адрес вписывается в дашборде — DATABASE_URL).
+# Отдельную базу здесь НЕ создаём: на free-тарифе Render разрешена только одна.
+#
+# Как применить: Render Dashboard → New + → Blueprint → выбрать этот репозиторий
+# и ветку claude/laughing-babbage-2tyt1p → Apply. Затем вписать 3 секрета
+# (DATABASE_URL, BOT_TOKEN, ADMIN_IDS) — см. docs/deploy-render.md.
 
-databases:
-  - name: wegrow-db
-    plan: free            # бесплатный тариф; апгрейд — в дашборде БД
-    databaseName: wegrow
-    user: wegrow
-
-# --- Бот-воркер (раскомментировать после перехода на платный тариф) ---------
-# services:
-#   - type: worker
-#     name: wegrow-bot
-#     runtime: python
-#     plan: starter        # воркер на Render платный (free тарифа для worker нет)
-#     buildCommand: pip install -r requirements.txt
-#     startCommand: python -m bot.main
-#     envVars:
-#       - key: DATABASE_URL
-#         fromDatabase:
-#           name: wegrow-db
-#           property: connectionString
-#       - key: BOT_TOKEN
-#         sync: false      # впишете в дашборде (секрет)
-#       - key: ADMIN_IDS
-#         sync: false
-#       - key: TZ
-#         value: Europe/Moscow
+services:
+  - type: worker
+    name: wegrow-bot
+    runtime: python
+    region: oregon            # та же зона, что и база test_bd (Oregon) — нужно для Internal URL
+    plan: starter             # воркер на Render платный (free-тарифа для worker нет)
+    branch: claude/laughing-babbage-2tyt1p
+    buildCommand: pip install -r requirements.txt
+    startCommand: python -m bot.main
+    envVars:
+      - key: DATABASE_URL     # Internal Database URL базы test_bd (впишете в дашборде)
+        sync: false
+      - key: BOT_TOKEN        # токен от @BotFather
+        sync: false
+      - key: ADMIN_IDS        # ваш Telegram ID (узнать: напишите @userinfobot)
+        sync: false
+      - key: TZ
+        value: Europe/Moscow
