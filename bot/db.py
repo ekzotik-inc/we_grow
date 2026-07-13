@@ -105,6 +105,53 @@ async def set_role(tg_id: int, role: str) -> None:
     )
 
 
+async def participants_page(offset: int, limit: int = 8) -> list[asyncpg.Record]:
+    return await pool().fetch(
+        """SELECT p.telegram_id, p.full_name, p.username, p.approved_at,
+                  p.disqualified_at, p.created_at, t.name AS team_name
+             FROM participants p LEFT JOIN teams t ON t.id=p.team_id
+            WHERE p.team_id IS NOT NULL
+            ORDER BY (p.approved_at IS NOT NULL), p.created_at DESC
+            OFFSET $1 LIMIT $2""", offset, limit)
+
+
+async def participants_count() -> int:
+    return int(await pool().fetchval(
+        "SELECT count(*) FROM participants WHERE team_id IS NOT NULL"))
+
+
+async def pending_participants() -> list[asyncpg.Record]:
+    return await pool().fetch(
+        """SELECT p.telegram_id, p.full_name, p.username, p.created_at, t.name AS team_name
+             FROM participants p LEFT JOIN teams t ON t.id=p.team_id
+            WHERE p.team_id IS NOT NULL AND p.approved_at IS NULL
+              AND p.disqualified_at IS NULL
+            ORDER BY p.created_at""")
+
+
+async def status_counts() -> dict[str, int]:
+    row = await pool().fetchrow(
+        """SELECT
+             count(*) FILTER (WHERE team_id IS NOT NULL) AS total,
+             count(*) FILTER (WHERE approved_at IS NOT NULL AND disqualified_at IS NULL) AS approved,
+             count(*) FILTER (WHERE team_id IS NOT NULL AND approved_at IS NULL
+                                AND disqualified_at IS NULL) AS pending,
+             count(*) FILTER (WHERE disqualified_at IS NOT NULL) AS disq
+           FROM participants""")
+    return dict(row)
+
+
+async def undisqualify(tg_id: int) -> None:
+    await pool().execute("UPDATE participants SET disqualified_at=NULL WHERE telegram_id=$1", tg_id)
+
+
+async def user_detail(tg_id: int) -> asyncpg.Record | None:
+    return await pool().fetchrow(
+        """SELECT p.*, t.name AS team_name
+             FROM participants p LEFT JOIN teams t ON t.id=p.team_id
+            WHERE p.telegram_id=$1""", tg_id)
+
+
 async def all_settings() -> dict[str, str]:
     rows = await pool().fetch("SELECT key, value FROM settings")
     return {r["key"]: r["value"] for r in rows}

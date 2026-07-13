@@ -249,6 +249,155 @@ async def icons_save(message: Message, state: FSMContext) -> None:
     await message.answer("Иконка кнопки сохранена ✅ (обновится при /start)")
 
 
+# ---- Панель управления пользователями -------------------------------------
+
+_PAGE = 8
+
+
+async def _users_view(offset: int):
+    total = await db.participants_count()
+    rows = await db.participants_page(offset, _PAGE)
+    c = await db.status_counts()
+    header = (
+        "👥 <b>Пользователи</b>\n"
+        f"Всего: <b>{c['total']}</b> · ✅ {c['approved']} · ⏳ {c['pending']} · ⛔ {c['disq']}\n"
+        f"Легенда: ✅ подтверждён · ⏳ ждёт · ⛔ дисквал.\n"
+        f"Стр. {offset // _PAGE + 1}"
+    )
+    return header, keyboards.users_page_kb(rows, offset, total, c["pending"], _PAGE)
+
+
+def _fmt(dt) -> str:
+    return dt.astimezone(config.tz).strftime("%d.%m %H:%M") if dt else "—"
+
+
+async def _card(tg_id: int):
+    p = await db.user_detail(tg_id)
+    if p is None:
+        return None, None
+    status = "⛔ дисквалифицирован" if p["disqualified_at"] else \
+        ("✅ подтверждён" if p["approved_at"] else "⏳ ожидает подтверждения")
+    uname = f"@{escape(p['username'])}" if p["username"] else "—"
+    text = (
+        f"👤 <b>{escape(p['full_name'])}</b>\n"
+        f"🔗 {uname}\n"
+        f"🆔 <code>{p['telegram_id']}</code>\n"
+        f"🌳 Команда: <b>{escape(p['team_name'] or '—')}</b>\n"
+        f"📌 Статус: {status}\n"
+        f"🏢 Из ASR: {'да' if p['is_asr'] else 'нет'}\n"
+        f"🗓 Регистрация: {_fmt(p['created_at'])}\n"
+        f"✅ Вступил/подтверждён: {_fmt(p['approved_at'])}\n"
+        f"⭐ Баллов: <b>{await db.total_points(tg_id)}</b>"
+    )
+    return text, keyboards.user_card_kb(p)
+
+
+@router.callback_query(F.data == "adm:users")
+async def users_open(cb: CallbackQuery) -> None:
+    if not _is_admin(cb.from_user.id):
+        return await cb.answer()
+    header, kb = await _users_view(0)
+    await cb.message.answer(header, reply_markup=kb)
+    await cb.answer()
+
+
+@router.callback_query(F.data.startswith("usrpg:"))
+async def users_page(cb: CallbackQuery) -> None:
+    if not _is_admin(cb.from_user.id):
+        return await cb.answer()
+    offset = int(cb.data.split(":")[1])
+    header, kb = await _users_view(offset)
+    try:
+        await cb.message.edit_text(header, reply_markup=kb)
+    except Exception:  # noqa: BLE001
+        await cb.message.answer(header, reply_markup=kb)
+    await cb.answer()
+
+
+@router.callback_query(F.data == "adm:pending")
+async def pending_list(cb: CallbackQuery) -> None:
+    if not _is_admin(cb.from_user.id):
+        return await cb.answer()
+    rows = await db.pending_participants()
+    if not rows:
+        await cb.message.answer("⏳ Заявок на подтверждение нет ✅")
+        return await cb.answer()
+    await cb.message.answer(f"⏳ <b>Заявки на подтверждение ({len(rows)})</b>")
+    from bot import texts
+    for r in rows[:15]:
+        p = await db.get_participant(r["telegram_id"])
+        await cb.message.answer(texts.admin_new_registration(p, r["team_name"] or "—"),
+                                reply_markup=keyboards.approve_kb(r["telegram_id"]))
+    await cb.answer()
+
+
+@router.callback_query(F.data.startswith("usr:"))
+async def user_card(cb: CallbackQuery) -> None:
+    if not _is_admin(cb.from_user.id):
+        return await cb.answer()
+    text, kb = await _card(int(cb.data.split(":")[1]))
+    if text is None:
+        return await cb.answer("Участник не найден.", show_alert=True)
+    try:
+        await cb.message.edit_text(text, reply_markup=kb)
+    except Exception:  # noqa: BLE001
+        await cb.message.answer(text, reply_markup=kb)
+    await cb.answer()
+
+
+async def _refresh_card(cb: CallbackQuery, tg_id: int) -> None:
+    text, kb = await _card(tg_id)
+    if text:
+        try:
+            await cb.message.edit_text(text, reply_markup=kb)
+        except Exception:  # noqa: BLE001
+            await cb.message.answer(text, reply_markup=kb)
+
+
+@router.callback_query(F.data.startswith("usrdq:"))
+async def user_dq(cb: CallbackQuery) -> None:
+    if not _is_admin(cb.from_user.id):
+        return await cb.answer()
+    tg = int(cb.data.split(":")[1])
+    from datetime import datetime, timezone
+    await db.pool().execute("UPDATE participants SET disqualified_at=$2 WHERE telegram_id=$1",
+                            tg, datetime.now(timezone.utc))
+    await _refresh_card(cb, tg)
+    await cb.answer("Дисквалифицирован ⛔")
+
+
+@router.callback_query(F.data.startswith("usrun:"))
+async def user_un(cb: CallbackQuery) -> None:
+    if not _is_admin(cb.from_user.id):
+        return await cb.answer()
+    tg = int(cb.data.split(":")[1])
+    await db.undisqualify(tg)
+    await _refresh_card(cb, tg)
+    await cb.answer("Восстановлен ♻️")
+
+
+@router.callback_query(F.data.startswith("usrmv:"))
+async def user_move(cb: CallbackQuery, state: FSMContext) -> None:
+    if not _is_admin(cb.from_user.id):
+        return await cb.answer()
+    tg = int(cb.data.split(":")[1])
+    await state.update_data(move_target=tg)
+    teams = await db.teams_with_capacity()
+    await cb.message.answer("В какую команду перевести?",
+                            reply_markup=keyboards.teams_pick_kb(teams, "mvt"))
+    await cb.answer()
+
+
+@router.callback_query(F.data.startswith("usrdel:"))
+async def user_del(cb: CallbackQuery) -> None:
+    if not _is_admin(cb.from_user.id):
+        return await cb.answer()
+    tg = int(cb.data.split(":")[1])
+    await db.reset_participant(tg)
+    await cb.message.edit_text("🗑 Участник удалён.")
+    await cb.answer("Удалён")
+
+
 # ---- Билдер рассылки ------------------------------------------------------
 
 async def _show_builder(message: Message, state: FSMContext) -> None:

@@ -83,7 +83,50 @@ def admin_panel_kb() -> InlineKeyboardMarkup:
     b.button(text="🔀 Перевод в команду", callback_data="adm:move")
     b.button(text="✏️ Кнопки меню", callback_data="adm:labels")
     b.button(text="🎨 Иконки кнопок", callback_data="adm:icons")
+    b.button(text="👥 Пользователи", callback_data="adm:users")
     b.adjust(2)
+    return b.as_markup()
+
+
+def _status_mark(r) -> str:
+    if r["disqualified_at"]:
+        return "⛔"
+    return "✅" if r["approved_at"] else "⏳"
+
+
+def users_page_kb(rows, offset: int, total: int, pending: int, page_size: int = 8) -> InlineKeyboardMarkup:
+    b = InlineKeyboardBuilder()
+    for r in rows:
+        b.button(text=f"{_status_mark(r)} {r['full_name']} · {r['team_name'] or '—'}",
+                 callback_data=f"usr:{r['telegram_id']}")
+    b.adjust(1)
+    nav = []
+    if offset > 0:
+        nav.append(InlineKeyboardButton(text="⬅️", callback_data=f"usrpg:{max(0, offset - page_size)}"))
+    if offset + page_size < total:
+        nav.append(InlineKeyboardButton(text="➡️", callback_data=f"usrpg:{offset + page_size}"))
+    if nav:
+        b.row(*nav)
+    if pending:
+        b.row(InlineKeyboardButton(text=f"⏳ Заявки на подтверждение ({pending})",
+                                   callback_data="adm:pending"))
+    return b.as_markup()
+
+
+def user_card_kb(p) -> InlineKeyboardMarkup:
+    tg = p["telegram_id"]
+    b = InlineKeyboardBuilder()
+    if p["disqualified_at"]:
+        b.button(text="♻️ Восстановить", callback_data=f"usrun:{tg}")
+    else:
+        if not p["approved_at"]:
+            b.button(text="✅ Подтвердить", callback_data=f"appr:{tg}")
+            b.button(text="❌ Отклонить", callback_data=f"rej:{tg}")
+        b.button(text="⛔ Дисквалифицировать", callback_data=f"usrdq:{tg}")
+    b.button(text="🔀 Перевести в команду", callback_data=f"usrmv:{tg}")
+    b.button(text="🗑 Удалить", callback_data=f"usrdel:{tg}")
+    b.button(text="⬅️ К списку", callback_data="usrpg:0")
+    b.adjust(2, 1, 1, 1)
     return b.as_markup()
 
 
