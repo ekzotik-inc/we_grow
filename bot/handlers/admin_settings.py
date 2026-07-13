@@ -527,7 +527,9 @@ async def _show_builder(message: Message, state: FSMContext) -> None:
 async def start_broadcast(message: Message, state: FSMContext) -> None:
     await state.set_state(BC.text)
     await state.update_data(bc={"text": None, "media": None, "buttons": []})
-    await message.answer("Пришли <b>текст</b> рассылки (или «-» без текста). /cancel — отмена.")
+    await message.answer("Пришли <b>текст</b> рассылки (или «-» без текста).\n"
+                         "Форматируй как удобно: встроенным редактором Telegram "
+                         "(Жирный/Курсив/…) или markdown (**жирный**). /cancel — отмена.")
 
 
 @router.callback_query(F.data == "adm:broadcast")
@@ -549,7 +551,14 @@ async def cmd_broadcast(message: Message, state: FSMContext) -> None:
 async def bc_text(message: Message, state: FSMContext) -> None:
     data = await state.get_data()
     draft = data.get("bc", {})
-    draft["text"] = None if message.text.strip() == "-" else message.text
+    if message.text.strip() == "-":
+        draft["text"], draft["html"] = None, False
+    elif message.entities:
+        # Нативное форматирование Telegram (Жирный/Курсив/эмодзи) → готовый HTML.
+        draft["text"], draft["html"] = message.html_text, True
+    else:
+        # Обычный текст — поддержим markdown-разметку (**жирный** и т.п.).
+        draft["text"], draft["html"] = message.text, False
     await state.update_data(bc=draft)
     await state.set_state(None)
     await _show_builder(message, state)
@@ -648,7 +657,12 @@ def _build_markup(draft: dict) -> InlineKeyboardMarkup | None:
 
 
 def _build_text(draft: dict) -> str:
-    return textfmt.md_to_html(draft["text"]) if draft.get("text") else ""
+    if not draft.get("text"):
+        return ""
+    # Нативное форматирование уже HTML (с премиум-эмодзи) — шлём как есть.
+    if draft.get("html"):
+        return draft["text"]
+    return textfmt.md_to_html(draft["text"])
 
 
 @router.callback_query(F.data == "bc:preview")
