@@ -64,6 +64,7 @@ python -m bot.main
 - [docs/mvp-plan.md](docs/mvp-plan.md) — план сборки и что выносим во вторую итерацию
 - [docs/deploy-render.md](docs/deploy-render.md) — деплой базы на Render
 - [docs/premium-emoji.md](docs/premium-emoji.md) — премиум (кастомные) эмодзи Telegram
+- [docs/miniapp.md](docs/miniapp.md) — Mini App (Telegram Web App)
 
 ## Структура репозитория
 

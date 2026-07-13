@@ -243,3 +243,40 @@ async def top_participants(limit: int = 10) -> list[asyncpg.Record]:
             ORDER BY points DESC, p.full_name LIMIT $1""",
         limit,
     )
+
+
+# ---- Данные для Mini App -------------------------------------------------
+
+async def participant_card(tg_id: int) -> asyncpg.Record | None:
+    """Профиль участника с названием команды."""
+    return await pool().fetchrow(
+        """SELECT p.telegram_id, p.full_name, p.team_id, p.disqualified_at,
+                  t.name AS team_name
+             FROM participants p LEFT JOIN teams t ON t.id = p.team_id
+            WHERE p.telegram_id = $1""",
+        tg_id,
+    )
+
+
+async def entries_list(tg_id: int) -> list[asyncpg.Record]:
+    """Все дневные записи участника (для календаря марафона)."""
+    return await pool().fetch(
+        "SELECT entry_date, steps, points FROM daily_entries "
+        "WHERE participant_id=$1 ORDER BY entry_date",
+        tg_id,
+    )
+
+
+async def team_members(team_id: int) -> list[asyncpg.Record]:
+    """Состав команды с вкладом каждого (дневные баллы + недельные бонусы)."""
+    return await pool().fetch(
+        """SELECT p.full_name,
+                  COALESCE((SELECT sum(d.points) FROM daily_entries d
+                             WHERE d.participant_id=p.telegram_id),0)
+                + COALESCE((SELECT sum(w.bonus_points) FROM weekly_summaries w
+                             WHERE w.participant_id=p.telegram_id),0) AS points
+             FROM participants p
+            WHERE p.team_id=$1 AND p.disqualified_at IS NULL
+            ORDER BY points DESC, p.full_name""",
+        team_id,
+    )

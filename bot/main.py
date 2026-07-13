@@ -29,6 +29,14 @@ async def main() -> None:
     dp.include_router(onboarding.router)
     dp.include_router(steps.router)
 
+    # Постоянная кнопка меню открывает Mini App (если задан WEBAPP_URL).
+    if config.webapp_url:
+        from aiogram.types import MenuButtonWebApp, WebAppInfo
+        await bot.set_chat_menu_button(
+            menu_button=MenuButtonWebApp(text="Открыть", web_app=WebAppInfo(url=config.webapp_url))
+        )
+        log.info("Кнопка меню Mini App: %s", config.webapp_url)
+
     scheduler = setup_scheduler(bot)
     scheduler.start()
     log.info("Планировщик запущен")

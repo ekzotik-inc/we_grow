@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>We Grow Marathon</title>
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<style>
+  :root{
+    --bg: var(--tg-theme-bg-color, #17212b);
+    --sec: var(--tg-theme-secondary-bg-color, #232e3c);
+    --text: var(--tg-theme-text-color, #fff);
+    --hint: var(--tg-theme-hint-color, #7d8b99);
+    --accent: var(--tg-theme-button-color, #3390ec);
+    --accent-text: var(--tg-theme-button-text-color, #fff);
+    --link: var(--tg-theme-link-color, #62bcf9);
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+       background:var(--bg);color:var(--text);padding-bottom:76px}
+  .wrap{max-width:640px;margin:0 auto;padding:16px}
+  h1{font-size:20px;margin:4px 0 2px}
+  .muted{color:var(--hint);font-size:13px}
+  .card{background:var(--sec);border-radius:14px;padding:16px;margin:12px 0}
+  .row{display:flex;align-items:center;justify-content:space-between;gap:8px}
+  .stat{display:flex;gap:10px;flex-wrap:wrap}
+  .pill{background:var(--bg);border-radius:12px;padding:10px 12px;flex:1;min-width:90px;text-align:center}
+  .pill .n{font-size:22px;font-weight:700}
+  .pill .l{font-size:11px;color:var(--hint);margin-top:2px}
+  .plant{font-size:72px;text-align:center;line-height:1;margin:6px 0}
+  .stage{text-align:center;font-weight:600}
+  .prog{height:8px;background:var(--bg);border-radius:6px;overflow:hidden;margin-top:10px}
+  .prog>i{display:block;height:100%;background:var(--accent);border-radius:6px;transition:width .4s}
+  .cal{display:grid;grid-template-columns:repeat(7,1fr);gap:6px;margin-top:10px}
+  .day{aspect-ratio:1;border-radius:9px;background:var(--bg);display:flex;flex-direction:column;
+       align-items:center;justify-content:center;font-size:12px;position:relative}
+  .day small{font-size:9px;color:var(--hint)}
+  .day.p1{background:#2e5a3a}.day.p2{background:#3f7d4e}.day.p3{background:#57b06a;color:#06210d}
+  .day.today{outline:2px solid var(--accent)}
+  .day.future{opacity:.35}
+  .member{display:flex;justify-content:space-between;padding:9px 0;border-bottom:1px solid var(--bg)}
+  .member:last-child{border-bottom:none}
+  .member .pts{font-weight:700;color:var(--link)}
+  .rankbadge{font-size:34px;text-align:center}
+  .tabs{position:fixed;bottom:0;left:0;right:0;display:flex;background:var(--sec);
+        border-top:1px solid var(--bg)}
+  .tabs button{flex:1;background:none;border:none;color:var(--hint);padding:10px 4px 12px;
+        font-size:11px;display:flex;flex-direction:column;align-items:center;gap:3px;cursor:pointer}
+  .tabs button .i{font-size:20px}
+  .tabs button.active{color:var(--accent)}
+  .center{text-align:center;padding:40px 20px;color:var(--hint)}
+  .hidden{display:none}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div id="view-progress"></div>
+  <div id="view-team" class="hidden"></div>
+  <div id="view-board" class="hidden"></div>
+</div>
+
+<div class="tabs">
+  <button data-tab="progress" class="active"><span class="i">👣</span>Мой прогресс</button>
+  <button data-tab="team"><span class="i">🌳</span>Моя команда</button>
+  <button data-tab="board"><span class="i">🏆</span>Лидерборд</button>
+</div>
+
+<script>
+const tg = window.Telegram?.WebApp;
+tg?.ready(); tg?.expand();
+const INIT = tg?.initData || "";
+
+async function api(path){
+  const r = await fetch(path, {headers:{"X-Init-Data": INIT}});
+  if(!r.ok) throw new Error("api " + r.status);
+  return r.json();
+}
+const esc = s => String(s).replace(/[&<>]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;"}[c]));
+
+// --- стадии растения ---
+const STAGES = [
+  {e:"🌱", n:"Семечко"}, {e:"🌿", n:"Росток"}, {e:"🪴", n:"Кустик"},
+  {e:"🌳", n:"Дерево"}, {e:"🌸", n:"Цветение"},
+];
+function stageIndex(points, bestStreak){
+  if(bestStreak >= 7) return 4;
+  if(points >= 50) return 4;
+  if(points >= 30) return 3;
+  if(points >= 15) return 2;
+  if(points >= 5)  return 1;
+  return 0;
+}
+
+function pointClass(p){ return p>=3?"p3":p>=2?"p2":p>=1?"p1":""; }
+
+async function renderProgress(){
+  const el = document.getElementById("view-progress");
+  let d;
+  try{ d = await api("/api/me"); }catch(e){ el.innerHTML = notice(); return; }
+  if(!d.registered){ el.innerHTML = regNotice(); return; }
+
+  const si = stageIndex(d.total_points, d.best_streak);
+  const st = STAGES[si];
+  const nextAt = [5,15,30,50,9999][si];
+  const prog = Math.min(100, Math.round(d.total_points/nextAt*100));
+
+  const cal = d.calendar.map((c,i)=>{
+    const cls = ["day", pointClass(c.points), c.is_today?"today":"", c.future?"future":""].join(" ");
+    const dd = new Date(c.date).getDate();
+    return `<div class="${cls}"><b>${dd}</b>${c.points?`<small>${c.points}б</small>`:""}</div>`;
+  }).join("");
+
+  el.innerHTML = `
+    <h1>Привет, ${esc(d.full_name||"спортсмен")}! 👟</h1>
+    <div class="muted">Команда: ${esc(d.team_name||"—")}</div>
+
+    <div class="card">
+      <div class="plant">${st.e}</div>
+      <div class="stage">${st.n}</div>
+      <div class="prog"><i style="width:${prog}%"></i></div>
+      <div class="muted" style="text-align:center;margin-top:6px">
+        ${si<4?`До следующей стадии: ${d.total_points}/${nextAt} баллов`:"Максимальная стадия — так держать! 🔥"}
+      </div>
+    </div>
+
+    <div class="stat">
+      <div class="pill"><div class="n">${d.total_points}</div><div class="l">Всего баллов</div></div>
+      <div class="pill"><div class="n">${d.current_streak}🔥</div><div class="l">Серия дней</div></div>
+      <div class="pill"><div class="n">${d.today_done?"✅":"—"}</div><div class="l">Сегодня</div></div>
+    </div>
+
+    <div class="card">
+      <div class="row"><b>📅 Календарь марафона</b><span class="muted">17.07 – 07.08</span></div>
+      <div class="cal">${cal}</div>
+    </div>`;
+}
+
+async function renderTeam(){
+  const el = document.getElementById("view-team");
+  let d;
+  try{ d = await api("/api/team"); }catch(e){ el.innerHTML = notice(); return; }
+  if(!d.registered){ el.innerHTML = regNotice(); return; }
+  const medals = ["🥇","🥈","🥉"];
+  const rows = d.members.map((m,i)=>`
+    <div class="member"><span>${medals[i]||(i+1)+"."} ${esc(m.name)}</span>
+    <span class="pts">${m.points}</span></div>`).join("");
+  el.innerHTML = `
+    <h1>🌳 ${esc(d.team_name)}</h1>
+    <div class="card">
+      <div class="rankbadge">${d.rank?`#${d.rank}`:"—"} <span class="muted" style="font-size:14px">из ${d.teams_count}</span></div>
+      <div class="stat" style="margin-top:8px">
+        <div class="pill"><div class="n">${d.total_points}</div><div class="l">Баллов команды</div></div>
+        <div class="pill"><div class="n">${d.members.length}</div><div class="l">Участников</div></div>
+      </div>
+    </div>
+    <div class="card"><b>👥 Вклад участников</b>${rows}</div>`;
+}
+
+async function renderBoard(){
+  const el = document.getElementById("view-board");
+  let d;
+  try{ d = await api("/api/leaderboard"); }catch(e){ el.innerHTML = notice(); return; }
+  const medals = ["🥇","🥈","🥉"];
+  const teams = d.teams.map((t,i)=>`
+    <div class="member"><span>${medals[i]||(i+1)+"."} ${esc(t.name)}</span>
+    <span class="pts">${t.points}</span></div>`).join("");
+  const top = d.top.map((p,i)=>`
+    <div class="member"><span>${medals[i]||(i+1)+"."} ${esc(p.name)}</span>
+    <span class="pts">${p.points}</span></div>`).join("");
+  el.innerHTML = `
+    <h1>🏆 Лидерборд</h1>
+    <div class="card"><b>Команды</b>${teams||'<div class="muted">Пока пусто</div>'}</div>
+    <div class="card"><b>👣 Топ-10 участников</b>${top||'<div class="muted">Пока пусто</div>'}</div>`;
+}
+
+function regNotice(){
+  return `<div class="center">Ты ещё не зарегистрирован в марафоне.<br><br>
+    Открой бота и нажми <b>/start</b>, чтобы начать 🌱</div>`;
+}
+function notice(){
+  return `<div class="center">Открой это мини-приложение из бота We Grow Marathon 🌱<br><br>
+    (данные подгружаются через Telegram)</div>`;
+}
+
+// --- табы ---
+const views = {progress:renderProgress, team:renderTeam, board:renderBoard};
+const loaded = {};
+function show(tab){
+  for(const t of ["progress","team","board"]){
+    document.getElementById("view-"+t).classList.toggle("hidden", t!==tab);
+  }
+  document.querySelectorAll(".tabs button").forEach(b=>b.classList.toggle("active", b.dataset.tab===tab));
+  if(!loaded[tab]){ loaded[tab]=true; views[tab](); }
+}
+document.querySelectorAll(".tabs button").forEach(b=>{
+  b.addEventListener("click", ()=>show(b.dataset.tab));
+});
+show("progress");
+</script>
+</body>
+</html>

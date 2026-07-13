@@ -21,6 +21,7 @@ class Config:
     database_url: str = os.getenv("DATABASE_URL", "postgresql://wegrow:wegrow@localhost:5432/wegrow")
     admin_ids: frozenset[int] = field(default_factory=lambda: frozenset(_admin_ids()))
     tz_name: str = os.getenv("TZ", "Europe/Moscow")
+    webapp_url: str = os.getenv("WEBAPP_URL", "").strip()
 
     @property
     def tz(self) -> ZoneInfo:

@@ -26,3 +26,24 @@ services:
         sync: false
       - key: TZ
         value: Europe/Moscow
+      - key: WEBAPP_URL       # адрес wegrow-webapp (см. ниже), напр. https://wegrow-webapp.onrender.com
+        sync: false
+      - key: PREMIUM_EMOJI    # true, если у владельца бота есть Telegram Premium
+        sync: false
+
+  # Mini App: API + статичный фронтенд (табы прогресс/команда/лидерборд).
+  - type: web
+    name: wegrow-webapp
+    runtime: python
+    region: oregon
+    plan: free                # веб-сервис можно на free (засыпает при простое)
+    branch: claude/laughing-babbage-2tyt1p
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn webapp.server:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: DATABASE_URL     # тот же Internal Database URL базы test_bd
+        sync: false
+      - key: BOT_TOKEN        # тот же токен — нужен для проверки initData
+        sync: false
+      - key: TZ
+        value: Europe/Moscow
