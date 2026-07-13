@@ -12,6 +12,36 @@ from bot.config import config
 from bot.handlers import admin, onboarding, steps
 from bot.scheduler import setup_scheduler
 
+# Списки команд (меню «/»). Разные для участников и админов через scopes.
+USER_COMMANDS = [
+    ("start", "Регистрация / главное меню"),
+    ("rules", "Правила марафона"),
+    ("help", "Как участвовать"),
+    ("reset", "Сбросить регистрацию"),
+]
+ADMIN_EXTRA = [
+    ("leaderboard", "Лидерборд"),
+    ("stats", "Вовлечённость за день"),
+    ("broadcast", "Рассылка участникам"),
+    ("dq", "Дисквалификация: /dq ID"),
+    ("emojiid", "Получить emoji-id"),
+]
+
+
+async def _setup_commands(bot: Bot) -> None:
+    from aiogram.types import BotCommand, BotCommandScopeChat, BotCommandScopeDefault
+
+    def cmds(pairs):
+        return [BotCommand(command=c, description=d) for c, d in pairs]
+
+    await bot.set_my_commands(cmds(USER_COMMANDS), scope=BotCommandScopeDefault())
+    for admin_id in config.admin_ids:
+        try:
+            await bot.set_my_commands(cmds(USER_COMMANDS + ADMIN_EXTRA),
+                                      scope=BotCommandScopeChat(chat_id=admin_id))
+        except Exception as e:  # noqa: BLE001 — админ мог не нажимать /start
+            log.warning("commands for admin %s: %s", admin_id, e)
+
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
 log = logging.getLogger("wegrow")
 
@@ -36,6 +66,9 @@ async def main() -> None:
             menu_button=MenuButtonWebApp(text="Открыть", web_app=WebAppInfo(url=config.webapp_url))
         )
         log.info("Кнопка меню Mini App: %s", config.webapp_url)
+
+    await _setup_commands(bot)
+    log.info("Команды меню настроены")
 
     scheduler = setup_scheduler(bot)
     scheduler.start()

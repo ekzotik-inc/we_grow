@@ -7,10 +7,12 @@ from aiogram.types import (
     InlineKeyboardMarkup,
     KeyboardButton,
     ReplyKeyboardMarkup,
+    WebAppInfo,
 )
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 
 from bot import texts
+from bot.config import config
 
 
 def consent_kb() -> InlineKeyboardMarkup:
@@ -35,11 +37,31 @@ def teams_kb(teams: list[asyncpg.Record]) -> InlineKeyboardMarkup:
     return b.as_markup()
 
 
-def main_kb() -> ReplyKeyboardMarkup:
-    return ReplyKeyboardMarkup(
-        keyboard=[[KeyboardButton(text=texts.STEPS_BUTTON)]],
-        resize_keyboard=True,
-    )
+def main_kb(is_admin: bool = False) -> ReplyKeyboardMarkup:
+    """Главное reply-меню. Мой прогресс/Лидерборд открывают Mini App, если задан URL."""
+    def wa(text: str) -> KeyboardButton:
+        if config.webapp_url:
+            return KeyboardButton(text=text, web_app=WebAppInfo(url=config.webapp_url))
+        return KeyboardButton(text=text)
+
+    rows = [
+        [KeyboardButton(text=texts.STEPS_BUTTON)],
+        [wa(texts.MENU_PROGRESS), wa(texts.MENU_BOARD)],
+        [KeyboardButton(text=texts.MENU_RULES), KeyboardButton(text=texts.MENU_HELP)],
+    ]
+    if is_admin:
+        rows.append([KeyboardButton(text=texts.MENU_ADMIN)])
+    return ReplyKeyboardMarkup(keyboard=rows, resize_keyboard=True)
+
+
+def admin_panel_kb() -> InlineKeyboardMarkup:
+    b = InlineKeyboardBuilder()
+    b.button(text="🏆 Лидерборд", callback_data="adm:board")
+    b.button(text="📣 Рассылка", callback_data="adm:broadcast")
+    b.button(text="🔎 На проверку", callback_data="adm:review")
+    b.button(text="📊 Вовлечённость", callback_data="adm:stats")
+    b.adjust(2)
+    return b.as_markup()
 
 
 def confirm_steps_kb(steps: int) -> InlineKeyboardMarkup:

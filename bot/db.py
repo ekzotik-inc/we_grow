@@ -245,6 +245,32 @@ async def top_participants(limit: int = 10) -> list[asyncpg.Record]:
     )
 
 
+# ---- Данные для админ-панели ---------------------------------------------
+
+async def pending_reviews(limit: int = 10) -> list[asyncpg.Record]:
+    """Записи, помеченные на проверку P&C (>30k, расхождения)."""
+    return await pool().fetch(
+        """SELECT d.entry_date, d.steps, p.full_name, d.participant_id
+             FROM daily_entries d JOIN participants p ON p.telegram_id=d.participant_id
+            WHERE d.needs_review ORDER BY d.entry_date DESC, d.id DESC LIMIT $1""",
+        limit,
+    )
+
+
+async def engagement(day: date) -> tuple[int, int]:
+    """(сдали сегодня, всего активных) для сводки вовлечённости."""
+    active = await pool().fetchval(
+        "SELECT count(*) FROM participants WHERE consent_at IS NOT NULL AND disqualified_at IS NULL"
+    )
+    submitted = await pool().fetchval(
+        """SELECT count(DISTINCT d.participant_id) FROM daily_entries d
+             JOIN participants p ON p.telegram_id=d.participant_id
+            WHERE d.entry_date=$1 AND p.disqualified_at IS NULL""",
+        day,
+    )
+    return int(submitted), int(active)
+
+
 # ---- Данные для Mini App -------------------------------------------------
 
 async def participant_card(tg_id: int) -> asyncpg.Record | None:

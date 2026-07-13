@@ -9,9 +9,9 @@ from aiogram import F, Router
 from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
-from aiogram.types import Message
+from aiogram.types import CallbackQuery, Message
 
-from bot import db, notify
+from bot import db, keyboards, notify, texts
 from bot.config import config
 from bot.premium_emoji import pe
 
@@ -20,6 +20,73 @@ router = Router()
 
 def _is_admin(tg_id: int) -> bool:
     return tg_id in config.admin_ids
+
+
+@router.message(F.text == texts.MENU_ADMIN)
+async def admin_panel(message: Message) -> None:
+    if not _is_admin(message.from_user.id):
+        return
+    await message.answer(texts.ADMIN_PANEL, reply_markup=keyboards.admin_panel_kb())
+
+
+@router.callback_query(F.data == "adm:board")
+async def adm_board(cb: CallbackQuery) -> None:
+    if not _is_admin(cb.from_user.id):
+        return await cb.answer()
+    teams = await db.team_leaderboard()
+    top = await db.top_participants(10)
+    await cb.message.answer(texts.render_leaderboard(teams, top, top_title="Топ-10 участников"))
+    await cb.answer()
+
+
+@router.callback_query(F.data == "adm:broadcast")
+async def adm_broadcast(cb: CallbackQuery, state: FSMContext) -> None:
+    if not _is_admin(cb.from_user.id):
+        return await cb.answer()
+    await cb.message.answer("Напиши текст рассылки одним сообщением (или /cancel).")
+    await state.set_state(Broadcast.text)
+    await cb.answer()
+
+
+@router.callback_query(F.data == "adm:review")
+async def adm_review(cb: CallbackQuery) -> None:
+    if not _is_admin(cb.from_user.id):
+        return await cb.answer()
+    rows = await db.pending_reviews(10)
+    if not rows:
+        await cb.message.answer("🔎 На проверку ничего нет — все чисто ✅")
+    else:
+        lines = ["🔎 <b>На проверку P&amp;C</b>"]
+        for r in rows:
+            lines.append(f"• {r['entry_date']}: {escape(r['full_name'])} — "
+                         f"<b>{r['steps']}</b> шагов (/dq {r['participant_id']})")
+        await cb.message.answer("\n".join(lines))
+    await cb.answer()
+
+
+async def _stats_text() -> str:
+    day = datetime.now(config.tz).date()
+    submitted, active = await db.engagement(day)
+    pct = round(submitted / active * 100) if active else 0
+    return (
+        f"📊 <b>Вовлечённость за {day}</b>\n"
+        f"<blockquote>Сдали шаги: <b>{submitted}</b> из <b>{active}</b> ({pct}%)</blockquote>"
+    )
+
+
+@router.callback_query(F.data == "adm:stats")
+async def adm_stats(cb: CallbackQuery) -> None:
+    if not _is_admin(cb.from_user.id):
+        return await cb.answer()
+    await cb.message.answer(await _stats_text())
+    await cb.answer()
+
+
+@router.message(Command("stats"))
+async def cmd_stats(message: Message) -> None:
+    if not _is_admin(message.from_user.id):
+        return
+    await message.answer(await _stats_text())
 
 
 class Broadcast(StatesGroup):

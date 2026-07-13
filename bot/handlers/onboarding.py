@@ -37,15 +37,41 @@ async def cmd_start(message: Message, state: FSMContext) -> None:
     if tg_id in config.admin_ids:
         await db.set_role(tg_id, "admin")
 
+    is_admin = tg_id in config.admin_ids
     p = await db.get_participant(tg_id)
     if p and p["consent_at"] and p["team_id"]:
-        await message.answer("С возвращением! Жми «Шаги за сегодня» 🌱",
-                             reply_markup=keyboards.main_kb())
+        await message.answer("С возвращением, чемпион! 👟 Готов к новым шагам?",
+                             reply_markup=keyboards.main_kb(is_admin))
         return
 
     await message.answer(texts.WELCOME)
     await message.answer(texts.RULES, disable_web_page_preview=True,
                          reply_markup=keyboards.consent_kb())
+
+
+@router.message(Command("rules"))
+@router.message(F.text == texts.MENU_RULES)
+async def cmd_rules(message: Message) -> None:
+    await message.answer(texts.RULES, disable_web_page_preview=True)
+
+
+@router.message(Command("help"))
+@router.message(F.text == texts.MENU_HELP)
+async def cmd_help(message: Message) -> None:
+    await message.answer(texts.HELP, disable_web_page_preview=True)
+
+
+@router.message(F.text == texts.MENU_BOARD)
+async def menu_board(message: Message) -> None:
+    # Фолбэк, если Mini App недоступен: лидерборд прямо в чате.
+    teams = await db.team_leaderboard()
+    top = await db.top_participants(10)
+    await message.answer(texts.render_leaderboard(teams, top, top_title="Топ-10 участников"))
+
+
+@router.message(F.text == texts.MENU_PROGRESS)
+async def menu_progress(message: Message) -> None:
+    await message.answer("📊 Открой «Мой прогресс» кнопкой меню слева от поля ввода 🌱")
 
 
 @router.message(Command("reset"))
@@ -128,7 +154,7 @@ async def on_team(cb: CallbackQuery, state: FSMContext) -> None:
     await db.set_team(cb.from_user.id, team["id"])
     await cb.message.edit_reply_markup(reply_markup=None)
     await cb.message.answer(texts.ONBOARDED.format(team=team["name"]),
-                            reply_markup=keyboards.main_kb())
+                            reply_markup=keyboards.main_kb(cb.from_user.id in config.admin_ids))
     await state.clear()
     await cb.answer()
 
