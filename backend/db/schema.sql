@@ -1,4 +1,4 @@
--- We Grow — схема БД (PostgreSQL). MVP.
+-- We Grow Marathon — схема БД (PostgreSQL). MVP.
 -- Времена дней считаются в TZ марафона (см. backend/config).
 
 CREATE TABLE teams (
