@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 from datetime import datetime, timedelta
+from html import escape
 
 from aiogram import Bot
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
@@ -32,20 +33,20 @@ async def award_weekly_bonuses(bot: Bot) -> None:
         bonus = weekly_streak_bonus(steps)
         await db.award_weekly_bonus(tg_id, monday, bonus, sum(steps))
         if bonus:
-            await notify.broadcast(bot, [tg_id], texts.weekly_bonus_note(bonus), parse_mode="Markdown")
+            await notify.broadcast(bot, [tg_id], texts.weekly_bonus_note(bonus))
 
 
 async def monday_leaderboard(bot: Bot) -> None:
     """Пн 10:00 — итоги недели: топ-3 команд и топ-3 участников."""
     teams = await db.team_leaderboard()
     top = await db.top_participants(3)
-    lines = [f"{texts.GROW} *Итоги недели*", "", "🏆 Команды:"]
+    lines = [f"{texts.GROW} <b>Итоги недели</b>", "", "🏆 Команды:"]
     for i, t in enumerate(teams[:3], 1):
-        lines.append(f"{i}. {t['name']} — {t['points']}")
+        lines.append(f"{i}. {escape(t['name'])} — {t['points']}")
     lines.append("\n👟 Участники:")
     for i, p in enumerate(top, 1):
-        lines.append(f"{i}. {p['full_name'] or '—'} — {p['points']}")
-    await notify.broadcast_all(bot, "\n".join(lines), parse_mode="Markdown")
+        lines.append(f"{i}. {escape(p['full_name'] or '—')} — {p['points']}")
+    await notify.broadcast_all(bot, "\n".join(lines))
 
 
 def setup_scheduler(bot: Bot) -> AsyncIOScheduler:

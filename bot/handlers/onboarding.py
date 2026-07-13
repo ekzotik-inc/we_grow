@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import random
+from html import escape
 
 from aiogram import F, Router
 from aiogram.filters import Command, CommandStart
@@ -42,7 +43,7 @@ async def cmd_start(message: Message, state: FSMContext) -> None:
                              reply_markup=keyboards.main_kb())
         return
 
-    await message.answer(texts.WELCOME, parse_mode="Markdown")
+    await message.answer(texts.WELCOME)
     await message.answer(texts.RULES, disable_web_page_preview=True,
                          reply_markup=keyboards.consent_kb())
 
@@ -57,7 +58,7 @@ async def cmd_reset(message: Message, state: FSMContext) -> None:
         InlineKeyboardButton(text=texts.RESET_YES, callback_data="reset_yes"),
         InlineKeyboardButton(text=texts.RESET_NO, callback_data="reset_no"),
     ]])
-    await message.answer(texts.RESET_CONFIRM, parse_mode="Markdown", reply_markup=kb)
+    await message.answer(texts.RESET_CONFIRM, reply_markup=kb)
 
 
 @router.callback_query(F.data == "reset_no")
@@ -127,11 +128,11 @@ async def on_team(cb: CallbackQuery, state: FSMContext) -> None:
     await db.set_team(cb.from_user.id, team["id"])
     await cb.message.edit_reply_markup(reply_markup=None)
     await cb.message.answer(texts.ONBOARDED.format(team=team["name"]),
-                            parse_mode="Markdown", reply_markup=keyboards.main_kb())
+                            reply_markup=keyboards.main_kb())
     await state.clear()
     await cb.answer()
 
     # Уведомляем P&C о новой регистрации.
     from bot.notify import notify_admins
     p = await db.get_participant(cb.from_user.id)
-    await notify_admins(cb.bot, f"🆕 Регистрация: {p['full_name']} → команда {team['name']}")
+    await notify_admins(cb.bot, f"🆕 Регистрация: {escape(p['full_name'])} → команда {team['name']}")

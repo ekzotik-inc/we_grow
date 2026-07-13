@@ -5,6 +5,7 @@ import asyncio
 import logging
 
 from aiogram import Bot, Dispatcher
+from aiogram.client.default import DefaultBotProperties
 
 from bot import db
 from bot.config import config
@@ -20,7 +21,8 @@ async def main() -> None:
     await db.connect(config.database_url)
     log.info("БД подключена, схема применена")
 
-    bot = Bot(config.bot_token)
+    # HTML по умолчанию — нужно для премиум-эмодзи (<tg-emoji>) и <b>.
+    bot = Bot(config.bot_token, default=DefaultBotProperties(parse_mode="HTML"))
     dp = Dispatcher()
     # Порядок важен: admin-команды и онбординг раньше общего приёма шагов.
     dp.include_router(admin.router)
