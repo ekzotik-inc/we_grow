@@ -1,6 +1,11 @@
 -- We Grow Marathon — схема БД (PostgreSQL). MVP.
 -- Идемпотентна: можно применять повторно.
 -- Времена дней считаются в TZ марафона (см. bot/config.py).
+--
+-- Все объекты живут в отдельной схеме wegrow, чтобы безопасно сосуществовать
+-- с другими проектами в той же базе (напр. общая free-база Render).
+CREATE SCHEMA IF NOT EXISTS wegrow;
+SET search_path TO wegrow;
 
 CREATE TABLE IF NOT EXISTS teams (
     id       serial PRIMARY KEY,

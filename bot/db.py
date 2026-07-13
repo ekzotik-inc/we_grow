@@ -33,7 +33,12 @@ def _ssl_for(dsn: str):
 
 async def connect(dsn: str) -> None:
     global _pool
-    _pool = await asyncpg.create_pool(dsn, min_size=1, max_size=10, ssl=_ssl_for(dsn))
+    # search_path=wegrow — все запросы работают внутри нашей схемы, изолированно
+    # от прочих объектов базы. Схему создаёт schema.sql ниже.
+    _pool = await asyncpg.create_pool(
+        dsn, min_size=1, max_size=10, ssl=_ssl_for(dsn),
+        server_settings={"search_path": "wegrow"},
+    )
     # Идемпотентная схема — применяем на старте, чтобы бот поднимался «из коробки».
     async with _pool.acquire() as conn:
         await conn.execute(_SCHEMA.read_text(encoding="utf-8"))
