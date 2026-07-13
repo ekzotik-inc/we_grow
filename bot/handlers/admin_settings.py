@@ -15,7 +15,7 @@ from aiogram.types import (
     Message,
 )
 
-from bot import db, keyboards, notify, settings, textfmt
+from bot import db, keyboards, notify, premium_emoji, settings, textfmt
 from bot.config import config
 
 router = Router()
@@ -34,6 +34,10 @@ class Move(StatesGroup):
 
 
 class Labels(StatesGroup):
+    waiting = State()
+
+
+class Icons(StatesGroup):
     waiting = State()
 
 
@@ -178,6 +182,71 @@ async def labels_save(message: Message, state: FSMContext) -> None:
         return
     await settings.set(f"label_{name}", message.text.strip())
     await message.answer(f"Кнопка обновлена: {escape(message.text.strip())} ✅ (обновится при /start)")
+
+
+# ---- Премиум-иконки кнопок (Bot API 9.4) ----------------------------------
+
+@router.callback_query(F.data == "adm:icons")
+async def icons_start(cb: CallbackQuery) -> None:
+    if not _is_admin(cb.from_user.id):
+        return await cb.answer()
+    note = "" if premium_emoji.ENABLED else \
+        "\n⚠️ PREMIUM_EMOJI выключен — иконки не будут показаны, пока не включишь."
+    await cb.message.answer("🎨 Для какой кнопки задать премиум-иконку?" + note,
+                            reply_markup=keyboards.icons_pick_kb())
+    await cb.answer()
+
+
+@router.callback_query(F.data == "ico:reset")
+async def icons_reset(cb: CallbackQuery) -> None:
+    if not _is_admin(cb.from_user.id):
+        return await cb.answer()
+    for name in settings.DEFAULT_LABELS:
+        await settings.set(f"icon_{name}", None)
+    await cb.message.edit_text("Иконки кнопок убраны ✅ (обновится при /start)")
+    await cb.answer()
+
+
+@router.callback_query(F.data.startswith("ico:"))
+async def icons_pick(cb: CallbackQuery, state: FSMContext) -> None:
+    if not _is_admin(cb.from_user.id):
+        return await cb.answer()
+    name = cb.data.split(":")[1]
+    if name not in settings.DEFAULT_LABELS:
+        return await cb.answer()
+    await state.set_state(Icons.waiting)
+    await state.update_data(icon_name=name)
+    await cb.message.answer(
+        f"Пришли <b>премиум-эмодзи</b> для кнопки «{settings.label(name)}» "
+        "(нужен Telegram Premium у отправителя). «-» — убрать иконку. /cancel — отмена."
+    )
+    await cb.answer()
+
+
+@router.message(Icons.waiting, F.text == "-")
+async def icons_clear(message: Message, state: FSMContext) -> None:
+    data = await state.get_data()
+    await state.clear()
+    name = data.get("icon_name")
+    if name:
+        await settings.set(f"icon_{name}", None)
+    await message.answer("Иконка убрана ✅ (обновится при /start)")
+
+
+@router.message(Icons.waiting)
+async def icons_save(message: Message, state: FSMContext) -> None:
+    data = await state.get_data()
+    name = data.get("icon_name")
+    entities = message.entities or message.caption_entities or []
+    cid = next((e.custom_emoji_id for e in entities
+                if e.type == "custom_emoji" and e.custom_emoji_id), None)
+    if not cid:
+        await message.answer("Не вижу премиум-эмодзи. Пришли именно кастомный эмодзи "
+                             "(нужен Telegram Premium) или «-» чтобы убрать.")
+        return
+    await state.clear()
+    await settings.set(f"icon_{name}", cid)
+    await message.answer("Иконка кнопки сохранена ✅ (обновится при /start)")
 
 
 # ---- Билдер рассылки ------------------------------------------------------

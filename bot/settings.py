@@ -43,6 +43,11 @@ def label(name: str) -> str:
     return _cache.get(f"label_{name}") or DEFAULT_LABELS[name]
 
 
+def icon(name: str) -> str | None:
+    """custom_emoji_id иконки кнопки (Bot API 9.4). None — без иконки."""
+    return _cache.get(f"icon_{name}")
+
+
 def all_labels() -> dict[str, str]:
     return {name: label(name) for name in DEFAULT_LABELS}
 

@@ -11,7 +11,7 @@ from aiogram.types import (
 )
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 
-from bot import settings, texts
+from bot import premium_emoji, settings, texts
 from bot.config import config
 
 
@@ -37,15 +37,21 @@ def teams_kb(teams: list[asyncpg.Record]) -> InlineKeyboardMarkup:
     return b.as_markup()
 
 
+def _mbtn(name: str) -> KeyboardButton:
+    """Кнопка меню: подпись из настроек + премиум-иконка (Bot API 9.4),
+    если премиум включён и иконка задана (иначе Telegram отклонит)."""
+    icon = settings.icon(name) if premium_emoji.ENABLED else None
+    return KeyboardButton(text=settings.label(name), icon_custom_emoji_id=icon)
+
+
 def main_kb() -> ReplyKeyboardMarkup:
-    """Главное reply-меню участника. Подписи кнопок берутся из настроек
-    (переименовываются через /admin). Админ-функции — по команде /admin."""
-    L = settings.label
+    """Главное reply-меню участника. Подписи и иконки кнопок — из настроек
+    (меняются через /admin). Админ-функции — по команде /admin."""
     return ReplyKeyboardMarkup(
         keyboard=[
-            [KeyboardButton(text=L("steps"))],
-            [KeyboardButton(text=L("progress")), KeyboardButton(text=L("board"))],
-            [KeyboardButton(text=L("rules")), KeyboardButton(text=L("help"))],
+            [_mbtn("steps")],
+            [_mbtn("progress"), _mbtn("board")],
+            [_mbtn("rules"), _mbtn("help")],
         ],
         resize_keyboard=True,
     )
@@ -76,6 +82,7 @@ def admin_panel_kb() -> InlineKeyboardMarkup:
     b.button(text="🖼 Медиа меню", callback_data="adm:media")
     b.button(text="🔀 Перевод в команду", callback_data="adm:move")
     b.button(text="✏️ Кнопки меню", callback_data="adm:labels")
+    b.button(text="🎨 Иконки кнопок", callback_data="adm:icons")
     b.adjust(2)
     return b.as_markup()
 
@@ -118,6 +125,16 @@ def labels_pick_kb() -> InlineKeyboardMarkup:
     for name, cur in settings.all_labels().items():
         b.button(text=cur, callback_data=f"lbl:{name}")
     b.button(text="↩️ Сбросить к стандартным", callback_data="lbl:reset")
+    b.adjust(1)
+    return b.as_markup()
+
+
+def icons_pick_kb() -> InlineKeyboardMarkup:
+    b = InlineKeyboardBuilder()
+    for name in settings.DEFAULT_LABELS:
+        mark = "🎨" if settings.icon(name) else "▫️"
+        b.button(text=f"{mark} {settings.label(name)}", callback_data=f"ico:{name}")
+    b.button(text="↩️ Убрать все иконки", callback_data="ico:reset")
     b.adjust(1)
     return b.as_markup()
 
