@@ -122,11 +122,4 @@ async def disqualify(message: Message) -> None:
 async def leaderboard(message: Message) -> None:
     teams = await db.team_leaderboard()
     top = await db.top_participants(10)
-    lines = [f"{pe('📊')} <b>Команды:</b>"]
-    for i, t in enumerate(teams, 1):
-        prefix = pe("👑") if i == 1 else f"{i}."
-        lines.append(f"{prefix} {escape(t['name'])} — {t['points']}")
-    lines.append(f"\n{pe('👣')} <b>Топ участников:</b>")
-    for i, p in enumerate(top, 1):
-        lines.append(f"{i}. {escape(p['full_name'] or '—')} — {p['points']}")
-    await message.answer("\n".join(lines))
+    await message.answer(render_leaderboard(teams, top, top_title="Топ участников"))
