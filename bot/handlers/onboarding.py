@@ -63,15 +63,22 @@ async def cmd_help(message: Message) -> None:
 
 @router.message(F.text == texts.MENU_BOARD)
 async def menu_board(message: Message) -> None:
-    # Фолбэк, если Mini App недоступен: лидерборд прямо в чате.
+    # Лидерборд прямо в чате + inline-кнопка открыть в приложении.
     teams = await db.team_leaderboard()
     top = await db.top_participants(10)
-    await message.answer(texts.render_leaderboard(teams, top, top_title="Топ-10 участников"))
+    await message.answer(
+        texts.render_leaderboard(teams, top, top_title="Топ-10 участников"),
+        reply_markup=keyboards.open_app_kb("🏆 Открыть лидерборд"),
+    )
 
 
 @router.message(F.text == texts.MENU_PROGRESS)
 async def menu_progress(message: Message) -> None:
-    await message.answer("📊 Открой «Мой прогресс» кнопкой меню слева от поля ввода 🌱")
+    kb = keyboards.open_app_kb("📊 Открыть мой прогресс")
+    if kb:
+        await message.answer("Твой прогресс, растение и календарь — в приложении 👇", reply_markup=kb)
+    else:
+        await message.answer("📊 Открой приложение кнопкой меню слева от поля ввода 🌱")
 
 
 @router.message(Command("reset"))

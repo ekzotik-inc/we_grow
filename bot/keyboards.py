@@ -38,20 +38,25 @@ def teams_kb(teams: list[asyncpg.Record]) -> InlineKeyboardMarkup:
 
 
 def main_kb(is_admin: bool = False) -> ReplyKeyboardMarkup:
-    """Главное reply-меню. Мой прогресс/Лидерборд открывают Mini App, если задан URL."""
-    def wa(text: str) -> KeyboardButton:
-        if config.webapp_url:
-            return KeyboardButton(text=text, web_app=WebAppInfo(url=config.webapp_url))
-        return KeyboardButton(text=text)
-
+    """Главное reply-меню. Обычные кнопки — Mini App открываем inline-кнопкой,
+    т.к. reply-клавиатурные web_app в части клиентов отдают пустой initData."""
     rows = [
         [KeyboardButton(text=texts.STEPS_BUTTON)],
-        [wa(texts.MENU_PROGRESS), wa(texts.MENU_BOARD)],
+        [KeyboardButton(text=texts.MENU_PROGRESS), KeyboardButton(text=texts.MENU_BOARD)],
         [KeyboardButton(text=texts.MENU_RULES), KeyboardButton(text=texts.MENU_HELP)],
     ]
     if is_admin:
         rows.append([KeyboardButton(text=texts.MENU_ADMIN)])
     return ReplyKeyboardMarkup(keyboard=rows, resize_keyboard=True)
+
+
+def open_app_kb(text: str = "🌱 Открыть приложение") -> InlineKeyboardMarkup | None:
+    """Inline-кнопка, открывающая Mini App с корректным initData."""
+    if not config.webapp_url:
+        return None
+    return InlineKeyboardMarkup(inline_keyboard=[[
+        InlineKeyboardButton(text=text, web_app=WebAppInfo(url=config.webapp_url))
+    ]])
 
 
 def admin_panel_kb() -> InlineKeyboardMarkup:
