@@ -86,10 +86,10 @@ async def set_consent(tg_id: int) -> None:
     )
 
 
-async def set_profile(tg_id: int, full_name: str, is_asr: bool) -> None:
+async def set_profile(tg_id: int, full_name: str, is_asr: bool, username: str | None = None) -> None:
     await pool().execute(
-        "UPDATE participants SET full_name=$2, is_asr=$3 WHERE telegram_id=$1",
-        tg_id, full_name, is_asr,
+        "UPDATE participants SET full_name=$2, is_asr=$3, username=$4 WHERE telegram_id=$1",
+        tg_id, full_name, is_asr, username,
     )
 
 
@@ -105,9 +105,18 @@ async def set_role(tg_id: int, role: str) -> None:
     )
 
 
+async def set_approved(tg_id: int) -> None:
+    await pool().execute(
+        "UPDATE participants SET approved_at=$2 WHERE telegram_id=$1",
+        tg_id, datetime.now(timezone.utc),
+    )
+
+
 async def all_active_ids() -> list[int]:
+    """ID подтверждённых, не дисквалифицированных участников (для рассылок)."""
     rows = await pool().fetch(
-        "SELECT telegram_id FROM participants WHERE consent_at IS NOT NULL"
+        "SELECT telegram_id FROM participants "
+        "WHERE approved_at IS NOT NULL AND disqualified_at IS NULL"
     )
     return [r["telegram_id"] for r in rows]
 
@@ -205,7 +214,7 @@ async def total_points(tg_id: int) -> int:
 async def ids_without_entry_today(day: date) -> list[int]:
     rows = await pool().fetch(
         """SELECT p.telegram_id FROM participants p
-            WHERE p.consent_at IS NOT NULL AND p.disqualified_at IS NULL
+            WHERE p.approved_at IS NOT NULL AND p.disqualified_at IS NULL
               AND NOT EXISTS (
                   SELECT 1 FROM daily_entries d
                    WHERE d.participant_id = p.telegram_id AND d.entry_date = $1)""",
@@ -223,7 +232,8 @@ async def team_leaderboard() -> list[asyncpg.Record]:
         """SELECT t.name,
                   COALESCE((SELECT sum(d.points) FROM daily_entries d
                               JOIN participants p ON p.telegram_id=d.participant_id
-                             WHERE p.team_id=t.id AND p.disqualified_at IS NULL),0)
+                             WHERE p.team_id=t.id AND p.approved_at IS NOT NULL
+                               AND p.disqualified_at IS NULL),0)
                 + COALESCE((SELECT sum(w.bonus_points) FROM weekly_summaries w
                               JOIN participants p ON p.telegram_id=w.participant_id
                              WHERE p.team_id=t.id AND p.disqualified_at IS NULL),0) AS points
@@ -239,7 +249,7 @@ async def top_participants(limit: int = 10) -> list[asyncpg.Record]:
                 + COALESCE((SELECT sum(w.bonus_points) FROM weekly_summaries w
                              WHERE w.participant_id=p.telegram_id),0) AS points
              FROM participants p
-            WHERE p.disqualified_at IS NULL AND p.consent_at IS NOT NULL
+            WHERE p.disqualified_at IS NULL AND p.approved_at IS NOT NULL
             ORDER BY points DESC, p.full_name LIMIT $1""",
         limit,
     )
@@ -260,12 +270,12 @@ async def pending_reviews(limit: int = 10) -> list[asyncpg.Record]:
 async def engagement(day: date) -> tuple[int, int]:
     """(сдали сегодня, всего активных) для сводки вовлечённости."""
     active = await pool().fetchval(
-        "SELECT count(*) FROM participants WHERE consent_at IS NOT NULL AND disqualified_at IS NULL"
+        "SELECT count(*) FROM participants WHERE approved_at IS NOT NULL AND disqualified_at IS NULL"
     )
     submitted = await pool().fetchval(
         """SELECT count(DISTINCT d.participant_id) FROM daily_entries d
              JOIN participants p ON p.telegram_id=d.participant_id
-            WHERE d.entry_date=$1 AND p.disqualified_at IS NULL""",
+            WHERE d.entry_date=$1 AND p.approved_at IS NOT NULL AND p.disqualified_at IS NULL""",
         day,
     )
     return int(submitted), int(active)
@@ -302,7 +312,7 @@ async def team_members(team_id: int) -> list[asyncpg.Record]:
                 + COALESCE((SELECT sum(w.bonus_points) FROM weekly_summaries w
                              WHERE w.participant_id=p.telegram_id),0) AS points
              FROM participants p
-            WHERE p.team_id=$1 AND p.disqualified_at IS NULL
+            WHERE p.team_id=$1 AND p.approved_at IS NOT NULL AND p.disqualified_at IS NULL
             ORDER BY points DESC, p.full_name""",
         team_id,
     )

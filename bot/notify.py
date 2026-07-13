@@ -40,9 +40,9 @@ async def broadcast(bot: Bot, ids: list[int], text: str, **kw) -> int:
     return sent
 
 
-async def notify_admins(bot: Bot, text: str) -> None:
+async def notify_admins(bot: Bot, text: str, **kw) -> None:
     for admin_id in config.admin_ids:
-        await _send(bot, admin_id, text)
+        await _send(bot, admin_id, text, **kw)
 
 
 async def broadcast_all(bot: Bot, text: str, **kw) -> int:

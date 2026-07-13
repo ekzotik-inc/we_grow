@@ -16,15 +16,21 @@ CREATE TABLE IF NOT EXISTS teams (
 CREATE TABLE IF NOT EXISTS participants (
     telegram_id     bigint PRIMARY KEY,
     full_name       text        NOT NULL,
+    username        text,                                        -- @username на момент регистрации
     is_asr          boolean     NOT NULL DEFAULT false,
     team_id         int         REFERENCES teams(id),
     role            text        NOT NULL DEFAULT 'participant',  -- participant | admin
     consent_at      timestamptz,                                 -- согласие с правилами (п.6)
+    approved_at     timestamptz,                                 -- подтверждение P&C (null = ожидает)
     disqualified_at timestamptz,
     created_at      timestamptz NOT NULL DEFAULT now()
 );
 
 CREATE INDEX IF NOT EXISTS participants_team_idx ON participants(team_id);
+
+-- Миграции для баз, созданных ранее.
+ALTER TABLE participants ADD COLUMN IF NOT EXISTS username text;
+ALTER TABLE participants ADD COLUMN IF NOT EXISTS approved_at timestamptz;
 
 CREATE TABLE IF NOT EXISTS daily_entries (
     id                 bigserial PRIMARY KEY,

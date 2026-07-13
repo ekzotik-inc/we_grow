@@ -36,8 +36,22 @@ def _parse_steps(text: str) -> int | None:
     return val if 0 < val < 200_000 else None
 
 
+async def _require_approved(message: Message) -> bool:
+    """Пускаем к приёму шагов только подтверждённых участников."""
+    p = await db.get_participant(message.from_user.id)
+    if p is None or not p["team_id"]:
+        await message.answer("Сначала зарегистрируйся: /start 🌱")
+        return False
+    if not p["approved_at"]:
+        await message.answer(texts.NOT_APPROVED_YET)
+        return False
+    return True
+
+
 @router.message(F.text == texts.STEPS_BUTTON)
 async def ask_steps(message: Message, state: FSMContext) -> None:
+    if not await _require_approved(message):
+        return
     existing = await db.get_entry(message.from_user.id, _today())
     if existing:
         await message.answer(texts.ALREADY_TODAY.format(steps=existing["steps"]))
@@ -78,6 +92,11 @@ async def on_fix(cb: CallbackQuery, state: FSMContext) -> None:
 async def on_confirm(cb: CallbackQuery, state: FSMContext) -> None:
     tg_id = cb.from_user.id
     day = _today()
+    p = await db.get_participant(tg_id)
+    if p is None or not p["approved_at"]:
+        await cb.answer("Заявка ещё не подтверждена P&C.", show_alert=True)
+        await state.clear()
+        return
     if await db.get_entry(tg_id, day):
         await cb.answer("Уже засчитано на сегодня.", show_alert=True)
         await state.clear()

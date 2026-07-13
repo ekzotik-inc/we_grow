@@ -22,11 +22,50 @@ def _is_admin(tg_id: int) -> bool:
     return tg_id in config.admin_ids
 
 
-@router.message(F.text == texts.MENU_ADMIN)
+@router.message(Command("admin"))
 async def admin_panel(message: Message) -> None:
     if not _is_admin(message.from_user.id):
         return
     await message.answer(texts.ADMIN_PANEL, reply_markup=keyboards.admin_panel_kb())
+
+
+@router.callback_query(F.data.startswith("appr:"))
+async def approve_registration(cb: CallbackQuery) -> None:
+    if not _is_admin(cb.from_user.id):
+        return await cb.answer()
+    target = int(cb.data.split(":")[1])
+    p = await db.get_participant(target)
+    if p is None:
+        await cb.answer("Участник не найден (возможно, сбросил регистрацию).", show_alert=True)
+        await cb.message.edit_reply_markup(reply_markup=None)
+        return
+    if p["approved_at"]:
+        await cb.message.edit_reply_markup(reply_markup=None)
+        return await cb.answer("Уже подтверждён.")
+    await db.set_approved(target)
+    await cb.message.edit_text(cb.message.html_text + f"\n\n✅ Подтверждено ({escape(cb.from_user.first_name)})")
+    try:
+        await cb.bot.send_message(target, texts.APPROVED, reply_markup=keyboards.main_kb())
+    except Exception:  # noqa: BLE001
+        pass
+    await cb.answer("Подтверждено ✅")
+
+
+@router.callback_query(F.data.startswith("rej:"))
+async def reject_registration(cb: CallbackQuery) -> None:
+    if not _is_admin(cb.from_user.id):
+        return await cb.answer()
+    target = int(cb.data.split(":")[1])
+    p = await db.get_participant(target)
+    await db.reset_participant(target)
+    await cb.message.edit_text(cb.message.html_text + f"\n\n❌ Отклонено ({escape(cb.from_user.first_name)})")
+    if p is not None:
+        try:
+            from aiogram.types import ReplyKeyboardRemove
+            await cb.bot.send_message(target, texts.REJECTED, reply_markup=ReplyKeyboardRemove())
+        except Exception:  # noqa: BLE001
+            pass
+    await cb.answer("Отклонено ❌")
 
 
 @router.callback_query(F.data == "adm:board")

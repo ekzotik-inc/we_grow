@@ -37,11 +37,13 @@ async def cmd_start(message: Message, state: FSMContext) -> None:
     if tg_id in config.admin_ids:
         await db.set_role(tg_id, "admin")
 
-    is_admin = tg_id in config.admin_ids
     p = await db.get_participant(tg_id)
-    if p and p["consent_at"] and p["team_id"]:
-        await message.answer("С возвращением, чемпион! 👟 Готов к новым шагам?",
-                             reply_markup=keyboards.main_kb(is_admin))
+    if p and p["team_id"]:
+        if p["approved_at"]:
+            await message.answer("С возвращением, чемпион! 👟 Готов к новым шагам?",
+                                 reply_markup=keyboards.main_kb())
+        else:
+            await message.answer(texts.NOT_APPROVED_YET, reply_markup=ReplyKeyboardRemove())
         return
 
     await message.answer(texts.WELCOME)
@@ -130,7 +132,7 @@ async def on_name(message: Message, state: FSMContext) -> None:
 async def on_asr(cb: CallbackQuery, state: FSMContext) -> None:
     is_asr = cb.data.split(":")[1] == "1"
     data = await state.get_data()
-    await db.set_profile(cb.from_user.id, data["full_name"], is_asr)
+    await db.set_profile(cb.from_user.id, data["full_name"], is_asr, cb.from_user.username)
     await cb.message.edit_reply_markup(reply_markup=None)
     await cb.message.answer(texts.FIT_LINKS, disable_web_page_preview=True)
 
@@ -160,12 +162,13 @@ async def on_team(cb: CallbackQuery, state: FSMContext) -> None:
 
     await db.set_team(cb.from_user.id, team["id"])
     await cb.message.edit_reply_markup(reply_markup=None)
-    await cb.message.answer(texts.ONBOARDED.format(team=team["name"]),
-                            reply_markup=keyboards.main_kb(cb.from_user.id in config.admin_ids))
+    await cb.message.answer(texts.PENDING.format(team=team["name"]),
+                            reply_markup=ReplyKeyboardRemove())
     await state.clear()
     await cb.answer()
 
-    # Уведомляем P&C о новой регистрации.
+    # Пуш админам с подробной карточкой и кнопками подтверждения.
     from bot.notify import notify_admins
     p = await db.get_participant(cb.from_user.id)
-    await notify_admins(cb.bot, f"🆕 Регистрация: {escape(p['full_name'])} → команда {team['name']}")
+    await notify_admins(cb.bot, texts.admin_new_registration(p, team["name"]),
+                        reply_markup=keyboards.approve_kb(cb.from_user.id))

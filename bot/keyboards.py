@@ -37,17 +37,18 @@ def teams_kb(teams: list[asyncpg.Record]) -> InlineKeyboardMarkup:
     return b.as_markup()
 
 
-def main_kb(is_admin: bool = False) -> ReplyKeyboardMarkup:
-    """Главное reply-меню. Обычные кнопки — Mini App открываем inline-кнопкой,
-    т.к. reply-клавиатурные web_app в части клиентов отдают пустой initData."""
-    rows = [
-        [KeyboardButton(text=texts.STEPS_BUTTON)],
-        [KeyboardButton(text=texts.MENU_PROGRESS), KeyboardButton(text=texts.MENU_BOARD)],
-        [KeyboardButton(text=texts.MENU_RULES), KeyboardButton(text=texts.MENU_HELP)],
-    ]
-    if is_admin:
-        rows.append([KeyboardButton(text=texts.MENU_ADMIN)])
-    return ReplyKeyboardMarkup(keyboard=rows, resize_keyboard=True)
+def main_kb() -> ReplyKeyboardMarkup:
+    """Главное reply-меню участника. Админ-функции — по команде /admin.
+    Mini App открываем inline-кнопкой (reply-web_app в части клиентов даёт
+    пустой initData)."""
+    return ReplyKeyboardMarkup(
+        keyboard=[
+            [KeyboardButton(text=texts.STEPS_BUTTON)],
+            [KeyboardButton(text=texts.MENU_PROGRESS), KeyboardButton(text=texts.MENU_BOARD)],
+            [KeyboardButton(text=texts.MENU_RULES), KeyboardButton(text=texts.MENU_HELP)],
+        ],
+        resize_keyboard=True,
+    )
 
 
 def open_app_kb(text: str = "🌱 Открыть приложение") -> InlineKeyboardMarkup | None:
@@ -56,6 +57,13 @@ def open_app_kb(text: str = "🌱 Открыть приложение") -> Inlin
         return None
     return InlineKeyboardMarkup(inline_keyboard=[[
         InlineKeyboardButton(text=text, web_app=WebAppInfo(url=config.webapp_url))
+    ]])
+
+
+def approve_kb(tg_id: int) -> InlineKeyboardMarkup:
+    return InlineKeyboardMarkup(inline_keyboard=[[
+        InlineKeyboardButton(text="✅ Подтвердить", callback_data=f"appr:{tg_id}"),
+        InlineKeyboardButton(text="❌ Отклонить", callback_data=f"rej:{tg_id}"),
     ]])
 
 
