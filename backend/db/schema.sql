@@ -1,4 +1,4 @@
--- We Grow Marathon — схема БД (PostgreSQL). MVP.
+-- Step Together — схема БД (PostgreSQL). MVP.
 -- Идемпотентна: можно применять повторно.
 -- Времена дней считаются в TZ марафона (см. bot/config.py).
 --

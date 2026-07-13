@@ -1,4 +1,4 @@
-# Render Blueprint для We Grow Marathon.
+# Render Blueprint для Step Together.
 #
 # Разворачивает бота как Background Worker, который подключается к УЖЕ
 # существующей базе test_bd (её адрес вписывается в дашборде — DATABASE_URL).

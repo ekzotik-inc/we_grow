@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
-<title>We Grow Marathon</title>
+<title>Step Together</title>
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
 <style>
   :root{
@@ -72,7 +72,11 @@ const INIT = tg?.initData || "";
 
 async function api(path){
   const r = await fetch(path, {headers:{"X-Init-Data": INIT}});
-  if(!r.ok) throw new Error("api " + r.status);
+  if(!r.ok){
+    let detail = "";
+    try{ detail = (await r.json()).detail || ""; }catch(_){}
+    throw new Error("HTTP " + r.status + (detail ? ": " + detail : ""));
+  }
   return r.json();
 }
 const esc = s => String(s).replace(/[&<>]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;"}[c]));
@@ -96,7 +100,7 @@ function pointClass(p){ return p>=3?"p3":p>=2?"p2":p>=1?"p1":""; }
 async function renderProgress(){
   const el = document.getElementById("view-progress");
   let d;
-  try{ d = await api("/api/me"); }catch(e){ el.innerHTML = notice(); return; }
+  try{ d = await api("/api/me"); }catch(e){ el.innerHTML = notice(e); return; }
   if(!d.registered){ el.innerHTML = regNotice(); return; }
 
   const si = stageIndex(d.total_points, d.best_streak);
@@ -138,7 +142,7 @@ async function renderProgress(){
 async function renderTeam(){
   const el = document.getElementById("view-team");
   let d;
-  try{ d = await api("/api/team"); }catch(e){ el.innerHTML = notice(); return; }
+  try{ d = await api("/api/team"); }catch(e){ el.innerHTML = notice(e); return; }
   if(!d.registered){ el.innerHTML = regNotice(); return; }
   const medals = ["🥇","🥈","🥉"];
   const rows = d.members.map((m,i)=>`
@@ -159,7 +163,7 @@ async function renderTeam(){
 async function renderBoard(){
   const el = document.getElementById("view-board");
   let d;
-  try{ d = await api("/api/leaderboard"); }catch(e){ el.innerHTML = notice(); return; }
+  try{ d = await api("/api/leaderboard"); }catch(e){ el.innerHTML = notice(e); return; }
   const medals = ["🥇","🥈","🥉"];
   const teams = d.teams.map((t,i)=>`
     <div class="member"><span>${medals[i]||(i+1)+"."} ${esc(t.name)}</span>
@@ -177,9 +181,14 @@ function regNotice(){
   return `<div class="center">Ты ещё не зарегистрирован в марафоне.<br><br>
     Открой бота и нажми <b>/start</b>, чтобы начать 🌱</div>`;
 }
-function notice(){
-  return `<div class="center">Открой это мини-приложение из бота We Grow Marathon 🌱<br><br>
-    (данные подгружаются через Telegram)</div>`;
+function notice(e){
+  if(!INIT){
+    return `<div class="center">Открой это мини-приложение <b>из бота</b> Step Together 🌱<br><br>
+      кнопкой меню слева от поля ввода</div>`;
+  }
+  return `<div class="center">Не удалось загрузить данные 😔<br><br>
+    <span class="muted">${esc(e && e.message || e || "")}</span><br><br>
+    Потяни экран вниз, чтобы обновить, или попробуй позже.</div>`;
 }
 
 // --- табы ---

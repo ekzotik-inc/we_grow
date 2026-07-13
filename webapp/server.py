@@ -36,7 +36,7 @@ async def lifespan(app: FastAPI):
     await db.close()
 
 
-app = FastAPI(title="We Grow Marathon Mini App", lifespan=lifespan)
+app = FastAPI(title="Step Together Mini App", lifespan=lifespan)
 
 
 # ---- Авторизация через Telegram initData ---------------------------------
