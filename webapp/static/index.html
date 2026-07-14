@@ -121,6 +121,20 @@
     background:var(--grad);color:#06222b;margin-bottom:4px}
   a.link{color:var(--tq);text-decoration:none}
 
+  /* Реплика Stepy — цитата с левой полосой и аватаром */
+  .stepy{display:flex;gap:10px;background:rgba(0,209,210,.07);border:1px solid rgba(0,209,210,.25);
+    border-left:3px solid var(--tq);border-radius:0 14px 14px 0;padding:12px 14px;margin:12px 0}
+  .stepy .av{font-size:26px;line-height:1;flex:0 0 auto}
+  .stepy .tx{font-size:13.5px;line-height:1.5}
+  .stepy .tx b{color:var(--tq)}
+  .howto{counter-reset:st;display:grid;gap:10px;margin-top:8px}
+  .howto .st{display:flex;gap:12px;align-items:flex-start}
+  .howto .st::before{counter-increment:st;content:counter(st);flex:0 0 26px;height:26px;border-radius:8px;
+    background:var(--grad);color:#06222b;font-weight:800;font-size:13px;display:grid;place-items:center}
+  .howto .st div{font-size:13.5px;line-height:1.45;padding-top:3px}
+  .note{background:rgba(255,198,92,.1);border:1px solid rgba(255,198,92,.35);border-radius:14px;
+    padding:12px 14px;font-size:13px;line-height:1.5;color:#ffe1a6}
+
   /* Призы — загадочные карточки */
   .gift{font-size:74px;line-height:1;margin:4px 0 6px;position:relative;z-index:1;
     animation:sprout .7s cubic-bezier(.2,1.4,.4,1) both, shake 3.2s ease-in-out 1s infinite}
@@ -162,8 +176,8 @@
 <body>
 <div class="wrap">
   <div class="app-head">
-    <div class="logo">🌱</div>
-    <div><h1>Step Together</h1><p id="head-sub">марафон шагов</p></div>
+    <div class="logo">🪴</div>
+    <div><h1>Step Together</h1><p id="head-sub">марафон шагов со Stepy</p></div>
   </div>
   <div id="view"><div class="spin"></div></div>
 </div>
@@ -290,37 +304,60 @@ async function renderBoard(){
     <div class="card d2"><div class="sec-title" style="margin-bottom:6px">👣 Топ-10 участников</div>${top}</div></div>`;
 }
 
+function stepyBox(html){
+  return `<div class="stepy"><div class="av">🪴</div><div class="tx">${html}</div></div>`;
+}
+
 function renderRules(){
   const r=[
-    "Участвуют все сотрудники подразделения ASR.",
-    "Регистрация и распределение по командам — в этом боте.",
-    `Приложение для шагов — Fitbit: <a class="link" href="${FIT_A}" target="_blank">Android</a> · <a class="link" href="${FIT_I}" target="_blank">iOS</a>.`,
-    "В команде — от 8 до 10 участников.",
+    "Участвовать могут все сотрудники подразделения <b>ASR</b>.",
+    "Регистрация и распределение по командам — прямо в боте.",
+    `Шаги считает приложение <b>Fitbit</b> (Google Health): <a class="link" href="${FIT_A}" target="_blank">Android</a> · <a class="link" href="${FIT_I}" target="_blank">iOS</a>.`,
+    "В команде — от <b>8 до 10</b> человек.",
     "Если команда заполнена, P&C предложит другую.",
-    "Участвуешь активно и доходишь до финиша.",
-    "Сроки: с 17 июля по 7 августа включительно.",
-    "Каждую неделю — лидерборд участников и команд.",
-    "Шаги фиксируй каждый день до 23:55 (скрин с датой и числом).",
-    "В воскресенье до 23:55 — недельная сводка для бонуса.",
-    "P&C может запросить скрин для проверки в течение дня.",
+    "Присоединяясь, ты обещаешь дойти до финиша 🏁",
+    "Даты: <b>17 июля — 7 августа</b> включительно.",
+    "Каждую неделю выходит лидерборд участников и команд.",
+    "Шаги присылай <b>каждый день до 23:55</b>: число + скриншот из Fitbit.",
+    "В <b>воскресенье до 23:55</b> — недельная сводка для бонуса.",
+    "P&C может запросить дополнительный скрин для проверки.",
     "Нарушение правил — дисквалификация, результаты не в зачёт.",
   ];
-  // Пункты 9 и 10 (баллы и бонус) вынесены карточками ниже, поэтому 9–12 → 11–14.
-  const num=i=>i<8?i+1:i+3;
-  const items=r.map((t,i)=>`<div class="rule"><div class="rnum">${num(i)}</div><p>${t}</p></div>`).join("");
+  const rn=i=>i<8?i+1:i+3;  // пункты 9–10 (баллы/бонус) — карточками ниже
+  const items=r.map((t,i)=>`<div class="rule"><div class="rnum">${rn(i)}</div><p>${t}</p></div>`).join("");
+
   V.innerHTML=`<div class="view">
-    <div class="card d1"><div class="sec-title" style="margin-bottom:4px">📋 Правила марафона</div>${items}</div>
+    <div class="card d1">
+      <div class="sec-title">🪴 Привет, я Stepy!</div>
+      ${stepyBox("Объясню всё <b>на пальцах</b>. Твоя задача — ходить и каждый день присылать результат. Остальное я беру на себя 😉")}
+      <div class="howto">
+        <div class="st"><div>Ходишь и открываешь Fitbit — там твои шаги за день.</div></div>
+        <div class="st"><div>Жмёшь «👟 Шаги за сегодня», пишешь число и шлёшь <b>скриншот</b>.</div></div>
+        <div class="st"><div>P&C проверяет результат — в календаре день будет <b>⏳ на проверке</b>.</div></div>
+        <div class="st"><div>Как примут — день станет <b>зелёным</b> и капнут баллы, растение растёт 🪴</div></div>
+      </div>
+    </div>
+
     <div class="card d2">
       <div class="badge">🎯 Баллы за день</div>
+      ${stepyBox("Считаются шаги <b>за текущий день</b>. Меньше 5 000 — 0 баллов, поэтому закрывай хотя бы 5 тысяч.")}
       <div class="scoregrid"><div class="k">5 000 – 9 999</div><div class="v">1 балл</div>
         <div class="k">10 000 – 14 999</div><div class="v">2 балла</div>
         <div class="k">15 000 – 30 000</div><div class="v">3 балла</div></div>
     </div>
+
     <div class="card d3">
-      <div class="badge">🥇 Бонус за серию (за неделю)</div>
+      <div class="badge">🔥 Бонус за серию</div>
+      ${stepyBox("Серия — дни <b>подряд</b> по 10 000+ шагов. Пропуск или меньше 10 000 — серия сгорает.")}
       <div class="scoregrid"><div class="k">5 дней подряд 10 000+</div><div class="v">+2 балла</div>
         <div class="k">7 дней подряд 10 000+</div><div class="v">+4 балла</div></div>
     </div>
+
+    <div class="card d3">
+      <div class="sec-title" style="margin-bottom:6px">📋 Все правила</div>${items}
+      <div class="note" style="margin-top:12px">⚠️ <b>Важно:</b> на скриншоте должны быть видны <b>дата</b> и <b>число шагов</b>, а результат засчитывается только после проверки P&C.</div>
+    </div>
+
     <div class="card d3" style="text-align:center">
       <div class="sec-title" style="justify-content:center;margin-bottom:6px">💬 Остались вопросы?</div>
       <p class="muted" style="margin:0 0 12px">Напиши сотруднику P&amp;C напрямую — поможем.</p>
