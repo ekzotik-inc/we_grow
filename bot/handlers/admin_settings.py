@@ -297,7 +297,7 @@ async def _card(tg_id: int):
         f"🆔 <code>{p['telegram_id']}</code>\n"
         f"🌳 Команда: <b>{escape(p['team_name'] or '—')}</b>\n"
         f"📌 Статус: {status}\n"
-        f"🏢 Из ASR: {'да' if p['is_asr'] else 'нет'}\n"
+        f"🏢 Наш дружный коллектив: {'да' if p['is_asr'] else 'нет'}\n"
         f"🗓 Регистрация: {_fmt(p['created_at'])}\n"
         f"✅ Вступил/подтверждён: {_fmt(p['approved_at'])}\n"
         f"⭐ Баллов: <b>{await db.total_points(tg_id)}</b>"

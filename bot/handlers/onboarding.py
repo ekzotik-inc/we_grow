@@ -161,7 +161,7 @@ async def phone_need_button(message: Message) -> None:
 @router.message(Onboarding.name, F.text)
 async def on_name(message: Message, state: FSMContext) -> None:
     full_name = message.text.strip()
-    # is_asr=True: марафон для сотрудников ASR, отдельный вопрос убрали из анкеты.
+    # is_asr=True: марафон для сотрудников нашего коллектива, отдельный вопрос убрали из анкеты.
     await db.set_profile(message.from_user.id, full_name, True, message.from_user.username)
     await message.answer(texts.FIT_LINKS, disable_web_page_preview=True)
     # Шаг 4 — выбор команды.

@@ -29,13 +29,6 @@ def phone_kb() -> ReplyKeyboardMarkup:
     )
 
 
-def asr_kb() -> InlineKeyboardMarkup:
-    return InlineKeyboardMarkup(inline_keyboard=[[
-        InlineKeyboardButton(text="Да ✅", callback_data="asr:1"),
-        InlineKeyboardButton(text="Нет", callback_data="asr:0"),
-    ]])
-
-
 def teams_kb(teams: list[asyncpg.Record]) -> InlineKeyboardMarkup:
     b = InlineKeyboardBuilder()
     for t in teams:

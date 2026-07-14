@@ -11,7 +11,7 @@
 |------|-----|----------|
 | `telegram_id` | bigint PK | ID пользователя Telegram |
 | `full_name` | text | ФИО из анкеты |
-| `is_asr` | bool | подтверждение «участник из ASR» |
+| `is_asr` | bool | признак «участник из нашего дружного коллектива» |
 | `team_id` | int FK → teams | команда |
 | `role` | text | `participant` \| `admin` (P&C) |
 | `consent_at` | timestamptz | дата согласия с правилами (закрывает п. 6) |
