@@ -9,12 +9,13 @@ from __future__ import annotations
 import hashlib
 import hmac
 import json
+import re
 from contextlib import asynccontextmanager
 from datetime import date, datetime
 from pathlib import Path
 from urllib.parse import parse_qsl
 
-from fastapi import FastAPI, Header, HTTPException
+from fastapi import Body, FastAPI, Header, HTTPException
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
@@ -66,8 +67,39 @@ def _verify_init_data(init_data: str) -> int:
         raise HTTPException(status_code=401, detail="no user")
 
 
-async def _auth(init_data: str | None) -> int:
-    return _verify_init_data(init_data or "")
+# ---- Сессия по номеру телефона (fallback, когда initData недоступен) -------
+
+def _make_token(tg_id: int) -> str:
+    """Подписанный токен сессии: telegram_id + HMAC на секрете бота. Подделать
+    чужой токен без BOT_TOKEN нельзя."""
+    sig = hmac.new(config.bot_token.encode(), str(tg_id).encode(), hashlib.sha256).hexdigest()
+    return f"{tg_id}.{sig}"
+
+
+def _verify_token(token: str) -> int | None:
+    try:
+        tg_id_s, sig = token.split(".", 1)
+    except ValueError:
+        return None
+    expected = hmac.new(config.bot_token.encode(), tg_id_s.encode(), hashlib.sha256).hexdigest()
+    if hmac.compare_digest(expected, sig):
+        try:
+            return int(tg_id_s)
+        except ValueError:
+            return None
+    return None
+
+
+async def _auth(init_data: str | None, session: str | None = None) -> int:
+    """Авторизация: приоритетно через Telegram initData, иначе — через
+    подписанный токен сессии (вход по номеру телефона)."""
+    if init_data:
+        return _verify_init_data(init_data)
+    if session:
+        tg_id = _verify_token(session)
+        if tg_id is not None:
+            return tg_id
+    raise HTTPException(status_code=401, detail="no auth")
 
 
 # ---- Вспомогательное -----------------------------------------------------
@@ -87,9 +119,25 @@ def _best_streak(steps_by_date: dict[date, int]) -> int:
 
 # ---- API -----------------------------------------------------------------
 
+@app.post("/api/login")
+async def api_login(phone: str = Body(..., embed=True)):
+    """Вход по номеру телефона: сверяем с базой (участник должен быть
+    зарегистрирован — с командой). Возвращаем токен сессии, если найден."""
+    digits = re.sub(r"\D", "", phone or "")
+    if len(digits) < 9:
+        return {"ok": False, "reason": "bad_phone"}
+    row = await db.find_by_phone(digits[-9:])          # сверяем по последним 9 цифрам
+    if row is None:
+        return {"ok": False, "registered": False}       # номер не в базе → на регистрацию
+    if row["disqualified_at"] is not None:
+        return {"ok": False, "reason": "disqualified"}
+    return {"ok": True, "token": _make_token(row["telegram_id"])}
+
+
 @app.get("/api/me")
-async def api_me(x_init_data: str | None = Header(default=None)):
-    tg_id = await _auth(x_init_data)
+async def api_me(x_init_data: str | None = Header(default=None),
+                 x_session: str | None = Header(default=None)):
+    tg_id = await _auth(x_init_data, x_session)
     card = await db.participant_card(tg_id)
     if card is None or card["team_id"] is None:
         return {"registered": False}
@@ -130,8 +178,9 @@ async def api_me(x_init_data: str | None = Header(default=None)):
 
 
 @app.get("/api/team")
-async def api_team(x_init_data: str | None = Header(default=None)):
-    tg_id = await _auth(x_init_data)
+async def api_team(x_init_data: str | None = Header(default=None),
+                   x_session: str | None = Header(default=None)):
+    tg_id = await _auth(x_init_data, x_session)
     card = await db.participant_card(tg_id)
     if card is None or card["team_id"] is None:
         return {"registered": False}
@@ -150,8 +199,9 @@ async def api_team(x_init_data: str | None = Header(default=None)):
 
 
 @app.get("/api/leaderboard")
-async def api_leaderboard(x_init_data: str | None = Header(default=None)):
-    await _auth(x_init_data)
+async def api_leaderboard(x_init_data: str | None = Header(default=None),
+                          x_session: str | None = Header(default=None)):
+    await _auth(x_init_data, x_session)
     teams = await db.team_leaderboard()
     top = await db.top_participants(10)
     return {

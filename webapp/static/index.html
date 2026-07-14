@@ -236,7 +236,13 @@ function getInit(){
   try{ const raw=new URLSearchParams(location.search).get("tgWebAppData"); if(raw) return raw; }catch(e){}
   return "";
 }
-const BUILD="initdata-hash-fallback";
+const BUILD="phone-login";
+const BOTLINK="https://t.me/wegrowmarathon_bot";
+// Сессия по номеру телефона (localStorage): выдаётся сервером после проверки в базе.
+function session(){ try{ return localStorage.getItem("st_session")||""; }catch(e){ return ""; } }
+function setSession(t){ try{ localStorage.setItem("st_session",t); }catch(e){} }
+function clearSession(){ try{ localStorage.removeItem("st_session"); }catch(e){} }
+function openBot(){ try{ tg?.openTelegramLink?.(BOTLINK); }catch(e){ location.href=BOTLINK; } }
 // Ждём до ~3с, пока initData появится (первый запуск), затем стартуем.
 async function waitInit(ms=3000){
   const step=100; let waited=0;
@@ -252,9 +258,15 @@ const FEEDBACK="https://t.me/DaryaPMI";
 function openPC(){ try{ tg?.openTelegramLink?.(FEEDBACK); }catch(e){ location.href=FEEDBACK; } }
 
 async function api(path){
-  const r = await fetch(path, {headers:{"X-Init-Data": getInit()}});
+  const r = await fetch(path, {headers:{"X-Init-Data": getInit(), "X-Session": session()}});
+  if(r.status===401){ clearSession(); renderLogin(); throw new Error("HTTP 401"); }
   if(!r.ok){ let d=""; try{ d=(await r.json()).detail||""; }catch(_){}
     throw new Error("HTTP "+r.status+(d?": "+d:"")); }
+  return r.json();
+}
+async function postLogin(phone){
+  const r = await fetch("/api/login",{method:"POST",
+    headers:{"Content-Type":"application/json"}, body:JSON.stringify({phone})});
   return r.json();
 }
 const esc=s=>String(s).replace(/[&<>]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;"}[c]));
@@ -488,7 +500,51 @@ function renderFAQ(){
 }
 
 const emptyRow=()=>`<div class="muted" style="padding:8px 0">— пока пусто —</div>`;
-function regNotice(){ V.innerHTML=`<div class="center">Ты ещё не в марафоне 🌱<br><br>Открой бота и нажми <b>/start</b>, чтобы зарегистрироваться.</div>`; }
+function regNotice(){ V.innerHTML=`<div class="center">Ты ещё не в марафоне 🌱<br><br>Открой бота и нажми <b>/start</b>, чтобы зарегистрироваться.
+  <br><br><button class="btn-grad" style="max-width:220px;margin:0 auto" onclick="openBot()">Открыть бота</button></div>`; }
+
+// Экран входа по номеру телефона (когда нет Telegram-авторизации).
+function renderLogin(){
+  V.innerHTML=`<div class="view"><div class="card d1" style="text-align:center">
+    <div class="plant" style="font-size:52px">🪴</div>
+    <div class="stage">Вход в Step Together</div>
+    <p class="muted" style="margin:10px auto 16px;max-width:340px;line-height:1.5">
+      Введи номер телефона, который ты указал при регистрации в боте — проверим по базе и откроем доступ.</p>
+    <input id="phone" type="tel" inputmode="tel" autocomplete="tel" placeholder="+998 90 123 45 67"
+      style="width:100%;padding:14px;border-radius:14px;border:1px solid var(--line);
+      background:var(--bg2);color:var(--text);font-size:16px;text-align:center;
+      -webkit-user-select:text;user-select:text;outline:none">
+    <div id="lmsg" style="min-height:20px;margin:10px 0;font-size:13px;color:var(--gold)"></div>
+    <button class="btn-grad" onclick="doLogin()">Войти</button>
+    <button class="btn-ghost" onclick="openBot()">Я ещё не регистрировался — открыть бота</button>
+  </div></div>`;
+  const inp=document.getElementById("phone");
+  inp?.addEventListener("keydown",e=>{ if(e.key==="Enter")doLogin(); });
+  setTimeout(()=>inp?.focus(),100);
+}
+async function doLogin(){
+  const el=document.getElementById("phone"), msg=document.getElementById("lmsg");
+  if(!el) return;
+  const phone=el.value.trim();
+  if(phone.replace(/\D/g,"").length<9){ msg.textContent="Введите корректный номер телефона"; return; }
+  msg.style.color="var(--muted)"; msg.textContent="Проверяю…";
+  let d; try{ d=await postLogin(phone); }catch(e){ msg.style.color="var(--gold)"; msg.textContent="Ошибка сети, попробуй ещё раз"; return; }
+  if(d.ok){
+    setSession(d.token);
+    Object.keys(loaded).forEach(k=>delete loaded[k]); V.dataset.tab="";
+    haptic("medium"); show("progress"); return;
+  }
+  msg.style.color="var(--gold)";
+  if(d.registered===false){
+    msg.innerHTML="Этот номер не найден в базе 🌱 Сначала пройди регистрацию в боте (кнопка ниже).";
+  } else if(d.reason==="disqualified"){
+    msg.textContent="Доступ закрыт: участник дисквалифицирован.";
+  } else if(d.reason==="bad_phone"){
+    msg.textContent="Введите корректный номер телефона";
+  } else {
+    msg.textContent="Не удалось войти. Проверь номер и попробуй снова.";
+  }
+}
 function diagText(){
   const w=window.Telegram?.WebApp;
   let uid="—"; try{ uid=w?.initDataUnsafe?.user?.id ?? "—"; }catch(e){}
@@ -531,8 +587,14 @@ function show(tab){
 document.querySelectorAll(".nav button").forEach(b=>{
   b.addEventListener("click",()=>{ hsel(); V.dataset.tab=""; show(b.dataset.tab); });
 });
-// Ждём initData (первый запуск может проставить его с задержкой), затем рендерим.
-waitInit().then(()=>show("progress"));
+// Загрузка: если есть Telegram-авторизация или сохранённая сессия — сразу к
+// прогрессу; иначе показываем вход по номеру телефона.
+async function boot(){
+  await waitInit();
+  if(getInit() || session()){ show("progress"); }
+  else { renderLogin(); }
+}
+boot();
 </script>
 </body>
 </html>

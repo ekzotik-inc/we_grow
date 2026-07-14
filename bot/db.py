@@ -100,6 +100,19 @@ async def set_phone(tg_id: int, phone: str, username: str | None = None) -> None
     )
 
 
+async def find_by_phone(digits9: str) -> asyncpg.Record | None:
+    """Поиск участника по последним 9 цифрам телефона (устойчиво к коду страны
+    и формату записи). Только зарегистрированные — с командой."""
+    return await pool().fetchrow(
+        """SELECT telegram_id, team_id, disqualified_at
+             FROM participants
+            WHERE team_id IS NOT NULL
+              AND right(regexp_replace(coalesce(phone,''), '[^0-9]', '', 'g'), 9) = $1
+            ORDER BY approved_at IS NULL, created_at
+            LIMIT 1""",
+        digits9)
+
+
 async def is_disqualified(tg_id: int) -> bool:
     val = await pool().fetchval(
         "SELECT disqualified_at IS NOT NULL FROM participants WHERE telegram_id=$1", tg_id)
