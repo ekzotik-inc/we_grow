@@ -69,6 +69,18 @@ async def cmd_feedback(message: Message) -> None:
     await message.answer(texts.FEEDBACK, reply_markup=keyboards.feedback_kb())
 
 
+@router.message(Command("app"))
+async def cmd_app(message: Message) -> None:
+    """Гарантированно правильный запуск Mini App: inline-кнопка web_app (несёт
+    initData на всех платформах). Полезно, если меню-кнопка настроена как URL."""
+    kb = keyboards.open_app_kb("🚀 Открыть приложение")
+    if kb:
+        await message.answer(
+            "Нажми кнопку ниже — так приложение откроется с авторизацией 👇", reply_markup=kb)
+    else:
+        await message.answer(texts.APP_NOT_CONFIGURED)
+
+
 @router.message(lambda m: bool(m.text) and m.text == settings.label("board"))
 async def menu_board(message: Message) -> None:
     # Лидерборд прямо в чате + inline-кнопка открыть в приложении.

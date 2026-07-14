@@ -30,6 +30,7 @@ ADMIN_EXTRA = [
     ("emojiid", "Получить emoji-id"),
     ("feedback", "Связь с P&C"),
     ("reset", "Сбросить регистрацию"),
+    ("app", "Открыть Mini App (web_app-кнопка)"),
 ]
 
 
