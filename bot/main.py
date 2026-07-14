@@ -50,9 +50,38 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name
 log = logging.getLogger("wegrow")
 
 
+async def _connect_db_retry(attempts: int = 6) -> None:
+    """Подключение к БД с ретраями (БД может подниматься дольше бота)."""
+    for i in range(1, attempts + 1):
+        try:
+            await db.connect(config.database_url)
+            return
+        except Exception as e:  # noqa: BLE001
+            wait = min(2 * i, 15)
+            log.warning("Не удалось подключиться к БД (%s/%s): %s — повтор через %sс", i, attempts, e, wait)
+            await asyncio.sleep(wait)
+    raise SystemExit("БД недоступна — проверь DATABASE_URL")
+
+
+async def _on_error(event) -> bool:
+    """Глобальный обработчик: логирует любую ошибку хендлера и мягко отвечает,
+    не роняя polling."""
+    log.exception("Необработанная ошибка: %s", getattr(event, "exception", None))
+    try:
+        upd = getattr(event, "update", None)
+        if upd is not None and upd.message:
+            await upd.message.answer(
+                "Ой, что-то пошло не так 🌱 Попробуй ещё раз или напиши в «Обратную связь».")
+        elif upd is not None and upd.callback_query:
+            await upd.callback_query.answer("Что-то пошло не так, попробуй ещё раз.", show_alert=True)
+    except Exception:  # noqa: BLE001
+        pass
+    return True
+
+
 async def main() -> None:
     config.validate()
-    await db.connect(config.database_url)
+    await _connect_db_retry()
     await settings.load()
     log.info("БД подключена, схема применена, настройки загружены")
 
@@ -64,6 +93,7 @@ async def main() -> None:
     dp.include_router(admin_settings.router)
     dp.include_router(onboarding.router)
     dp.include_router(steps.router)
+    dp.errors.register(_on_error)
 
     # Постоянная кнопка меню открывает Mini App (если задан WEBAPP_URL).
     if config.webapp_url:

@@ -36,7 +36,7 @@ services:
     name: wegrow-webapp
     runtime: python
     region: oregon
-    plan: free                # веб-сервис можно на free (засыпает при простое)
+    plan: starter             # платный — веб-сервис не засыпает, мгновенный отклик
     branch: claude/laughing-babbage-2tyt1p
     buildCommand: pip install -r requirements.txt
     startCommand: uvicorn webapp.server:app --host 0.0.0.0 --port $PORT
