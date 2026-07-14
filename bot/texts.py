@@ -279,12 +279,6 @@ def welcome_back(is_first_today: bool = True) -> str:
                  "Жми «👟 Шаги за сегодня», когда будешь готов сдать результат.")
 
 
-def feedback(steps: int, points: int, upd) -> str:
-    """Мгновенная обратная связь после ОТПРАВКИ (до модерации не начисляется).
-    Оставлено для совместимости; в текущем флоу не используется."""
-    return f"👟 {steps} шагов · ожидай подтверждения P&C ⏳"
-
-
 def weekly_bonus_note(bonus: int) -> str:
     medal = pe("🥇") if bonus >= 4 else pe("🥈")
     return f"{medal} <b>Бонус за серию: +{bonus} балла!</b>\n" + stepy(

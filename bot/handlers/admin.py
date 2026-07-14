@@ -1,4 +1,5 @@
-"""Админ-режим P&C: /broadcast и /leaderboard. Дисквалификация — /dq <id>."""
+"""Админ-режим P&C: /admin панель, подтверждение регистраций, /leaderboard,
+/stats, /dq, /emojiid. Модерация результатов и настройки — в admin_settings."""
 from __future__ import annotations
 
 import json
@@ -27,6 +28,23 @@ async def admin_panel(message: Message) -> None:
     if not _is_admin(message.from_user.id):
         return
     await message.answer(texts.ADMIN_PANEL, reply_markup=keyboards.admin_panel_kb())
+
+
+@router.callback_query(F.data == "adm:design")
+async def adm_design(cb: CallbackQuery) -> None:
+    if not _is_admin(cb.from_user.id):
+        return await cb.answer()
+    await cb.message.edit_text("⚙️ <b>Оформление</b>\nМедиа меню, подписи и иконки кнопок.",
+                               reply_markup=keyboards.design_panel_kb())
+    await cb.answer()
+
+
+@router.callback_query(F.data == "adm:back")
+async def adm_back(cb: CallbackQuery) -> None:
+    if not _is_admin(cb.from_user.id):
+        return await cb.answer()
+    await cb.message.edit_text(texts.ADMIN_PANEL, reply_markup=keyboards.admin_panel_kb())
+    await cb.answer()
 
 
 @router.callback_query(F.data.startswith("appr:"))
@@ -76,22 +94,6 @@ async def adm_board(cb: CallbackQuery) -> None:
     teams = await db.team_leaderboard()
     top = await db.top_participants(10)
     await cb.message.answer(texts.render_leaderboard(teams, top, top_title="Топ-10 участников"))
-    await cb.answer()
-
-
-@router.callback_query(F.data == "adm:review")
-async def adm_review(cb: CallbackQuery) -> None:
-    if not _is_admin(cb.from_user.id):
-        return await cb.answer()
-    rows = await db.pending_reviews(10)
-    if not rows:
-        await cb.message.answer("🔎 На проверку ничего нет — все чисто ✅")
-    else:
-        lines = ["🔎 <b>На проверку P&amp;C</b>"]
-        for r in rows:
-            lines.append(f"• {r['entry_date']}: {escape(r['full_name'])} — "
-                         f"<b>{r['steps']}</b> шагов (/dq {r['participant_id']})")
-        await cb.message.answer("\n".join(lines))
     await cb.answer()
 
 
@@ -192,4 +194,4 @@ async def disqualify(message: Message) -> None:
 async def leaderboard(message: Message) -> None:
     teams = await db.team_leaderboard()
     top = await db.top_participants(10)
-    await message.answer(render_leaderboard(teams, top, top_title="Топ участников"))
+    await message.answer(texts.render_leaderboard(teams, top, top_title="Топ участников"))

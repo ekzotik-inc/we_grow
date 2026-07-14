@@ -82,13 +82,12 @@ async def media_save(message: Message, state: FSMContext) -> None:
 
 # ---- Перевод участника в другую команду -----------------------------------
 
-@router.callback_query(F.data == "adm:move")
-async def move_start(cb: CallbackQuery, state: FSMContext) -> None:
-    if not _is_admin(cb.from_user.id):
-        return await cb.answer()
+@router.message(Command("move"))
+async def move_start(message: Message, state: FSMContext) -> None:
+    if not _is_admin(message.from_user.id):
+        return
     await state.set_state(Move.query)
-    await cb.message.answer("🔀 Кого перевести? Пришли <b>ID</b> или часть <b>ФИО</b>.")
-    await cb.answer()
+    await message.answer("🔀 Кого перевести? Пришли <b>ID</b> или часть <b>ФИО</b>.")
 
 
 @router.message(Move.query, F.text)
@@ -427,9 +426,8 @@ async def subs_queue(cb: CallbackQuery) -> None:
     await cb.message.answer(f"🧾 <b>На проверку: {len(rows)}</b>")
     for r in rows:
         e = await db.entry_by_id(r["id"])
-        await cb.bot.send_photo(cb.from_user.id, r["screenshot_file_id"],
-                                caption=texts.admin_new_submission(e),
-                                reply_markup=keyboards.moderate_kb(r["id"]))
+        await notify.send_screenshot(cb.bot, cb.from_user.id, r["screenshot_file_id"],
+                                     texts.admin_new_submission(e), keyboards.moderate_kb(r["id"]))
     await cb.answer()
 
 

@@ -85,17 +85,26 @@ def approve_kb(tg_id: int) -> InlineKeyboardMarkup:
 
 
 def admin_panel_kb() -> InlineKeyboardMarkup:
+    """Главная админ-панель — сгруппирована, оформление вынесено в подменю."""
     b = InlineKeyboardBuilder()
+    b.button(text="🧾 Результаты", callback_data="adm:subs")
+    b.button(text="👥 Участники", callback_data="adm:users")
     b.button(text="🏆 Лидерборд", callback_data="adm:board")
     b.button(text="📊 Вовлечённость", callback_data="adm:stats")
     b.button(text="📣 Рассылка", callback_data="adm:broadcast")
+    b.button(text="⚙️ Оформление", callback_data="adm:design")
+    b.adjust(2)
+    return b.as_markup()
+
+
+def design_panel_kb() -> InlineKeyboardMarkup:
+    """Подменю «Оформление»: медиа, подписи и иконки кнопок."""
+    b = InlineKeyboardBuilder()
     b.button(text="🖼 Медиа меню", callback_data="adm:media")
-    b.button(text="🔀 Перевод в команду", callback_data="adm:move")
     b.button(text="✏️ Кнопки меню", callback_data="adm:labels")
     b.button(text="🎨 Иконки кнопок", callback_data="adm:icons")
-    b.button(text="👥 Пользователи", callback_data="adm:users")
-    b.button(text="🧾 Проверить результаты", callback_data="adm:subs")
-    b.adjust(2)
+    b.button(text="⬅️ Назад", callback_data="adm:back")
+    b.adjust(1)
     return b.as_markup()
 
 

@@ -80,11 +80,19 @@ async def notify_admins(bot: Bot, text: str, **kw) -> None:
         await _send(bot, admin_id, text, **kw)
 
 
+async def send_screenshot(bot: Bot, chat_id: int, file_id: str, caption: str, markup) -> None:
+    """Отправляет скриншот-заявку: фото или документ (префикс 'doc:')."""
+    if file_id.startswith("doc:"):
+        await bot.send_document(chat_id, file_id[4:], caption=caption, reply_markup=markup)
+    else:
+        await bot.send_photo(chat_id, file_id, caption=caption, reply_markup=markup)
+
+
 async def admins_submission(bot: Bot, file_id: str, caption: str, markup) -> None:
     """Шлёт админам скриншот-заявку с кнопками модерации."""
     for admin_id in config.admin_ids:
         try:
-            await bot.send_photo(admin_id, file_id, caption=caption, reply_markup=markup)
+            await send_screenshot(bot, admin_id, file_id, caption, markup)
         except Exception as e:  # noqa: BLE001
             log.warning("submission to admin %s failed: %s", admin_id, e)
 

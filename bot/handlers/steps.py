@@ -74,8 +74,16 @@ async def on_number(message: Message, state: FSMContext) -> None:
     await state.set_state(Steps.screenshot)
 
 
-@router.message(Steps.screenshot, F.photo)
+@router.message(Steps.screenshot, F.photo | F.document)
 async def on_screenshot(message: Message, state: FSMContext) -> None:
+    # Скриншот может прийти как фото (из галереи) или как файл-изображение.
+    if message.photo:
+        file_id = message.photo[-1].file_id
+    elif message.document and (message.document.mime_type or "").startswith("image/"):
+        file_id = "doc:" + message.document.file_id  # префикс — чтобы переслать как документ
+    else:
+        await message.answer(texts.STEP2_NEED_PHOTO)
+        return
     data = await state.get_data()
     steps = data.get("steps")
     await state.clear()
@@ -84,7 +92,6 @@ async def on_screenshot(message: Message, state: FSMContext) -> None:
         await state.set_state(Steps.number)
         return
     tg_id = message.from_user.id
-    file_id = message.photo[-1].file_id
     entry_id = await db.save_submission(tg_id, _today(), steps, file_id)
     await message.answer(texts.STEP3_WAIT.format(steps=steps))
 
