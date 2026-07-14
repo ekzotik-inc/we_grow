@@ -36,7 +36,7 @@ def num(n: int) -> str:
     return ch if n <= 9 else f"{n}."
 
 
-FITBIT_ANDROID = "https://play.google.com/store/apps/details?id=com.fitbit.FitbitMobile&hl=en_US"
+FITBIT_ANDROID = "https://play.google.com/store/apps/details?id=com.fitbit.FitbitMobile"
 FITBIT_IOS = "https://apps.apple.com/us/app/fitbit-health-fitness/id462638897"
 
 
@@ -60,9 +60,8 @@ def _rules_body() -> str:
         + "\n\n<b>🚀 Кто и как участвует</b>\n"
         f"{num(1)} Участвовать могут все сотрудники подразделения <b>ASR</b>.\n"
         f"{num(2)} Регистрация и распределение по командам — прямо здесь, в боте.\n"
-        f"{num(3)} Шаги считает приложение <b>Fitbit</b> (Google Health):\n"
-        f"     • Android: {FITBIT_ANDROID}\n"
-        f"     • iOS: {FITBIT_IOS}\n"
+        f"{num(3)} Шаги считает приложение <b>Fitbit</b> (Google Health) — скачать: "
+        f'<a href="{FITBIT_ANDROID}">Android</a> · <a href="{FITBIT_IOS}">iOS</a>\n'
         f"{num(4)} В команде — от <b>8 до 10</b> человек.\n"
         f"{num(5)} Если команда уже заполнена, P&amp;C предложит другую.\n"
         f"{num(6)} Присоединяясь, ты обещаешь дойти до финиша 🏁\n"
@@ -103,10 +102,9 @@ RULES = _rules_body()
 CONSENT_BUTTON = "Принимаю правила 🏁"
 ASK_NAME = stepy("Как тебя зовут? Напиши, пожалуйста, <b>ФИО</b> — так P&amp;C узнает тебя в списке.")
 ASK_ASR = stepy("Подтверди: ты из подразделения <b>ASR</b>?")
-FIT_LINKS = (
-    stepy("Шаги мы считаем в приложении <b>Fitbit</b> (Google Health). "
-          "Если ещё не установил — поставь по ссылке ниже 👇")
-    + f"\n• Android: {FITBIT_ANDROID}\n• iOS: {FITBIT_IOS}"
+FIT_LINKS = stepy(
+    "Шаги считаем в приложении <b>Fitbit</b> (Google Health). Если ещё не установил — "
+    f'скачай: <a href="{FITBIT_ANDROID}">Android</a> · <a href="{FITBIT_IOS}">iOS</a>'
 )
 ASK_TEAM = stepy("Выбери команду — вместе идти веселее! Показываю только те, где есть места.")
 RANDOM_TEAM = "🎲 Определите меня"
