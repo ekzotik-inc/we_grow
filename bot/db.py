@@ -145,6 +145,47 @@ async def undisqualify(tg_id: int) -> None:
     await pool().execute("UPDATE participants SET disqualified_at=NULL WHERE telegram_id=$1", tg_id)
 
 
+async def streak_at_risk(day: date, min_len: int = 3) -> list[asyncpg.Record]:
+    """Активные участники с серией >= min_len, у кого сегодня НЕТ записи —
+    серия под угрозой."""
+    return await pool().fetch(
+        """SELECT s.participant_id, s.current_len
+             FROM streaks s JOIN participants p ON p.telegram_id=s.participant_id
+            WHERE s.current_len >= $2 AND p.approved_at IS NOT NULL
+              AND p.disqualified_at IS NULL
+              AND NOT EXISTS (SELECT 1 FROM daily_entries d
+                               WHERE d.participant_id=s.participant_id AND d.entry_date=$1)""",
+        day, min_len)
+
+
+async def export_participants() -> list[asyncpg.Record]:
+    """Все участники со сводкой (для выгрузки в Excel)."""
+    return await pool().fetch(
+        """SELECT p.telegram_id, p.full_name, p.username, t.name AS team_name,
+                  p.is_asr, p.created_at, p.approved_at, p.disqualified_at,
+                  COALESCE(s.current_len,0) AS streak,
+                  COALESCE((SELECT sum(d.points) FROM daily_entries d
+                             WHERE d.participant_id=p.telegram_id AND d.status='accepted'),0)
+                + COALESCE((SELECT sum(w.bonus_points) FROM weekly_summaries w
+                             WHERE w.participant_id=p.telegram_id),0) AS total_points
+             FROM participants p
+             LEFT JOIN teams t ON t.id=p.team_id
+             LEFT JOIN streaks s ON s.participant_id=p.telegram_id
+            WHERE p.team_id IS NOT NULL
+            ORDER BY total_points DESC""")
+
+
+async def export_entries() -> list[asyncpg.Record]:
+    """Все дневные результаты (для выгрузки в Excel)."""
+    return await pool().fetch(
+        """SELECT p.full_name, t.name AS team_name, d.entry_date, d.steps,
+                  d.points, d.status, d.created_at, d.reviewed_at
+             FROM daily_entries d
+             JOIN participants p ON p.telegram_id=d.participant_id
+             LEFT JOIN teams t ON t.id=p.team_id
+            ORDER BY d.entry_date, p.full_name""")
+
+
 async def user_detail(tg_id: int) -> asyncpg.Record | None:
     return await pool().fetchrow(
         """SELECT p.*, t.name AS team_name

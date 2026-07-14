@@ -92,6 +92,7 @@ def admin_panel_kb() -> InlineKeyboardMarkup:
     b.button(text="🏆 Лидерборд", callback_data="adm:board")
     b.button(text="📊 Вовлечённость", callback_data="adm:stats")
     b.button(text="📣 Рассылка", callback_data="adm:broadcast")
+    b.button(text="📥 Экспорт в Excel", callback_data="adm:export")
     b.button(text="⚙️ Оформление", callback_data="adm:design")
     b.adjust(2)
     return b.as_markup()

@@ -30,6 +30,29 @@ async def admin_panel(message: Message) -> None:
     await message.answer(texts.ADMIN_PANEL, reply_markup=keyboards.admin_panel_kb())
 
 
+async def _send_export(bot, chat_id: int) -> None:
+    from aiogram.types import BufferedInputFile
+    from bot.export import build_workbook
+    data, name = await build_workbook()
+    await bot.send_document(chat_id, BufferedInputFile(data, filename=name),
+                            caption="📥 Выгрузка данных марафона")
+
+
+@router.callback_query(F.data == "adm:export")
+async def adm_export(cb: CallbackQuery) -> None:
+    if not _is_admin(cb.from_user.id):
+        return await cb.answer()
+    await cb.answer("Готовлю файл…")
+    await _send_export(cb.bot, cb.from_user.id)
+
+
+@router.message(Command("export"))
+async def cmd_export(message: Message) -> None:
+    if not _is_admin(message.from_user.id):
+        return
+    await _send_export(message.bot, message.from_user.id)
+
+
 @router.callback_query(F.data == "adm:design")
 async def adm_design(cb: CallbackQuery) -> None:
     if not _is_admin(cb.from_user.id):

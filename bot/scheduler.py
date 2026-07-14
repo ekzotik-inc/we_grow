@@ -18,6 +18,14 @@ async def remind_no_steps(bot: Bot) -> None:
     await notify.broadcast(bot, ids, texts.REMINDER_2100)
 
 
+async def remind_streak_at_risk(bot: Bot) -> None:
+    """20:00 — персональное напоминание тем, у кого серия под угрозой."""
+    day = datetime.now(config.tz).date()
+    for r in await db.streak_at_risk(day, min_len=3):
+        await notify.broadcast(bot, [r["participant_id"]],
+                               texts.streak_at_risk_note(r["current_len"]))
+
+
 async def weekly_summary_reminder(bot: Bot) -> None:
     """Вс 12:00 и 21:00 — напоминание прислать недельную сводку (правило 12)."""
     await notify.broadcast_all(bot, texts.WEEKLY_SUMMARY_REMINDER)
@@ -45,6 +53,7 @@ async def monday_leaderboard(bot: Bot) -> None:
 
 def setup_scheduler(bot: Bot) -> AsyncIOScheduler:
     sched = AsyncIOScheduler(timezone=config.tz)
+    sched.add_job(remind_streak_at_risk, "cron", hour=20, minute=0, args=[bot])
     sched.add_job(remind_no_steps, "cron", hour=21, minute=0, args=[bot])
     sched.add_job(weekly_summary_reminder, "cron", day_of_week="sun", hour=12, minute=0, args=[bot])
     sched.add_job(weekly_summary_reminder, "cron", day_of_week="sun", hour=21, minute=0, args=[bot])
