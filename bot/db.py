@@ -93,6 +93,26 @@ async def set_profile(tg_id: int, full_name: str, is_asr: bool, username: str | 
     )
 
 
+async def set_phone(tg_id: int, phone: str, username: str | None = None) -> None:
+    await pool().execute(
+        "UPDATE participants SET phone=$2, username=COALESCE($3, username) WHERE telegram_id=$1",
+        tg_id, phone, username,
+    )
+
+
+async def is_disqualified(tg_id: int) -> bool:
+    val = await pool().fetchval(
+        "SELECT disqualified_at IS NOT NULL FROM participants WHERE telegram_id=$1", tg_id)
+    return bool(val)
+
+
+async def set_disqualified(tg_id: int) -> None:
+    await pool().execute(
+        "UPDATE participants SET disqualified_at=$2 WHERE telegram_id=$1",
+        tg_id, datetime.now(timezone.utc),
+    )
+
+
 async def set_team(tg_id: int, team_id: int) -> None:
     await pool().execute(
         "UPDATE participants SET team_id=$2 WHERE telegram_id=$1", tg_id, team_id
@@ -260,6 +280,31 @@ async def teams_with_capacity() -> list[asyncpg.Record]:
 
 async def open_teams() -> list[asyncpg.Record]:
     return [t for t in await teams_with_capacity() if t["taken"] < t["capacity"]]
+
+
+async def create_team(name: str, capacity: int = 10) -> None:
+    await pool().execute(
+        "INSERT INTO teams (name, capacity) VALUES ($1,$2) ON CONFLICT (name) DO NOTHING",
+        name, capacity)
+
+
+async def rename_team(team_id: int, name: str) -> None:
+    await pool().execute("UPDATE teams SET name=$2 WHERE id=$1", team_id, name)
+
+
+async def set_team_capacity(team_id: int, capacity: int) -> None:
+    await pool().execute("UPDATE teams SET capacity=$2 WHERE id=$1", team_id, capacity)
+
+
+async def team_member_count(team_id: int) -> int:
+    return int(await pool().fetchval(
+        "SELECT count(*) FROM participants WHERE team_id=$1", team_id))
+
+
+async def delete_team(team_id: int) -> None:
+    """Удаляет команду. Возможно только если в ней нет участников (проверяется
+    вызывающим кодом)."""
+    await pool().execute("DELETE FROM teams WHERE id=$1", team_id)
 
 
 # ---- Дни и серии ---------------------------------------------------------

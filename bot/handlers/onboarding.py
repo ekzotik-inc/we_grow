@@ -23,8 +23,8 @@ router = Router()
 
 
 class Onboarding(StatesGroup):
+    phone = State()
     name = State()
-    asr = State()
     team = State()
 
 
@@ -86,7 +86,7 @@ async def menu_progress(message: Message) -> None:
     if kb:
         await message.answer(texts.OPEN_PROGRESS, reply_markup=kb)
     else:
-        await message.answer(texts.stepy("Открой приложение кнопкой меню слева от поля ввода 🌱"))
+        await message.answer(texts.APP_NOT_CONFIGURED)
 
 
 @router.message(Command("reset"))
@@ -122,30 +122,40 @@ async def reset_yes(cb: CallbackQuery, state: FSMContext) -> None:
 async def on_consent(cb: CallbackQuery, state: FSMContext) -> None:
     await db.set_consent(cb.from_user.id)
     await cb.message.edit_reply_markup(reply_markup=None)
-    await cb.message.answer(texts.ASK_NAME)
-    await state.set_state(Onboarding.name)
+    # Шаг 2 — телефон (кнопка «Поделиться номером»).
+    await cb.message.answer(texts.ASK_PHONE, reply_markup=keyboards.phone_kb())
+    await state.set_state(Onboarding.phone)
     await cb.answer()
+
+
+@router.message(Onboarding.phone, F.contact)
+async def on_phone(message: Message, state: FSMContext) -> None:
+    contact = message.contact
+    # Принимаем только собственный номер участника, не чужой контакт.
+    if contact.user_id and contact.user_id != message.from_user.id:
+        await message.answer(texts.PHONE_NOT_OWN, reply_markup=keyboards.phone_kb())
+        return
+    await db.set_phone(message.from_user.id, contact.phone_number, message.from_user.username)
+    # Шаг 3 — ФИО.
+    await message.answer(texts.ASK_NAME, reply_markup=ReplyKeyboardRemove())
+    await state.set_state(Onboarding.name)
+
+
+@router.message(Onboarding.phone)
+async def phone_need_button(message: Message) -> None:
+    await message.answer(texts.PHONE_NEED_BUTTON, reply_markup=keyboards.phone_kb())
 
 
 @router.message(Onboarding.name, F.text)
 async def on_name(message: Message, state: FSMContext) -> None:
-    await state.update_data(full_name=message.text.strip())
-    await message.answer(texts.ASK_ASR, reply_markup=keyboards.asr_kb())
-    await state.set_state(Onboarding.asr)
-
-
-@router.callback_query(Onboarding.asr, F.data.startswith("asr:"))
-async def on_asr(cb: CallbackQuery, state: FSMContext) -> None:
-    is_asr = cb.data.split(":")[1] == "1"
-    data = await state.get_data()
-    await db.set_profile(cb.from_user.id, data["full_name"], is_asr, cb.from_user.username)
-    await cb.message.edit_reply_markup(reply_markup=None)
-    await cb.message.answer(texts.FIT_LINKS, disable_web_page_preview=True)
-
+    full_name = message.text.strip()
+    # is_asr=True: марафон для сотрудников ASR, отдельный вопрос убрали из анкеты.
+    await db.set_profile(message.from_user.id, full_name, True, message.from_user.username)
+    await message.answer(texts.FIT_LINKS, disable_web_page_preview=True)
+    # Шаг 4 — выбор команды.
     teams = await db.open_teams()
-    await cb.message.answer(texts.ASK_TEAM, reply_markup=keyboards.teams_kb(teams))
+    await message.answer(texts.ASK_TEAM, reply_markup=keyboards.teams_kb(teams))
     await state.set_state(Onboarding.team)
-    await cb.answer()
 
 
 @router.callback_query(Onboarding.team, F.data.startswith("team:"))
@@ -172,8 +182,8 @@ async def on_team(cb: CallbackQuery, state: FSMContext) -> None:
     await state.clear()
     await cb.answer()
 
-    # Пуш админам с подробной карточкой и кнопками подтверждения.
-    from bot.notify import notify_admins
+    # Заявка уходит в канал заявок (если настроен) либо админам.
+    from bot.notify import notify_join_request
     p = await db.get_participant(cb.from_user.id)
-    await notify_admins(cb.bot, texts.admin_new_registration(p, team["name"]),
-                        reply_markup=keyboards.approve_kb(cb.from_user.id))
+    await notify_join_request(cb.bot, texts.admin_new_registration(p, team["name"]),
+                              reply_markup=keyboards.approve_kb(cb.from_user.id))

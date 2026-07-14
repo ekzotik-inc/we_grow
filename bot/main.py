@@ -12,13 +12,12 @@ from bot.config import config
 from bot.handlers import admin, admin_settings, onboarding, steps
 from bot.scheduler import setup_scheduler
 
-# Списки команд (меню «/»). Разные для участников и админов через scopes.
+# Списки команд (меню «/»). Участникам показываем только три базовые команды —
+# остальное скрыто и доступно лишь админам через отдельный scope.
 USER_COMMANDS = [
     ("start", "Регистрация / главное меню"),
-    ("rules", "Правила марафона"),
     ("help", "Как участвовать"),
-    ("feedback", "Связь с P&C"),
-    ("reset", "Сбросить регистрацию"),
+    ("rules", "Правила марафона"),
 ]
 ADMIN_EXTRA = [
     ("admin", "Админ-панель P&C"),
@@ -29,6 +28,8 @@ ADMIN_EXTRA = [
     ("move", "Перевести участника в команду"),
     ("dq", "Дисквалификация: /dq ID"),
     ("emojiid", "Получить emoji-id"),
+    ("feedback", "Связь с P&C"),
+    ("reset", "Сбросить регистрацию"),
 ]
 
 
@@ -97,13 +98,20 @@ async def main() -> None:
     dp.include_router(steps.router)
     dp.errors.register(_on_error)
 
-    # Постоянная кнопка меню открывает Mini App (если задан WEBAPP_URL).
-    if config.webapp_url:
+    # Блокировка дисквалифицированных участников (кроме админов).
+    from bot.middleware import BlockDisqualifiedMiddleware
+    block_mw = BlockDisqualifiedMiddleware()
+    dp.message.middleware(block_mw)
+    dp.callback_query.middleware(block_mw)
+
+    # Постоянная кнопка меню открывает Mini App (если задан URL в настройках/env).
+    webapp_url = settings.webapp_url()
+    if webapp_url:
         from aiogram.types import MenuButtonWebApp, WebAppInfo
         await bot.set_chat_menu_button(
-            menu_button=MenuButtonWebApp(text="Открыть", web_app=WebAppInfo(url=config.webapp_url))
+            menu_button=MenuButtonWebApp(text="Открыть", web_app=WebAppInfo(url=webapp_url))
         )
-        log.info("Кнопка меню Mini App: %s", config.webapp_url)
+        log.info("Кнопка меню Mini App: %s", webapp_url)
 
     await _setup_commands(bot)
     log.info("Команды меню настроены")

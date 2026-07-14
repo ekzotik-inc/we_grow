@@ -21,6 +21,14 @@ def consent_kb() -> InlineKeyboardMarkup:
     ])
 
 
+def phone_kb() -> ReplyKeyboardMarkup:
+    """Кнопка «Поделиться телефоном» (request_contact)."""
+    return ReplyKeyboardMarkup(
+        keyboard=[[KeyboardButton(text=texts.SHARE_PHONE_BUTTON, request_contact=True)]],
+        resize_keyboard=True, one_time_keyboard=True,
+    )
+
+
 def asr_kb() -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(inline_keyboard=[[
         InlineKeyboardButton(text="Да ✅", callback_data="asr:1"),
@@ -43,8 +51,9 @@ def _mbtn(name: str) -> KeyboardButton:
     Mini App напрямую (web_app)."""
     icon = settings.icon(name) if premium_emoji.ENABLED else None
     web_app = None
-    if name in ("progress", "board") and config.webapp_url:
-        web_app = WebAppInfo(url=config.webapp_url)
+    url = settings.webapp_url()
+    if name in ("progress", "board") and url:
+        web_app = WebAppInfo(url=url)
     return KeyboardButton(text=settings.label(name), icon_custom_emoji_id=icon, web_app=web_app)
 
 
@@ -70,10 +79,11 @@ def feedback_kb() -> InlineKeyboardMarkup:
 
 def open_app_kb(text: str = "🌱 Открыть приложение") -> InlineKeyboardMarkup | None:
     """Inline-кнопка, открывающая Mini App с корректным initData."""
-    if not config.webapp_url:
+    url = settings.webapp_url()
+    if not url:
         return None
     return InlineKeyboardMarkup(inline_keyboard=[[
-        InlineKeyboardButton(text=text, web_app=WebAppInfo(url=config.webapp_url))
+        InlineKeyboardButton(text=text, web_app=WebAppInfo(url=url))
     ]])
 
 
@@ -89,12 +99,45 @@ def admin_panel_kb() -> InlineKeyboardMarkup:
     b = InlineKeyboardBuilder()
     b.button(text="🧾 Результаты", callback_data="adm:subs")
     b.button(text="👥 Участники", callback_data="adm:users")
+    b.button(text="🌳 Команды", callback_data="adm:teams")
     b.button(text="🏆 Лидерборд", callback_data="adm:board")
     b.button(text="📊 Вовлечённость", callback_data="adm:stats")
     b.button(text="📣 Рассылка", callback_data="adm:broadcast")
     b.button(text="📥 Экспорт в Excel", callback_data="adm:export")
+    b.button(text="📢 Каналы", callback_data="adm:channels")
     b.button(text="⚙️ Оформление", callback_data="adm:design")
     b.adjust(2)
+    return b.as_markup()
+
+
+def teams_admin_kb(teams: list[asyncpg.Record]) -> InlineKeyboardMarkup:
+    """Список команд для управления: у каждой — занятость, снизу «добавить»."""
+    b = InlineKeyboardBuilder()
+    for t in teams:
+        b.button(text=f"🌳 {t['name']} — {t['taken']}/{t['capacity']}",
+                 callback_data=f"tm:{t['id']}")
+    b.button(text="➕ Добавить команду", callback_data="tm:add")
+    b.button(text="⬅️ Назад", callback_data="adm:back")
+    b.adjust(1)
+    return b.as_markup()
+
+
+def team_card_kb(team_id: int) -> InlineKeyboardMarkup:
+    b = InlineKeyboardBuilder()
+    b.button(text="✏️ Переименовать", callback_data=f"tmren:{team_id}")
+    b.button(text="🔢 Вместимость", callback_data=f"tmcap:{team_id}")
+    b.button(text="🗑 Удалить", callback_data=f"tmdel:{team_id}")
+    b.button(text="⬅️ К списку команд", callback_data="adm:teams")
+    b.adjust(2, 1, 1)
+    return b.as_markup()
+
+
+def channels_kb() -> InlineKeyboardMarkup:
+    b = InlineKeyboardBuilder()
+    b.button(text="📥 Канал заявок на вступление", callback_data="ch:join")
+    b.button(text="🧾 Канал проверки результатов", callback_data="ch:review")
+    b.button(text="⬅️ Назад", callback_data="adm:back")
+    b.adjust(1)
     return b.as_markup()
 
 
@@ -104,6 +147,7 @@ def design_panel_kb() -> InlineKeyboardMarkup:
     b.button(text="🖼 Медиа меню", callback_data="adm:media")
     b.button(text="✏️ Кнопки меню", callback_data="adm:labels")
     b.button(text="🎨 Иконки кнопок", callback_data="adm:icons")
+    b.button(text="🔗 Ссылка приложения", callback_data="adm:appurl")
     b.button(text="⬅️ Назад", callback_data="adm:back")
     b.adjust(1)
     return b.as_markup()
@@ -177,7 +221,7 @@ def bc_builder_kb(draft: dict) -> InlineKeyboardMarkup:
 def bc_buttons_kb() -> InlineKeyboardMarkup:
     b = InlineKeyboardBuilder()
     b.button(text="➕ Своя кнопка (текст + ссылка)", callback_data="bc:btn_custom")
-    if config.webapp_url:
+    if settings.webapp_url():
         b.button(text="📊 Кнопка «Открыть приложение»", callback_data="bc:btn_app")
     b.button(text="🗑 Очистить кнопки", callback_data="bc:btn_clear")
     b.button(text="⬅️ Назад", callback_data="bc:back")
@@ -213,6 +257,7 @@ def icons_pick_kb() -> InlineKeyboardMarkup:
 
 
 def open_app_inline(text: str) -> InlineKeyboardButton | None:
-    if not config.webapp_url:
+    url = settings.webapp_url()
+    if not url:
         return None
-    return InlineKeyboardButton(text=text, web_app=WebAppInfo(url=config.webapp_url))
+    return InlineKeyboardButton(text=text, web_app=WebAppInfo(url=url))

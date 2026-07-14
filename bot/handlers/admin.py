@@ -10,7 +10,7 @@ from aiogram import F, Router
 from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
-from aiogram.types import CallbackQuery, Message
+from aiogram.types import CallbackQuery, Message, ReplyKeyboardRemove
 
 from bot import db, keyboards, notify, texts
 from bot.config import config
@@ -203,12 +203,14 @@ async def disqualify(message: Message) -> None:
     if p is None:
         await message.answer("Участник не найден.")
         return
-    await db.pool().execute(
-        "UPDATE participants SET disqualified_at=$2 WHERE telegram_id=$1",
-        target, datetime.now(timezone.utc),
-    )
+    await db.set_disqualified(target)
     name = escape(p["full_name"])
     await message.answer(f"Дисквалифицирован: {name}. Баллы исключены из зачёта.")
+    try:
+        await message.bot.send_message(target, texts.DISQUALIFIED_NOTICE,
+                                       reply_markup=ReplyKeyboardRemove())
+    except Exception:  # noqa: BLE001
+        pass
     from bot.notify import notify_admins
     await notify_admins(message.bot, f"⛔ {name} дисквалифицирован администратором.")
 

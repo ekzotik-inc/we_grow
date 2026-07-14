@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import os
 from dataclasses import dataclass, field
+from datetime import date
 from zoneinfo import ZoneInfo
 
 from dotenv import load_dotenv
@@ -24,6 +25,9 @@ class Config:
     webapp_url: str = os.getenv("WEBAPP_URL", "").strip()
     # Прямой контакт сотрудника P&C для обратной связи.
     feedback_url: str = os.getenv("FEEDBACK_URL", "https://t.me/DaryaPMI").strip()
+    # Старт марафона: до этой даты бот не принимает шаги, а «Прогресс» заблюрен.
+    marathon_start: date = date.fromisoformat(os.getenv("MARATHON_START", "2026-07-17"))
+    marathon_end: date = date.fromisoformat(os.getenv("MARATHON_END", "2026-08-07"))
 
     @property
     def tz(self) -> ZoneInfo:

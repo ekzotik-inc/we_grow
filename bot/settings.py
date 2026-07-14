@@ -1,13 +1,18 @@
 """Настройки, управляемые из админ-панели. Кэш в памяти + хранение в БД.
 
 Ключи:
-  menu_media   — JSON {"type": "photo|animation|video", "file_id": "..."}
-  menu_caption — подпись под медиа главного меню
-  label_<name> — подпись кнопки (steps/progress/board/rules/help)
+  menu_media    — JSON {"type": "photo|animation|video", "file_id": "..."}
+  menu_caption  — подпись под медиа главного меню
+  label_<name>  — подпись кнопки (steps/progress/board/rules/help)
+  webapp_url    — URL Mini App (переопределяет env, чтобы менять без редеплоя)
+  channel_join  — chat_id канала для заявок на вступление
+  channel_review— chat_id канала для проверки результатов
 """
 from __future__ import annotations
 
 import json
+
+from bot.config import config
 
 _cache: dict[str, str] = {}
 
@@ -65,3 +70,19 @@ def menu_media() -> dict | None:
 
 async def set_menu_media(kind: str, file_id: str) -> None:
     await set("menu_media", json.dumps({"type": kind, "file_id": file_id}))
+
+
+def webapp_url() -> str:
+    """URL Mini App: сначала настройка из админки, затем env. Позволяет
+    включить кнопки «Прогресс/Лидерборд» без редеплоя (частая причина
+    ошибки «открой приложение из бота» — незаданный WEBAPP_URL)."""
+    return _cache.get("webapp_url") or config.webapp_url
+
+
+def channel_id(kind: str) -> int | None:
+    """chat_id канала для заявок (kind='join') или проверки (kind='review')."""
+    raw = _cache.get(f"channel_{kind}")
+    try:
+        return int(raw) if raw else None
+    except (TypeError, ValueError):
+        return None

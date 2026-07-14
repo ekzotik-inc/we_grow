@@ -7,7 +7,7 @@ import logging
 from aiogram import Bot
 from aiogram.exceptions import TelegramRetryAfter
 
-from bot import db
+from bot import db, settings
 from bot.config import config
 
 log = logging.getLogger(__name__)
@@ -80,6 +80,17 @@ async def notify_admins(bot: Bot, text: str, **kw) -> None:
         await _send(bot, admin_id, text, **kw)
 
 
+async def notify_join_request(bot: Bot, text: str, **kw) -> None:
+    """Заявка на вступление: в канал заявок (если настроен через админку),
+    иначе — личкой всем админам."""
+    chat_id = settings.channel_id("join")
+    if chat_id is not None:
+        if await _send(bot, chat_id, text, **kw):
+            return
+        log.warning("Не удалось отправить заявку в канал %s — шлю админам", chat_id)
+    await notify_admins(bot, text, **kw)
+
+
 async def send_screenshot(bot: Bot, chat_id: int, file_id: str, caption: str, markup) -> None:
     """Отправляет скриншот-заявку: фото или документ (префикс 'doc:')."""
     if file_id.startswith("doc:"):
@@ -89,7 +100,15 @@ async def send_screenshot(bot: Bot, chat_id: int, file_id: str, caption: str, ma
 
 
 async def admins_submission(bot: Bot, file_id: str, caption: str, markup) -> None:
-    """Шлёт админам скриншот-заявку с кнопками модерации."""
+    """Шлёт результат на проверку: в канал проверки (если настроен через
+    админку), иначе — личкой всем админам."""
+    chat_id = settings.channel_id("review")
+    if chat_id is not None:
+        try:
+            await send_screenshot(bot, chat_id, file_id, caption, markup)
+            return
+        except Exception as e:  # noqa: BLE001
+            log.warning("submission to review channel %s failed: %s — шлю админам", chat_id, e)
     for admin_id in config.admin_ids:
         try:
             await send_screenshot(bot, admin_id, file_id, caption, markup)

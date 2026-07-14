@@ -17,6 +17,7 @@ CREATE TABLE IF NOT EXISTS participants (
     telegram_id     bigint PRIMARY KEY,
     full_name       text        NOT NULL,
     username        text,                                        -- @username на момент регистрации
+    phone           text,                                        -- телефон, полученный при регистрации
     is_asr          boolean     NOT NULL DEFAULT false,
     team_id         int         REFERENCES teams(id),
     role            text        NOT NULL DEFAULT 'participant',  -- participant | admin
@@ -31,6 +32,7 @@ CREATE INDEX IF NOT EXISTS participants_team_idx ON participants(team_id);
 -- Миграции для баз, созданных ранее.
 ALTER TABLE participants ADD COLUMN IF NOT EXISTS username text;
 ALTER TABLE participants ADD COLUMN IF NOT EXISTS approved_at timestamptz;
+ALTER TABLE participants ADD COLUMN IF NOT EXISTS phone text;  -- телефон (шаг регистрации)
 
 CREATE TABLE IF NOT EXISTS daily_entries (
     id                 bigserial PRIMARY KEY,

@@ -51,6 +51,13 @@ async def _require_approved(message: Message):
 async def ask_steps(message: Message, state: FSMContext) -> None:
     if not await _require_approved(message):
         return
+    today = _today()
+    if today < config.marathon_start:
+        await message.answer(texts.marathon_not_started(config.marathon_start))
+        return
+    if today > config.marathon_end:
+        await message.answer(texts.MARATHON_FINISHED)
+        return
     existing = await db.get_entry(message.from_user.id, _today())
     if existing and existing["status"] == "accepted":
         await message.answer(texts.ALREADY_ACCEPTED.format(steps=existing["steps"]))

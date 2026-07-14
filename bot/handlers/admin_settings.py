@@ -289,9 +289,11 @@ async def _card(tg_id: int):
     status = "⛔ дисквалифицирован" if p["disqualified_at"] else \
         ("✅ подтверждён" if p["approved_at"] else "⏳ ожидает подтверждения")
     uname = f"@{escape(p['username'])}" if p["username"] else "—"
+    phone = f"<code>{escape(p['phone'])}</code>" if p["phone"] else "—"
     text = (
         f"👤 <b>{escape(p['full_name'])}</b>\n"
         f"🔗 {uname}\n"
+        f"📱 {phone}\n"
         f"🆔 <code>{p['telegram_id']}</code>\n"
         f"🌳 Команда: <b>{escape(p['team_name'] or '—')}</b>\n"
         f"📌 Статус: {status}\n"
@@ -370,9 +372,12 @@ async def user_dq(cb: CallbackQuery) -> None:
     if not _is_admin(cb.from_user.id):
         return await cb.answer()
     tg = int(cb.data.split(":")[1])
-    from datetime import datetime, timezone
-    await db.pool().execute("UPDATE participants SET disqualified_at=$2 WHERE telegram_id=$1",
-                            tg, datetime.now(timezone.utc))
+    await db.set_disqualified(tg)
+    try:
+        from aiogram.types import ReplyKeyboardRemove
+        await cb.bot.send_message(tg, texts.DISQUALIFIED_NOTICE, reply_markup=ReplyKeyboardRemove())
+    except Exception:  # noqa: BLE001
+        pass
     await _refresh_card(cb, tg)
     await cb.answer("Дисквалифицирован ⛔")
 
@@ -383,6 +388,12 @@ async def user_un(cb: CallbackQuery) -> None:
         return await cb.answer()
     tg = int(cb.data.split(":")[1])
     await db.undisqualify(tg)
+    try:
+        from bot.menu import send_main_menu
+        await cb.bot.send_message(tg, texts.REINSTATED_NOTICE)
+        await send_main_menu(cb.bot, tg, texts.welcome_back())
+    except Exception:  # noqa: BLE001
+        pass
     await _refresh_card(cb, tg)
     await cb.answer("Восстановлен ♻️")
 
@@ -407,6 +418,277 @@ async def user_del(cb: CallbackQuery) -> None:
     await db.reset_participant(tg)
     await cb.message.edit_text("🗑 Участник удалён.")
     await cb.answer("Удалён")
+
+
+# ---- Управление командами -------------------------------------------------
+
+class TeamAdmin(StatesGroup):
+    add_name = State()
+    rename = State()
+    capacity = State()
+
+
+async def _teams_view():
+    teams = await db.teams_with_capacity()
+    header = ("🌳 <b>Команды</b>\n"
+              "Выбери команду для настройки или добавь новую.\n"
+              f"Всего команд: <b>{len(teams)}</b>")
+    return header, keyboards.teams_admin_kb(teams)
+
+
+@router.callback_query(F.data == "adm:teams")
+async def teams_open(cb: CallbackQuery, state: FSMContext) -> None:
+    if not _is_admin(cb.from_user.id):
+        return await cb.answer()
+    await state.set_state(None)
+    header, kb = await _teams_view()
+    try:
+        await cb.message.edit_text(header, reply_markup=kb)
+    except Exception:  # noqa: BLE001
+        await cb.message.answer(header, reply_markup=kb)
+    await cb.answer()
+
+
+@router.callback_query(F.data == "tm:add")
+async def team_add(cb: CallbackQuery, state: FSMContext) -> None:
+    if not _is_admin(cb.from_user.id):
+        return await cb.answer()
+    await state.set_state(TeamAdmin.add_name)
+    await cb.message.answer("Название новой команды? (можно с эмодзи). /cancel — отмена.")
+    await cb.answer()
+
+
+@router.message(TeamAdmin.add_name, F.text)
+async def team_add_save(message: Message, state: FSMContext) -> None:
+    await state.clear()
+    name = message.text.strip()
+    if not name:
+        return await message.answer("Пустое название. Попробуй ещё раз через «🌳 Команды».")
+    await db.create_team(name, 10)
+    header, kb = await _teams_view()
+    await message.answer(f"Команда <b>{escape(name)}</b> добавлена ✅ (вместимость 10)")
+    await message.answer(header, reply_markup=kb)
+
+
+@router.callback_query(F.data.startswith("tm:"))
+async def team_card(cb: CallbackQuery) -> None:
+    if not _is_admin(cb.from_user.id):
+        return await cb.answer()
+    team_id = int(cb.data.split(":")[1])
+    teams = await db.teams_with_capacity()
+    t = next((x for x in teams if x["id"] == team_id), None)
+    if t is None:
+        return await cb.answer("Команда не найдена.", show_alert=True)
+    text = (f"🌳 <b>{escape(t['name'])}</b>\n"
+            f"Занято мест: <b>{t['taken']}/{t['capacity']}</b>")
+    try:
+        await cb.message.edit_text(text, reply_markup=keyboards.team_card_kb(team_id))
+    except Exception:  # noqa: BLE001
+        await cb.message.answer(text, reply_markup=keyboards.team_card_kb(team_id))
+    await cb.answer()
+
+
+@router.callback_query(F.data.startswith("tmren:"))
+async def team_rename_start(cb: CallbackQuery, state: FSMContext) -> None:
+    if not _is_admin(cb.from_user.id):
+        return await cb.answer()
+    await state.set_state(TeamAdmin.rename)
+    await state.update_data(team_id=int(cb.data.split(":")[1]))
+    await cb.message.answer("Новое название команды? /cancel — отмена.")
+    await cb.answer()
+
+
+@router.message(TeamAdmin.rename, F.text)
+async def team_rename_save(message: Message, state: FSMContext) -> None:
+    data = await state.get_data()
+    await state.clear()
+    name = message.text.strip()
+    await db.rename_team(data["team_id"], name)
+    header, kb = await _teams_view()
+    await message.answer(f"Переименовано в <b>{escape(name)}</b> ✅")
+    await message.answer(header, reply_markup=kb)
+
+
+@router.callback_query(F.data.startswith("tmcap:"))
+async def team_cap_start(cb: CallbackQuery, state: FSMContext) -> None:
+    if not _is_admin(cb.from_user.id):
+        return await cb.answer()
+    await state.set_state(TeamAdmin.capacity)
+    await state.update_data(team_id=int(cb.data.split(":")[1]))
+    await cb.message.answer("Новая вместимость команды? Пришли число (например 10). /cancel — отмена.")
+    await cb.answer()
+
+
+@router.message(TeamAdmin.capacity, F.text)
+async def team_cap_save(message: Message, state: FSMContext) -> None:
+    if not message.text.strip().isdigit():
+        return await message.answer("Нужно число, например 10.")
+    cap = int(message.text.strip())
+    if not 1 <= cap <= 100:
+        return await message.answer("Вместимость должна быть от 1 до 100.")
+    data = await state.get_data()
+    await state.clear()
+    await db.set_team_capacity(data["team_id"], cap)
+    header, kb = await _teams_view()
+    await message.answer(f"Вместимость обновлена: <b>{cap}</b> ✅")
+    await message.answer(header, reply_markup=kb)
+
+
+@router.callback_query(F.data.startswith("tmdel:"))
+async def team_delete(cb: CallbackQuery) -> None:
+    if not _is_admin(cb.from_user.id):
+        return await cb.answer()
+    team_id = int(cb.data.split(":")[1])
+    n = await db.team_member_count(team_id)
+    if n > 0:
+        return await cb.answer(f"Нельзя удалить: в команде {n} участник(ов). "
+                               "Сначала переведите их в другие команды.", show_alert=True)
+    await db.delete_team(team_id)
+    header, kb = await _teams_view()
+    try:
+        await cb.message.edit_text("Команда удалена ✅\n\n" + header, reply_markup=kb)
+    except Exception:  # noqa: BLE001
+        await cb.message.answer(header, reply_markup=kb)
+    await cb.answer("Удалено")
+
+
+# ---- Настройка каналов (заявки / проверка результатов) --------------------
+
+class AppUrl(StatesGroup):
+    waiting = State()
+
+
+@router.callback_query(F.data == "adm:appurl")
+async def appurl_start(cb: CallbackQuery, state: FSMContext) -> None:
+    if not _is_admin(cb.from_user.id):
+        return await cb.answer()
+    cur = settings.webapp_url() or "не задан"
+    await state.set_state(AppUrl.waiting)
+    await cb.message.answer(
+        "🔗 <b>Ссылка Mini App</b>\n\n"
+        f"Текущая: <code>{escape(cur)}</code>\n\n"
+        "Пришли URL веб-приложения (например <code>https://wegrow-webapp.onrender.com</code>).\n"
+        "Он включит кнопки «Мой прогресс/Лидерборд» с корректной авторизацией — "
+        "это и есть причина ошибки «открой приложение из бота».\n"
+        "«-» — очистить. /cancel — отмена."
+    )
+    await cb.answer()
+
+
+@router.message(AppUrl.waiting, F.text)
+async def appurl_save(message: Message, state: FSMContext) -> None:
+    await state.clear()
+    val = message.text.strip()
+    if val == "-":
+        await settings.set("webapp_url", None)
+        await message.answer("Ссылка приложения очищена ✅ (кнопки откроют приложение по env, если задан)")
+        return
+    if not val.startswith("https://"):
+        await message.answer("Ссылка должна начинаться с <code>https://</code>. Попробуй ещё раз через «⚙️ Оформление».")
+        return
+    await settings.set("webapp_url", val)
+    # Обновляем постоянную кнопку меню на новый URL.
+    try:
+        from aiogram.types import MenuButtonWebApp, WebAppInfo
+        await message.bot.set_chat_menu_button(
+            menu_button=MenuButtonWebApp(text="Открыть", web_app=WebAppInfo(url=val)))
+    except Exception:  # noqa: BLE001
+        pass
+    await message.answer("Ссылка приложения сохранена ✅\nОткрой /start — кнопки обновятся.",
+                         reply_markup=keyboards.main_kb())
+
+
+class ChannelSetup(StatesGroup):
+    waiting = State()
+
+
+def _channels_text() -> str:
+    join = settings.channel_id("join")
+    review = settings.channel_id("review")
+    return (
+        "📢 <b>Каналы</b>\n\n"
+        f"📥 Заявки на вступление: <b>{join if join else 'не задан (шлём админам)'}</b>\n"
+        f"🧾 Проверка результатов: <b>{review if review else 'не задан (шлём админам)'}</b>\n\n"
+        "Чтобы задать канал: добавь бота в канал <b>администратором</b> (с правом "
+        "публикации), затем перешли сюда любое сообщение из этого канала — я запомню его."
+    )
+
+
+@router.callback_query(F.data == "adm:channels")
+async def channels_open(cb: CallbackQuery, state: FSMContext) -> None:
+    if not _is_admin(cb.from_user.id):
+        return await cb.answer()
+    await state.set_state(None)
+    try:
+        await cb.message.edit_text(_channels_text(), reply_markup=keyboards.channels_kb())
+    except Exception:  # noqa: BLE001
+        await cb.message.answer(_channels_text(), reply_markup=keyboards.channels_kb())
+    await cb.answer()
+
+
+@router.callback_query(F.data.startswith("ch:"))
+async def channel_set_start(cb: CallbackQuery, state: FSMContext) -> None:
+    if not _is_admin(cb.from_user.id):
+        return await cb.answer()
+    kind = cb.data.split(":")[1]  # join | review
+    if kind not in ("join", "review"):
+        return await cb.answer()
+    await state.set_state(ChannelSetup.waiting)
+    await state.update_data(channel_kind=kind)
+    title = "заявок на вступление" if kind == "join" else "проверки результатов"
+    await cb.message.answer(
+        f"Настраиваю канал <b>{title}</b>.\n\n"
+        "Перешли сюда любое сообщение из нужного канала "
+        "(бот должен быть в нём администратором), либо пришли числовой "
+        "<b>chat_id</b> канала (например <code>-1001234567890</code>).\n"
+        "«-» — сбросить (снова слать админам). /cancel — отмена."
+    )
+    await cb.answer()
+
+
+@router.message(ChannelSetup.waiting)
+async def channel_set_save(message: Message, state: FSMContext) -> None:
+    data = await state.get_data()
+    kind = data.get("channel_kind")
+    if not kind:
+        await state.clear()
+        return
+    text = (message.text or "").strip()
+    if text == "-":
+        await state.clear()
+        await settings.set(f"channel_{kind}", None)
+        await message.answer("Канал сброшен ✅ Уведомления снова идут админам.",
+                             reply_markup=keyboards.channels_kb())
+        return
+
+    chat_id = None
+    if message.forward_from_chat is not None:
+        chat_id = message.forward_from_chat.id
+    elif text.lstrip("-").isdigit():
+        chat_id = int(text)
+    if chat_id is None:
+        await message.answer("Не понял. Перешли сообщение из канала или пришли числовой "
+                             "chat_id. «-» — сброс, /cancel — отмена.")
+        return
+
+    # Проверяем, что бот может писать в канал.
+    try:
+        probe = await message.bot.send_message(chat_id, "✅ Канал подключён к боту Step Together.")
+        await state.clear()
+        await settings.set(f"channel_{kind}", str(chat_id))
+        try:
+            await probe.delete()
+        except Exception:  # noqa: BLE001
+            pass
+        title = "заявок на вступление" if kind == "join" else "проверки результатов"
+        await message.answer(f"Готово! Канал {title}: <code>{chat_id}</code> ✅",
+                             reply_markup=keyboards.channels_kb())
+    except Exception as e:  # noqa: BLE001
+        await message.answer(
+            "Не удалось отправить сообщение в этот канал 😔\n"
+            f"<code>{escape(str(e))}</code>\n\n"
+            "Убедись, что бот добавлен в канал <b>администратором</b> с правом публикации, "
+            "и попробуй снова.")
 
 
 # ---- Модерация результатов (шаги) -----------------------------------------
@@ -647,7 +929,7 @@ async def bc_back(cb: CallbackQuery, state: FSMContext) -> None:
 def _build_markup(draft: dict) -> InlineKeyboardMarkup | None:
     rows = []
     for btn in draft.get("buttons", []):
-        if btn.get("app") and config.webapp_url:
+        if btn.get("app") and settings.webapp_url():
             b = keyboards.open_app_inline(btn["text"])
             if b:
                 rows.append([b])

@@ -34,7 +34,7 @@
       radial-gradient(120% 60% at 0% 0%, rgba(0,209,210,.16), transparent 55%),
       var(--bg);
     color:var(--text);
-    padding:calc(var(--safe-top) + 8px) 0 calc(84px + var(--safe-bottom)) 0;
+    padding:calc(var(--safe-top) + 8px) 0 calc(104px + var(--safe-bottom)) 0;
     overflow-x:hidden;
   }
   .wrap{max-width:620px;margin:0 auto;padding:0 16px}
@@ -173,6 +173,19 @@
   .nav button.on::before{content:"";position:absolute;top:0;width:26px;height:3px;border-radius:3px;
     background:var(--grad);box-shadow:0 0 10px var(--tq)}
 
+  /* Блокировка «Прогресса» до старта марафона */
+  .locked{position:relative}
+  .locked .blurwrap{filter:blur(7px) saturate(.8);pointer-events:none;opacity:.7}
+  .lockmsg{position:absolute;inset:0;display:flex;flex-direction:column;
+    align-items:center;justify-content:center;text-align:center;padding:24px;z-index:5}
+  .lockmsg .lk{font-size:56px;margin-bottom:10px;
+    animation:bob 4s ease-in-out 1s infinite}
+  .lockmsg .lt{font-weight:800;font-size:19px;background:var(--grad);
+    -webkit-background-clip:text;background-clip:text;color:transparent}
+  .lockmsg .ls{color:var(--text);font-size:14px;margin-top:10px;line-height:1.55;max-width:320px}
+  .lockmsg .chip{margin-top:16px;background:var(--grad);color:#06222b;font-weight:800;
+    padding:9px 18px;border-radius:999px;font-size:14px;box-shadow:0 8px 22px rgba(0,209,210,.35)}
+
   .view{animation:fade .35s ease both}
   @keyframes fade{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
   .center{text-align:center;padding:56px 24px;color:var(--muted);line-height:1.5}
@@ -229,6 +242,9 @@ async function api(path){
 }
 const esc=s=>String(s).replace(/[&<>]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;"}[c]));
 const V=document.getElementById("view");
+const MONTHS=["января","февраля","марта","апреля","мая","июня","июля","августа","сентября","октября","ноября","декабря"];
+function fmtDM(iso){ const p=String(iso).split("-"); return p[2]+"."+p[1]; }
+function fmtFull(iso){ const [y,m,dd]=String(iso).split("-"); return parseInt(dd,10)+" "+MONTHS[parseInt(m,10)-1]+" "+y; }
 
 function countUp(el,to,dur=900){
   const start=performance.now(), from=0;
@@ -260,7 +276,7 @@ async function renderProgress(){
   }).join("");
   const ts=d.today_status;
   const todayMark=ts==="accepted"?"✅":ts==="pending"?"⏳":ts==="rejected"?"❌":"—";
-  V.innerHTML=`<div class="view">
+  const body=`
     <div class="card hero d1">
       <div class="plant">${st.e}</div>
       <div class="stage">${st.n}</div>
@@ -273,17 +289,33 @@ async function renderProgress(){
       <div class="tile card d3" style="margin:0"><div class="n">${todayMark}</div><div class="l">Сегодня</div></div>
     </div>
     <div class="card d3">
-      <div class="row"><div class="sec-title">📅 Календарь марафона</div><span class="muted">17.07–07.08</span></div>
+      <div class="row"><div class="sec-title">📅 Календарь марафона</div><span class="muted">${fmtDM(d.marathon.start)}–${fmtDM(d.marathon.end)}</span></div>
       <div class="cal">${cal}</div>
       <div class="legend">
         <span><i class="lg-acc"></i>принято</span>
         <span><i class="lg-pend"></i>на проверке ⏳</span>
         <span><i class="lg-rej"></i>отклонено</span>
       </div>
-    </div></div>`;
-  requestAnimationFrame(()=>{ document.getElementById("pbar").style.width=prog+"%";
-    countUp(document.getElementById("s-pts"),d.total_points);
-    countUp(document.getElementById("s-str"),d.current_streak); });
+    </div>`;
+
+  // До старта марафона «Прогресс» заблюрен + дисклеймер (пункт 5).
+  const startDate=new Date(d.marathon.start+"T00:00:00");
+  const today0=new Date(new Date().toDateString());
+  const notStarted=today0<startDate;
+  const inner=notStarted
+    ? `<div class="locked"><div class="blurwrap">${body}</div>
+         <div class="lockmsg">
+           <div class="lk">🔒</div>
+           <div class="lt">Марафон ещё не начался</div>
+           <div class="ls">Твой прогресс, растение и календарь откроются со старта.<br>
+             Начало — <b>${fmtFull(d.marathon.start)}</b> 🌱</div>
+           <div class="chip">Старт ${fmtDM(d.marathon.start)}</div>
+         </div></div>`
+    : body;
+  V.innerHTML=`<div class="view">${inner}</div>`;
+  requestAnimationFrame(()=>{ const pb=document.getElementById("pbar"); if(pb)pb.style.width=prog+"%";
+    const sp=document.getElementById("s-pts"); if(sp)countUp(sp,d.total_points);
+    const ss=document.getElementById("s-str"); if(ss)countUp(ss,d.current_streak); });
 }
 
 async function renderTeam(){
@@ -339,12 +371,27 @@ function renderRules(){
   V.innerHTML=`<div class="view">
     <div class="card d1">
       <div class="sec-title">🪴 Привет, я Stepy!</div>
-      ${stepyBox("Объясню всё <b>на пальцах</b>. Твоя задача — ходить и каждый день присылать результат. Остальное я беру на себя 😉")}
+      ${stepyBox("Объясню всё <b>на пальцах</b>, как для новичка. Твоя задача — ходить и раз в день присылать результат. Остальное я беру на себя 😉")}
       <div class="howto">
-        <div class="st"><div>Ходишь и открываешь Fitbit — там твои шаги за день.</div></div>
-        <div class="st"><div>Жмёшь «👟 Шаги за сегодня», пишешь число и шлёшь <b>скриншот</b>.</div></div>
-        <div class="st"><div>P&C проверяет результат — в календаре день будет <b>⏳ на проверке</b>.</div></div>
-        <div class="st"><div>Как примут — день станет <b>зелёным</b> и капнут баллы, растение растёт 🪴</div></div>
+        <div class="st"><div><b>Установи Fitbit</b> — приложение, которое считает шаги. Ссылки: <a class="link" href="${FIT_A}" target="_blank">Android</a> · <a class="link" href="${FIT_I}" target="_blank">iOS</a>. Зарегистрируйся и разреши доступ к шагам.</div></div>
+        <div class="st"><div><b>Носи телефон с собой</b> и просто ходи в течение дня — Fitbit сам посчитает шаги.</div></div>
+        <div class="st"><div>Вечером <b>открой Fitbit</b> и посмотри число шагов за сегодня. Сделай <b>скриншот</b> экрана, где видно <b>дату</b> и <b>количество шагов</b>.</div></div>
+        <div class="st"><div>Вернись в бот, нажми кнопку <b>«👟 Шаги за сегодня»</b>, напиши <b>число шагов</b> и пришли <b>скриншот</b>.</div></div>
+        <div class="st"><div>P&amp;C проверит результат — в календаре день будет <b>⏳ на проверке</b>.</div></div>
+        <div class="st"><div>Как примут — день станет <b>зелёным</b> ✅, капнут баллы, а растение подрастёт 🪴</div></div>
+      </div>
+      <div class="note" style="margin-top:12px">📸 <b>Как сделать скриншот:</b><br>
+        • <b>iPhone</b> без кнопки «Домой»: боковая кнопка + кнопка громкости вверх одновременно.<br>
+        • <b>iPhone</b> с кнопкой «Домой»: кнопка «Домой» + боковая кнопка.<br>
+        • <b>Android</b>: кнопка питания + кнопка громкости вниз одновременно.</div>
+    </div>
+
+    <div class="card d2">
+      <div class="sec-title">⏰ Что и когда делать</div>
+      <div class="howto" style="margin-top:10px">
+        <div class="st"><div><b>Каждый день до 23:55</b> — присылай число шагов + скриншот за этот день.</div></div>
+        <div class="st"><div><b>В воскресенье до 23:55</b> — пришли недельную сводку из Fitbit: так закрепим серию и начислим бонус.</div></div>
+        <div class="st"><div>Не успел до полуночи — день пропущен, а серия обнулится. Старайся не пропускать 🙌</div></div>
       </div>
     </div>
 

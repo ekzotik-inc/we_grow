@@ -22,8 +22,8 @@ from backend.scoring import QUALIFYING_STEPS
 from bot import db
 from bot.config import config
 
-MARATHON_START = date(2026, 7, 17)
-MARATHON_END = date(2026, 8, 7)
+MARATHON_START = config.marathon_start
+MARATHON_END = config.marathon_end
 
 _STATIC = Path(__file__).with_name("static")
 
