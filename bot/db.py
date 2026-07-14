@@ -298,6 +298,18 @@ async def recompute_streak(tg_id: int) -> StreakState:
     return state
 
 
+async def recompute_weekly_bonus(tg_id: int, day: date) -> int:
+    """Пересчитывает недельный бонус за неделю, к которой относится day.
+    Вызывается при каждой модерации — чтобы бонус всегда отражал ПРИНЯТЫЕ дни,
+    а не зависел от момента воскресного расчёта."""
+    from backend.scoring import weekly_streak_bonus
+    monday = day - timedelta(days=day.weekday())
+    steps = await week_steps(tg_id, monday)
+    bonus = weekly_streak_bonus(steps)
+    await award_weekly_bonus(tg_id, monday, bonus, sum(steps))
+    return bonus
+
+
 async def week_steps(tg_id: int, monday: date) -> list[int]:
     """Принятые шаги участника за 7 дней недели (пн..вс), 0 для несданных."""
     rows = await pool().fetch(

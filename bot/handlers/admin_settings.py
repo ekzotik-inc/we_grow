@@ -454,6 +454,7 @@ async def mod_accept(cb: CallbackQuery) -> None:
     pts = points_for_steps(e["steps"])
     await db.set_entry_status(e["id"], "accepted", pts)
     st = await db.recompute_streak(e["participant_id"])
+    await db.recompute_weekly_bonus(e["participant_id"], e["entry_date"])
     try:
         await cb.bot.send_message(e["participant_id"],
                                   texts.accepted_note(e["steps"], pts, st.current_len))
@@ -475,6 +476,7 @@ async def mod_reject(cb: CallbackQuery) -> None:
         return await cb.answer("Уже обработано.")
     await db.set_entry_status(e["id"], "rejected", 0)
     await db.recompute_streak(e["participant_id"])
+    await db.recompute_weekly_bonus(e["participant_id"], e["entry_date"])
     try:
         await cb.bot.send_message(e["participant_id"], texts.REJECTED_NOTE)
     except Exception:  # noqa: BLE001
