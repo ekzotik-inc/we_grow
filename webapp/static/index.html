@@ -225,10 +225,18 @@ try{
   tg?.setHeaderColor?.("#17151d"); tg?.setBackgroundColor?.("#17151d");
   tg?.disableVerticalSwipes?.();
 }catch(e){}
-// initData читаем «лениво» при каждом запросе: Telegram иногда проставляет его
-// на пару тактов позже загрузки скрипта. Синхронное чтение один раз при старте
-// давало пустую строку → ложное «Открой из бота».
-function getInit(){ try{ return window.Telegram?.WebApp?.initData || ""; }catch(e){ return ""; } }
+// initData читаем «лениво» при каждом запросе из нескольких источников:
+//  1) SDK (window.Telegram.WebApp.initData) — основной путь;
+//  2) URL-хэш #tgWebAppData=... — Telegram кладёт туда данные при запуске web_app.
+//     На Telegram Desktop .initData иногда пустой, а в хэше данные есть;
+//  3) query ?tgWebAppData=... — на всякий случай.
+function getInit(){
+  try{ const d=window.Telegram?.WebApp?.initData; if(d) return d; }catch(e){}
+  try{ const raw=new URLSearchParams(location.hash.slice(1)).get("tgWebAppData"); if(raw) return raw; }catch(e){}
+  try{ const raw=new URLSearchParams(location.search).get("tgWebAppData"); if(raw) return raw; }catch(e){}
+  return "";
+}
+const BUILD="initdata-hash-fallback";
 // Ждём до ~3с, пока initData появится (первый запуск), затем стартуем.
 async function waitInit(ms=3000){
   const step=100; let waited=0;
@@ -481,13 +489,30 @@ function renderFAQ(){
 
 const emptyRow=()=>`<div class="muted" style="padding:8px 0">— пока пусто —</div>`;
 function regNotice(){ V.innerHTML=`<div class="center">Ты ещё не в марафоне 🌱<br><br>Открой бота и нажми <b>/start</b>, чтобы зарегистрироваться.</div>`; }
+function diagText(){
+  const w=window.Telegram?.WebApp;
+  let uid="—"; try{ uid=w?.initDataUnsafe?.user?.id ?? "—"; }catch(e){}
+  const parts=[
+    "build: "+BUILD,
+    "tg: "+(w?"есть":"нет"),
+    "platform: "+(w?.platform||"—"),
+    "version: "+(w?.version||"—"),
+    "initData.len: "+((w?.initData||"").length),
+    "hash.tgWebAppData: "+(new URLSearchParams(location.hash.slice(1)).get("tgWebAppData")?"есть":"нет"),
+    "initDataUnsafe.user.id: "+uid,
+  ];
+  return parts.join("\n");
+}
 function notice(e){
   if(!getInit()){
     V.innerHTML=`<div class="center">Открой это приложение <b>из бота</b> Step Together 🌱
-      <br><br><button class="btn-grad" style="max-width:220px;margin:0 auto" onclick="retryInit()">Обновить</button></div>`;
+      <br><br><button class="btn-grad" style="max-width:220px;margin:0 auto" onclick="retryInit()">Обновить</button>
+      <pre style="text-align:left;white-space:pre-wrap;font-size:11px;color:var(--muted);margin-top:18px;background:var(--bg2);border:1px solid var(--line);border-radius:12px;padding:12px">${esc(diagText())}</pre>
+      </div>`;
     return;
   }
-  V.innerHTML=`<div class="center">Не удалось загрузить 😔<br><br><span class="muted">${esc(e&&e.message||e||"")}</span><br><br>Потяни вниз, чтобы обновить.</div>`;
+  V.innerHTML=`<div class="center">Не удалось загрузить 😔<br><br><span class="muted">${esc(e&&e.message||e||"")}</span><br><br>Потяни вниз, чтобы обновить.
+    <pre style="text-align:left;white-space:pre-wrap;font-size:11px;color:var(--muted);margin-top:18px;background:var(--bg2);border:1px solid var(--line);border-radius:12px;padding:12px">${esc(diagText())}</pre></div>`;
 }
 async function retryInit(){
   V.innerHTML=`<div class="spin"></div>`;
