@@ -220,12 +220,21 @@
 
 <script>
 const tg = window.Telegram?.WebApp;
-const INIT = tg?.initData || "";
 try{
   tg?.ready(); tg?.expand();
   tg?.setHeaderColor?.("#17151d"); tg?.setBackgroundColor?.("#17151d");
   tg?.disableVerticalSwipes?.();
 }catch(e){}
+// initData читаем «лениво» при каждом запросе: Telegram иногда проставляет его
+// на пару тактов позже загрузки скрипта. Синхронное чтение один раз при старте
+// давало пустую строку → ложное «Открой из бота».
+function getInit(){ try{ return window.Telegram?.WebApp?.initData || ""; }catch(e){ return ""; } }
+// Ждём до ~3с, пока initData появится (первый запуск), затем стартуем.
+async function waitInit(ms=3000){
+  const step=100; let waited=0;
+  while(!getInit() && waited<ms){ await new Promise(r=>setTimeout(r,step)); waited+=step; }
+  return getInit();
+}
 const haptic = (t="light")=>{ try{ tg?.HapticFeedback?.impactOccurred(t); }catch(e){} };
 const hsel = ()=>{ try{ tg?.HapticFeedback?.selectionChanged(); }catch(e){} };
 
@@ -235,7 +244,7 @@ const FEEDBACK="https://t.me/DaryaPMI";
 function openPC(){ try{ tg?.openTelegramLink?.(FEEDBACK); }catch(e){ location.href=FEEDBACK; } }
 
 async function api(path){
-  const r = await fetch(path, {headers:{"X-Init-Data": INIT}});
+  const r = await fetch(path, {headers:{"X-Init-Data": getInit()}});
   if(!r.ok){ let d=""; try{ d=(await r.json()).detail||""; }catch(_){}
     throw new Error("HTTP "+r.status+(d?": "+d:"")); }
   return r.json();
@@ -473,8 +482,17 @@ function renderFAQ(){
 const emptyRow=()=>`<div class="muted" style="padding:8px 0">— пока пусто —</div>`;
 function regNotice(){ V.innerHTML=`<div class="center">Ты ещё не в марафоне 🌱<br><br>Открой бота и нажми <b>/start</b>, чтобы зарегистрироваться.</div>`; }
 function notice(e){
-  if(!INIT){ V.innerHTML=`<div class="center">Открой это приложение <b>из бота</b> Step Together 🌱</div>`; return; }
+  if(!getInit()){
+    V.innerHTML=`<div class="center">Открой это приложение <b>из бота</b> Step Together 🌱
+      <br><br><button class="btn-grad" style="max-width:220px;margin:0 auto" onclick="retryInit()">Обновить</button></div>`;
+    return;
+  }
   V.innerHTML=`<div class="center">Не удалось загрузить 😔<br><br><span class="muted">${esc(e&&e.message||e||"")}</span><br><br>Потяни вниз, чтобы обновить.</div>`;
+}
+async function retryInit(){
+  V.innerHTML=`<div class="spin"></div>`;
+  await waitInit(3000);
+  loaded.progress=false; V.dataset.tab=""; show("progress");
 }
 
 const views={progress:renderProgress,team:renderTeam,board:renderBoard,rules:renderRules,prizes:renderPrizes,faq:renderFAQ};
@@ -488,7 +506,8 @@ function show(tab){
 document.querySelectorAll(".nav button").forEach(b=>{
   b.addEventListener("click",()=>{ hsel(); V.dataset.tab=""; show(b.dataset.tab); });
 });
-show("progress");
+// Ждём initData (первый запуск может проставить его с задержкой), затем рендерим.
+waitInit().then(()=>show("progress"));
 </script>
 </body>
 </html>

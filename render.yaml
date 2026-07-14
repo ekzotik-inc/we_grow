@@ -25,7 +25,7 @@ services:
       - key: ADMIN_IDS        # ваш Telegram ID (узнать: напишите @userinfobot)
         sync: false
       - key: TZ
-        value: Europe/Moscow
+        value: Asia/Tashkent
       - key: WEBAPP_URL       # адрес wegrow-webapp (см. ниже), напр. https://wegrow-webapp.onrender.com
         sync: false
       - key: PREMIUM_EMOJI    # true, если у владельца бота есть Telegram Premium
@@ -46,4 +46,4 @@ services:
       - key: BOT_TOKEN        # тот же токен — нужен для проверки initData
         sync: false
       - key: TZ
-        value: Europe/Moscow
+        value: Asia/Tashkent

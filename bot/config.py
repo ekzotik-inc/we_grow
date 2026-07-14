@@ -21,7 +21,7 @@ class Config:
     bot_token: str = os.getenv("BOT_TOKEN", "")
     database_url: str = os.getenv("DATABASE_URL", "postgresql://wegrow:wegrow@localhost:5432/wegrow")
     admin_ids: frozenset[int] = field(default_factory=lambda: frozenset(_admin_ids()))
-    tz_name: str = os.getenv("TZ", "Europe/Moscow")
+    tz_name: str = os.getenv("TZ", "Asia/Tashkent")  # Узбекистан (UTC+5, без перехода)
     webapp_url: str = os.getenv("WEBAPP_URL", "").strip()
     # Прямой контакт сотрудника P&C для обратной связи.
     feedback_url: str = os.getenv("FEEDBACK_URL", "https://t.me/DaryaPMI").strip()
