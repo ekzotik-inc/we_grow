@@ -133,7 +133,7 @@ async def move_do(cb: CallbackQuery, state: FSMContext) -> None:
     tname = next((t["name"] for t in await db.teams_with_capacity() if t["id"] == team_id), "?")
     await cb.message.edit_text(f"✅ {escape(p['full_name'])} переведён(а) в команду <b>{escape(tname)}</b>.")
     try:
-        await cb.bot.send_message(target, f"🔀 Тебя перевели в команду <b>{escape(tname)}</b>. Вперёд! 💪")
+        await cb.bot.send_message(target, texts.moved_note(escape(tname)))
     except Exception:  # noqa: BLE001
         pass
     await cb.answer("Готово ✅")

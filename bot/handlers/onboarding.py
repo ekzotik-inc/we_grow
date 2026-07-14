@@ -41,7 +41,7 @@ async def cmd_start(message: Message, state: FSMContext) -> None:
     p = await db.get_participant(tg_id)
     if p and p["team_id"]:
         if p["approved_at"]:
-            await send_main_menu(message.bot, tg_id, "С возвращением, чемпион! 👟 Готов к новым шагам?")
+            await send_main_menu(message.bot, tg_id, texts.welcome_back())
         else:
             await message.answer(texts.NOT_APPROVED_YET, reply_markup=ReplyKeyboardRemove())
         return
@@ -85,9 +85,9 @@ async def menu_board(message: Message) -> None:
 async def menu_progress(message: Message) -> None:
     kb = keyboards.open_app_kb("📊 Открыть мой прогресс")
     if kb:
-        await message.answer("Твой прогресс, растение и календарь — в приложении 👇", reply_markup=kb)
+        await message.answer(texts.OPEN_PROGRESS, reply_markup=kb)
     else:
-        await message.answer("📊 Открой приложение кнопкой меню слева от поля ввода 🌱")
+        await message.answer(texts.stepy("Открой приложение кнопкой меню слева от поля ввода 🌱"))
 
 
 @router.message(Command("reset"))
@@ -162,8 +162,7 @@ async def on_team(cb: CallbackQuery, state: FSMContext) -> None:
     else:
         team = next((t for t in teams if t["id"] == int(choice)), None)
         if team is None:  # место заняли, пока выбирал
-            await cb.message.answer("Эта команда только что заполнилась, выбери другую:",
-                                    reply_markup=keyboards.teams_kb(teams))
+            await cb.message.answer(texts.TEAM_FULL, reply_markup=keyboards.teams_kb(teams))
             await cb.answer()
             return
 

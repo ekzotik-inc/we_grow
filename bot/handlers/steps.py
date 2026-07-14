@@ -39,7 +39,7 @@ def _parse_steps(text: str) -> int | None:
 async def _require_approved(message: Message):
     p = await db.get_participant(message.from_user.id)
     if p is None or not p["team_id"]:
-        await message.answer("Сначала зарегистрируйся: /start 🌱")
+        await message.answer(texts.NEED_REGISTER)
         return None
     if not p["approved_at"]:
         await message.answer(texts.NOT_APPROVED_YET)
