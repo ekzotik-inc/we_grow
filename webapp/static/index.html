@@ -340,7 +340,7 @@ function renderRules(){
 
     <div class="card d2">
       <div class="badge">🎯 Баллы за день</div>
-      ${stepyBox("Считаются шаги <b>за текущий день</b>. Меньше 5 000 — 0 баллов, поэтому закрывай хотя бы 5 тысяч.")}
+      <p class="muted" style="margin:8px 0 4px">Считаются шаги за текущий день. Меньше 5 000 — 0 баллов.</p>
       <div class="scoregrid"><div class="k">5 000 – 9 999</div><div class="v">1 балл</div>
         <div class="k">10 000 – 14 999</div><div class="v">2 балла</div>
         <div class="k">15 000 – 30 000</div><div class="v">3 балла</div></div>
@@ -348,7 +348,7 @@ function renderRules(){
 
     <div class="card d3">
       <div class="badge">🔥 Бонус за серию</div>
-      ${stepyBox("Серия — дни <b>подряд</b> по 10 000+ шагов. Пропуск или меньше 10 000 — серия сгорает.")}
+      <p class="muted" style="margin:8px 0 4px">Серия — дни подряд по 10 000+ шагов. Пропуск или меньше 10 000 обнуляет серию.</p>
       <div class="scoregrid"><div class="k">5 дней подряд 10 000+</div><div class="v">+2 балла</div>
         <div class="k">7 дней подряд 10 000+</div><div class="v">+4 балла</div></div>
     </div>
