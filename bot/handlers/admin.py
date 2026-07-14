@@ -12,7 +12,7 @@ from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
 from aiogram.types import CallbackQuery, Message, ReplyKeyboardRemove
 
-from bot import db, keyboards, notify, texts
+from bot import db, keyboards, notify, settings, texts
 from bot.config import config
 from bot.premium_emoji import pe
 
@@ -20,7 +20,7 @@ router = Router()
 
 
 def _is_admin(tg_id: int) -> bool:
-    return tg_id in config.admin_ids
+    return settings.is_admin(tg_id)
 
 
 @router.message(Command("admin"))
@@ -213,6 +213,61 @@ async def disqualify(message: Message) -> None:
         pass
     from bot.notify import notify_admins
     await notify_admins(message.bot, f"⛔ {name} дисквалифицирован администратором.")
+
+
+def _parse_id_arg(text: str) -> int | None:
+    parts = (text or "").split()
+    if len(parts) == 2 and parts[1].lstrip("-").isdigit():
+        return int(parts[1])
+    return None
+
+
+@router.message(Command("addadmin"))
+async def add_admin_cmd(message: Message) -> None:
+    if not _is_admin(message.from_user.id):
+        return
+    tid = _parse_id_arg(message.text)
+    if tid is None:
+        await message.answer("Использование: /addadmin ID (числовой Telegram ID)")
+        return
+    await settings.add_admin(tid)
+    await db.set_role(tid, "admin")  # если у пользователя уже есть запись участника
+    await message.answer(
+        f"✅ Пользователь <code>{tid}</code> теперь администратор.\n"
+        "Ему нужно нажать /start, чтобы в меню появились админ-команды.")
+
+
+@router.message(Command("deladmin"))
+async def del_admin_cmd(message: Message) -> None:
+    if not _is_admin(message.from_user.id):
+        return
+    tid = _parse_id_arg(message.text)
+    if tid is None:
+        await message.answer("Использование: /deladmin ID")
+        return
+    if tid in config.admin_ids:
+        await message.answer("Этот админ задан через ADMIN_IDS (env) — его можно убрать "
+                             "только там. Доп-админов снимаю без проблем.")
+        return
+    await settings.remove_admin(tid)
+    await message.answer(f"✅ Пользователь <code>{tid}</code> больше не администратор.")
+
+
+@router.message(Command("delete"))
+async def delete_user_cmd(message: Message) -> None:
+    if not _is_admin(message.from_user.id):
+        return
+    tid = _parse_id_arg(message.text)
+    if tid is None:
+        await message.answer("Использование: /delete ID (полностью удаляет данные участника)")
+        return
+    p = await db.get_participant(tid)
+    if p is None:
+        await message.answer("Участник с таким ID не найден в базе.")
+        return
+    await db.reset_participant(tid)
+    name = escape(p["full_name"] or str(tid))
+    await message.answer(f"🗑 Данные участника <b>{name}</b> (<code>{tid}</code>) полностью удалены.")
 
 
 @router.message(Command("leaderboard"))

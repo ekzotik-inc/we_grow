@@ -23,7 +23,7 @@ router = Router()
 
 
 def _is_admin(tg_id: int) -> bool:
-    return tg_id in config.admin_ids
+    return settings.is_admin(tg_id)
 
 
 class Media(StatesGroup):

@@ -33,8 +33,8 @@ async def cmd_start(message: Message, state: FSMContext) -> None:
     await state.clear()
     tg_id = message.from_user.id
     await db.upsert_participant_start(tg_id)
-    # Админов помечаем ролью по конфигу.
-    if tg_id in config.admin_ids:
+    # Админов помечаем ролью (env + доп-админы из настроек).
+    if settings.is_admin(tg_id):
         await db.set_role(tg_id, "admin")
 
     p = await db.get_participant(tg_id)

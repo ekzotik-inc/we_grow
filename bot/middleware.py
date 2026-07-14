@@ -12,8 +12,7 @@ from typing import Any, Awaitable, Callable
 from aiogram import BaseMiddleware
 from aiogram.types import CallbackQuery, Message, TelegramObject
 
-from bot import db, texts
-from bot.config import config
+from bot import db, settings, texts
 
 
 class BlockDisqualifiedMiddleware(BaseMiddleware):
@@ -24,7 +23,7 @@ class BlockDisqualifiedMiddleware(BaseMiddleware):
         data: dict[str, Any],
     ) -> Any:
         user = data.get("event_from_user")
-        if user is None or user.id in config.admin_ids:
+        if user is None or settings.is_admin(user.id):
             return await handler(event, data)
 
         if await db.is_disqualified(user.id):

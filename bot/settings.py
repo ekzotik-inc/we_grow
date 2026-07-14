@@ -86,3 +86,30 @@ def channel_id(kind: str) -> int | None:
         return int(raw) if raw else None
     except (TypeError, ValueError):
         return None
+
+
+# ---- Администраторы -------------------------------------------------------
+# Базовые админы — из env (ADMIN_IDS, config.admin_ids). Дополнительно можно
+# добавлять админов прямо из бота — они хранятся в settings (ключ extra_admins)
+# и подхватываются без редеплоя.
+
+def extra_admin_ids() -> set[int]:
+    # Внимание: имя set() в этом модуле перекрыто функцией set() ниже,
+    # поэтому используем set-comprehension, а не конструктор set().
+    raw = _cache.get("extra_admins") or ""
+    return {int(x.strip()) for x in raw.split(",") if x.strip().lstrip("-").isdigit()}
+
+
+def is_admin(tg_id: int) -> bool:
+    return tg_id in config.admin_ids or tg_id in extra_admin_ids()
+
+
+async def add_admin(tg_id: int) -> None:
+    ids = extra_admin_ids() | {tg_id}
+    await set("extra_admins", ",".join(str(i) for i in sorted(ids)))
+
+
+async def remove_admin(tg_id: int) -> None:
+    """Убирает доп-админа. Базовых (из env ADMIN_IDS) убрать нельзя."""
+    ids = extra_admin_ids() - {tg_id}
+    await set("extra_admins", ",".join(str(i) for i in sorted(ids)) or None)
