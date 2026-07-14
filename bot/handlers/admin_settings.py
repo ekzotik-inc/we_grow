@@ -398,6 +398,33 @@ async def user_un(cb: CallbackQuery) -> None:
     await cb.answer("Восстановлен ♻️")
 
 
+@router.callback_query(F.data.startswith("usrclryes:"))
+async def user_clear_do(cb: CallbackQuery) -> None:
+    if not _is_admin(cb.from_user.id):
+        return await cb.answer()
+    tg = int(cb.data.split(":")[1])
+    await db.clear_participant_results(tg)
+    await _refresh_card(cb, tg)
+    await cb.answer("Результаты очищены 🧹")
+
+
+@router.callback_query(F.data.startswith("usrclr:"))
+async def user_clear_confirm(cb: CallbackQuery) -> None:
+    if not _is_admin(cb.from_user.id):
+        return await cb.answer()
+    tg = int(cb.data.split(":")[1])
+    p = await db.user_detail(tg)
+    name = escape(p["full_name"]) if p and p["full_name"] else str(tg)
+    text = (f"🧹 Очистить <b>все результаты</b> участника <b>{name}</b>?\n\n"
+            "Сотрутся все сданные дни, серия и баллы (обнулятся). "
+            "Регистрация, команда и статус останутся. Действие необратимо.")
+    try:
+        await cb.message.edit_text(text, reply_markup=keyboards.clear_results_confirm_kb(tg))
+    except Exception:  # noqa: BLE001
+        await cb.message.answer(text, reply_markup=keyboards.clear_results_confirm_kb(tg))
+    await cb.answer()
+
+
 @router.callback_query(F.data.startswith("usrmv:"))
 async def user_move(cb: CallbackQuery, state: FSMContext) -> None:
     if not _is_admin(cb.from_user.id):

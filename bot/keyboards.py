@@ -198,10 +198,18 @@ def user_card_kb(p) -> InlineKeyboardMarkup:
             b.button(text="❌ Отклонить", callback_data=f"rej:{tg}")
         b.button(text="⛔ Дисквалифицировать", callback_data=f"usrdq:{tg}")
     b.button(text="🔀 Перевести в команду", callback_data=f"usrmv:{tg}")
+    b.button(text="🧹 Очистить результаты", callback_data=f"usrclr:{tg}")
     b.button(text="🗑 Удалить", callback_data=f"usrdel:{tg}")
     b.button(text="⬅️ К списку", callback_data="usrpg:0")
-    b.adjust(2, 1, 1, 1)
+    b.adjust(2, 1, 1, 1, 1)
     return b.as_markup()
+
+
+def clear_results_confirm_kb(tg_id: int) -> InlineKeyboardMarkup:
+    return InlineKeyboardMarkup(inline_keyboard=[[
+        InlineKeyboardButton(text="🧹 Да, очистить", callback_data=f"usrclryes:{tg_id}"),
+        InlineKeyboardButton(text="Отмена", callback_data=f"usr:{tg_id}"),
+    ]])
 
 
 def bc_builder_kb(draft: dict) -> InlineKeyboardMarkup:
