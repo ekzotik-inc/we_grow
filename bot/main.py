@@ -88,10 +88,12 @@ async def main() -> None:
     # HTML по умолчанию — нужно для премиум-эмодзи (<tg-emoji>) и <b>.
     bot = Bot(config.bot_token, default=DefaultBotProperties(parse_mode="HTML"))
     dp = Dispatcher()
-    # Порядок важен: admin-команды и онбординг раньше общего приёма шагов.
+    # Онбординг первым: его команды (/start, /reset, /help, /rules, /feedback)
+    # и кнопки меню должны срабатывать ВСЕГДА — даже когда пользователь застрял
+    # в каком-то сценарии (ввод рассылки, эмодзи и т.п.). Приём шагов — последним.
+    dp.include_router(onboarding.router)
     dp.include_router(admin.router)
     dp.include_router(admin_settings.router)
-    dp.include_router(onboarding.router)
     dp.include_router(steps.router)
     dp.errors.register(_on_error)
 
