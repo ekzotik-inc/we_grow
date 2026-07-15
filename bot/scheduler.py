@@ -53,14 +53,19 @@ async def monday_leaderboard(bot: Bot) -> None:
 
 def setup_scheduler(bot: Bot) -> AsyncIOScheduler:
     sched = AsyncIOScheduler(timezone=config.tz)
-    sched.add_job(remind_streak_at_risk, "cron", hour=20, minute=0, args=[bot])
-    sched.add_job(remind_no_steps, "cron", hour=21, minute=0, args=[bot])
-    sched.add_job(weekly_summary_reminder, "cron", day_of_week="sun", hour=12, minute=0, args=[bot])
-    sched.add_job(weekly_summary_reminder, "cron", day_of_week="sun", hour=21, minute=0, args=[bot])
-    sched.add_job(award_weekly_bonuses, "cron", day_of_week="sun", hour=23, minute=55, args=[bot])
-    sched.add_job(monday_leaderboard, "cron", day_of_week="mon", hour=10, minute=0, args=[bot])
+
+    # Временно отключены все напоминания
+    # sched.add_job(remind_streak_at_risk, "cron", hour=20, minute=0, args=[bot])
+    # sched.add_job(remind_no_steps, "cron", hour=21, minute=0, args=[bot])
+    # sched.add_job(weekly_summary_reminder, "cron", day_of_week="sun", hour=12, minute=0, args=[bot])
+    # sched.add_job(weekly_summary_reminder, "cron", day_of_week="sun", hour=21, minute=0, args=[bot])
+    # sched.add_job(award_weekly_bonuses, "cron", day_of_week="sun", hour=23, minute=55, args=[bot])
+    # sched.add_job(monday_leaderboard, "cron", day_of_week="mon", hour=10, minute=0, args=[bot])
+
+    # Оставляем только пинг Render, чтобы приложение не засыпало
     if config.webapp_url:
         sched.add_job(keep_webapp_awake, "interval", minutes=10)
+
     return sched
 
 
