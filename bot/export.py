@@ -1,6 +1,8 @@
 """Выгрузка данных марафона в Excel (для P&C)."""
 from __future__ import annotations
 
+import hashlib
+import hmac
 from datetime import datetime
 from io import BytesIO
 
@@ -8,10 +10,26 @@ from openpyxl import Workbook
 from openpyxl.styles import Font, PatternFill
 from openpyxl.utils import get_column_letter
 
-from bot import db
+from bot import db, settings
+from bot.config import config
 
 _HEAD = Font(bold=True, color="FFFFFF")
 _HEAD_FILL = PatternFill("solid", fgColor="2F2B39")
+_LINK = Font(color="0563C1", underline="single")
+
+
+def shot_sig(entry_id: int) -> str:
+    """HMAC-подпись ссылки на скриншот: постороннему её не подобрать,
+    токен бота в URL не участвует. Проверяется в webapp/server.py."""
+    return hmac.new(config.bot_token.encode(), f"shot:{entry_id}".encode(),
+                    hashlib.sha256).hexdigest()[:20]
+
+
+def shot_url(entry_id: int) -> str | None:
+    base = settings.webapp_url()
+    if not base:
+        return None
+    return f"{base.rstrip('/')}/shot/{entry_id}/{shot_sig(entry_id)}"
 
 
 def _fmt(dt) -> str:
@@ -55,11 +73,22 @@ async def build_workbook() -> tuple[bytes, str]:
     entries = await db.export_entries()
     ws2 = wb.create_sheet("Результаты")
     _sheet(ws2,
-           ["Дата", "ФИО", "Команда", "Шаги", "Баллы", "Статус", "Отправлен", "Проверен"],
+           ["Дата", "ФИО", "Команда", "Шаги", "Баллы", "Статус", "Отправлен",
+            "Проверен", "Фото"],
            [[e["entry_date"].strftime("%d.%m.%Y"), e["full_name"], e["team_name"] or "",
              e["steps"], e["points"], _status_ru(e["status"]),
-             _fmt(e["created_at"]), _fmt(e["reviewed_at"])]
+             _fmt(e["created_at"]), _fmt(e["reviewed_at"]),
+             "открыть" if e["screenshot_file_id"] else ""]
             for e in entries])
+    # Колонка «Фото» — кликабельные ссылки на скриншоты участников.
+    photo_col = 9
+    for row_i, e in enumerate(entries, start=2):
+        if e["screenshot_file_id"]:
+            url = shot_url(e["id"])
+            if url:
+                cell = ws2.cell(row=row_i, column=photo_col)
+                cell.hyperlink = url
+                cell.font = _LINK
 
     buf = BytesIO()
     wb.save(buf)

@@ -210,6 +210,40 @@ async def api_leaderboard(x_init_data: str | None = Header(default=None),
     }
 
 
+@app.get("/shot/{entry_id}/{sig}")
+async def api_screenshot(entry_id: int, sig: str):
+    """Отдаёт скриншот участника по подписанной ссылке (для выгрузки Excel).
+    Файл скачивается у Telegram на сервере — токен бота наружу не попадает."""
+    import aiohttp
+    from fastapi.responses import Response
+
+    from bot.export import shot_sig
+    if not hmac.compare_digest(shot_sig(entry_id), sig):
+        raise HTTPException(status_code=403, detail="bad signature")
+    entry = await db.entry_by_id(entry_id)
+    if entry is None or not entry["screenshot_file_id"]:
+        raise HTTPException(status_code=404, detail="no screenshot")
+    file_id = entry["screenshot_file_id"]
+    if file_id.startswith("doc:"):          # скрин, присланный файлом
+        file_id = file_id[4:]
+
+    api = f"https://api.telegram.org/bot{config.bot_token}"
+    async with aiohttp.ClientSession() as s:
+        async with s.get(f"{api}/getFile", params={"file_id": file_id},
+                         timeout=aiohttp.ClientTimeout(total=20)) as r:
+            meta = await r.json()
+        if not meta.get("ok"):
+            raise HTTPException(status_code=404, detail="file expired")
+        path = meta["result"]["file_path"]
+        async with s.get(f"https://api.telegram.org/file/bot{config.bot_token}/{path}",
+                         timeout=aiohttp.ClientTimeout(total=30)) as r:
+            data = await r.read()
+    ext = path.rsplit(".", 1)[-1].lower()
+    media = {"png": "image/png", "webp": "image/webp"}.get(ext, "image/jpeg")
+    return Response(content=data, media_type=media,
+                    headers={"Cache-Control": "private, max-age=3600"})
+
+
 @app.get("/health")
 async def health():
     return {"ok": True}

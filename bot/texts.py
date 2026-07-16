@@ -348,6 +348,26 @@ def welcome_back(is_first_today: bool = True) -> str:
                  "Жми «👟 Шаги за сегодня», когда будешь готов сдать результат.")
 
 
+def profile_card(s: dict) -> str:
+    """Персональная сводка в главном меню: ФИО, команда с местом, баллы,
+    шаги, личное место, серия. s — результат db.participant_summary."""
+    team = escape(s.get("team_name") or "—")
+    team_rank = (f" · {pe('🏆')} <b>#{s['team_rank']}</b> из {s['teams_total']}"
+                 if s.get("team_rank") else "")
+    streak = s.get("streak") or 0
+    fire = " 🔥" if streak > 0 else ""
+    steps_fmt = f"{s['steps']:,}".replace(",", " ")   # 12 340
+    return (
+        f"👤 <b>{escape(s['full_name'])}</b>\n"
+        f"🌳 Команда: <b>{team}</b>{team_rank}\n"
+        f"{pe('👣')} Шаги: <b>{steps_fmt}</b>\n"
+        f"⭐ Баллы: <b>{s['points']}</b> · место <b>#{s['rnk']}</b> из {s['total']}\n"
+        f"{pe('⚡')} Серия: <b>{streak}</b> дн. подряд{fire}\n\n"
+        + stepy("С возвращением! Жми «👟 Шаги за сегодня», когда будешь готов "
+                "сдать результат 💪")
+    )
+
+
 def weekly_bonus_note(bonus: int) -> str:
     medal = pe("🥇") if bonus >= 4 else pe("🥈")
     return f"{medal} <b>Бонус за серию: +{bonus} балла!</b>\n" + stepy(
