@@ -221,8 +221,9 @@ async def export_participants() -> list[asyncpg.Record]:
 async def export_entries() -> list[asyncpg.Record]:
     """Все дневные результаты (для выгрузки в Excel)."""
     return await pool().fetch(
-        """SELECT p.full_name, t.name AS team_name, d.entry_date, d.steps,
-                  d.points, d.status, d.created_at, d.reviewed_at
+        """SELECT d.id, p.full_name, t.name AS team_name, d.entry_date, d.steps,
+                  d.points, d.status, d.created_at, d.reviewed_at,
+                  d.screenshot_file_id
              FROM daily_entries d
              JOIN participants p ON p.telegram_id=d.participant_id
              LEFT JOIN teams t ON t.id=p.team_id
@@ -512,6 +513,46 @@ async def engagement(day: date) -> tuple[int, int]:
         day,
     )
     return int(submitted), int(active)
+
+
+async def participant_summary(tg_id: int) -> dict | None:
+    """Сводка для главного меню: ФИО, команда + её место, баллы, шаги,
+    личное место в рейтинге, серия. Ранги считаются по баллам (как в
+    лидерборде), только среди подтверждённых и не дисквалифицированных."""
+    row = await pool().fetchrow(
+        """WITH pts AS (
+             SELECT p.telegram_id, p.full_name, p.team_id,
+                    COALESCE((SELECT sum(d.points) FROM daily_entries d
+                               WHERE d.participant_id=p.telegram_id AND d.status='accepted'),0)
+                  + COALESCE((SELECT sum(w.bonus_points) FROM weekly_summaries w
+                               WHERE w.participant_id=p.telegram_id),0) AS points,
+                    COALESCE((SELECT sum(d.steps) FROM daily_entries d
+                               WHERE d.participant_id=p.telegram_id AND d.status='accepted'),0) AS steps
+               FROM participants p
+              WHERE p.approved_at IS NOT NULL AND p.disqualified_at IS NULL
+           ),
+           ranked AS (
+             SELECT *, RANK() OVER (ORDER BY points DESC) AS rnk,
+                    count(*) OVER () AS total
+               FROM pts
+           )
+           SELECT r.full_name, r.points, r.steps, r.rnk, r.total,
+                  t.name AS team_name,
+                  COALESCE(s.current_len, 0) AS streak
+             FROM ranked r
+             LEFT JOIN teams t ON t.id = r.team_id
+             LEFT JOIN streaks s ON s.participant_id = r.telegram_id
+            WHERE r.telegram_id = $1""",
+        tg_id)
+    if row is None:
+        return None
+    out = dict(row)
+    # место команды — по командному лидерборду
+    board = await team_leaderboard()
+    out["team_rank"] = next(
+        (i for i, t in enumerate(board, 1) if t["name"] == row["team_name"]), None)
+    out["teams_total"] = len(board)
+    return out
 
 
 # ---- Данные для Mini App -------------------------------------------------

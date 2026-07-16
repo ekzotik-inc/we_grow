@@ -40,7 +40,10 @@ async def cmd_start(message: Message, state: FSMContext) -> None:
     p = await db.get_participant(tg_id)
     if p and p["team_id"]:
         if p["approved_at"]:
-            await send_main_menu(message.bot, tg_id, texts.welcome_back())
+            # Персональная сводка: ФИО, команда с местом, шаги, баллы, серия.
+            summary = await db.participant_summary(tg_id)
+            greeting = texts.profile_card(summary) if summary else texts.welcome_back()
+            await send_main_menu(message.bot, tg_id, greeting)
         else:
             await message.answer(texts.NOT_APPROVED_YET, reply_markup=ReplyKeyboardRemove())
         return
