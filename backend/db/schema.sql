@@ -52,6 +52,11 @@ CREATE TABLE IF NOT EXISTS daily_entries (
 -- Миграции для баз, созданных ранее (существующие записи считаем принятыми).
 ALTER TABLE daily_entries ADD COLUMN IF NOT EXISTS status text NOT NULL DEFAULT 'accepted';
 ALTER TABLE daily_entries ADD COLUMN IF NOT EXISTS reviewed_at timestamptz;
+-- Анти-дубль: file_unique_id скриншота одинаков у одного и того же файла
+-- независимо от того, кто и когда его прислал.
+ALTER TABLE daily_entries ADD COLUMN IF NOT EXISTS screenshot_unique_id text;
+CREATE INDEX IF NOT EXISTS daily_shot_uid_idx ON daily_entries(screenshot_unique_id)
+    WHERE screenshot_unique_id IS NOT NULL;
 
 CREATE INDEX IF NOT EXISTS daily_status_idx ON daily_entries(status) WHERE status='pending';
 

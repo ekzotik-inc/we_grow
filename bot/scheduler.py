@@ -67,6 +67,53 @@ async def monday_leaderboard(bot: Bot) -> None:
     await notify.broadcast_all(bot, text)
 
 
+async def pc_daily_digest(bot: Bot) -> None:
+    """09:00 — дайджест для P&C: как прошёл вчерашний день + кто молчит 2+ дня."""
+    today = datetime.now(config.tz).date()
+    # Дайджест полезен со 2-го дня марафона и ещё день после финиша.
+    if not (config.marathon_start < today <= config.marathon_end + timedelta(days=1)):
+        return
+    day = today - timedelta(days=1)
+    s = await db.digest_stats(day)
+    lines = [
+        f"📊 <b>Дайджест за {day.strftime('%d.%m')}</b>",
+        f"Сдали шаги: <b>{s['total']}</b> из {s['active']} участников",
+        f"✅ Принято: <b>{s['accepted']}</b> · ⏳ На проверке: <b>{s['pending']}</b>"
+        f" · ❌ Отклонено: <b>{s['rejected']}</b>",
+    ]
+    if s["silent"]:
+        lines.append(f"\n😴 <b>Молчат 2+ дня ({len(s['silent'])}):</b>")
+        for r in s["silent"][:15]:
+            last = r["last_entry"].strftime("%d.%m") if r["last_entry"] else "ни разу"
+            team = r["team_name"] or "—"
+            lines.append(f"• {r['full_name']} ({team}) — посл. сдача: {last}")
+        if len(s["silent"]) > 15:
+            lines.append(f"…и ещё {len(s['silent']) - 15}")
+    else:
+        lines.append("\n🎉 Молчунов нет — сдают все!")
+    if s["pending"]:
+        lines.append("\n👉 Не забудь проверить заявки на модерации.")
+    await notify.notify_admins(bot, "\n".join(lines))
+
+
+async def nightly_backup(bot: Bot) -> None:
+    """23:59 — резервная копия: полная Excel-выгрузка админам в личку.
+    Если что-то случится с базой, у P&C всегда есть вчерашний слепок данных."""
+    today = datetime.now(config.tz).date()
+    if not (config.marathon_start <= today <= config.marathon_end + timedelta(days=1)):
+        return
+    from aiogram.types import BufferedInputFile
+    from bot.export import build_workbook
+    data, name = await build_workbook()
+    doc = BufferedInputFile(data, filename=f"backup_{name}")
+    for admin_id in config.admin_ids:
+        try:
+            await bot.send_document(admin_id, doc,
+                                    caption="🗄 Ночная резервная копия данных марафона")
+        except Exception:  # noqa: BLE001 — админ мог не начать диалог с ботом
+            pass
+
+
 async def send_due_broadcasts(bot: Bot) -> None:
     """Ежеминутно: отправляет отложенные рассылки, чьё время пришло."""
     import json
@@ -94,6 +141,8 @@ def setup_scheduler(bot: Bot) -> AsyncIOScheduler:
     sched.add_job(weekly_summary_reminder, "cron", day_of_week="sun", hour=21, minute=0, args=[bot])
     sched.add_job(award_weekly_bonuses, "cron", day_of_week="sun", hour=23, minute=55, args=[bot])
     sched.add_job(monday_leaderboard, "cron", day_of_week="mon", hour=10, minute=0, args=[bot])
+    sched.add_job(pc_daily_digest, "cron", hour=9, minute=0, args=[bot])
+    sched.add_job(nightly_backup, "cron", hour=23, minute=59, args=[bot])
 
     # Отложенные рассылки админов — проверяем каждую минуту.
     sched.add_job(send_due_broadcasts, "interval", minutes=1, args=[bot])

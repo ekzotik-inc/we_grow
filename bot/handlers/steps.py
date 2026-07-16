@@ -28,6 +28,15 @@ def _today():
     return datetime.now(config.tz).date()
 
 
+DEADLINE = (23, 55)
+
+
+def _day_closed() -> bool:
+    """После 23:55 приём за текущий день закрыт (правило «до 23:55»)."""
+    now = datetime.now(config.tz)
+    return (now.hour, now.minute) >= DEADLINE
+
+
 def _parse_steps(text: str) -> int | None:
     digits = "".join(ch for ch in text if ch.isdigit())
     if not digits:
@@ -58,6 +67,9 @@ async def ask_steps(message: Message, state: FSMContext) -> None:
     if today > config.marathon_end:
         await message.answer(texts.MARATHON_FINISHED)
         return
+    if _day_closed():
+        await message.answer(texts.DAY_CLOSED)
+        return
     existing = await db.get_entry(message.from_user.id, _today())
     if existing and existing["status"] == "accepted":
         await message.answer(texts.ALREADY_ACCEPTED.format(steps=existing["steps"]))
@@ -86,8 +98,10 @@ async def on_screenshot(message: Message, state: FSMContext) -> None:
     # Скриншот может прийти как фото (из галереи) или как файл-изображение.
     if message.photo:
         file_id = message.photo[-1].file_id
+        unique_id = message.photo[-1].file_unique_id
     elif message.document and (message.document.mime_type or "").startswith("image/"):
         file_id = "doc:" + message.document.file_id  # префикс — чтобы переслать как документ
+        unique_id = message.document.file_unique_id
     else:
         await message.answer(texts.STEP2_NEED_PHOTO)
         return
@@ -98,14 +112,22 @@ async def on_screenshot(message: Message, state: FSMContext) -> None:
         await message.answer(texts.STEP1_NUMBER)
         await state.set_state(Steps.number)
         return
+    if _day_closed():
+        # Дедлайн мог наступить, пока участник искал скриншот.
+        await message.answer(texts.DAY_CLOSED)
+        return
     tg_id = message.from_user.id
-    entry_id = await db.save_submission(tg_id, _today(), steps, file_id)
+    entry_id = await db.save_submission(tg_id, _today(), steps, file_id, unique_id)
     await message.answer(texts.STEP3_WAIT.format(steps=steps))
 
     # Уведомляем P&C: скриншот + карточка + кнопки модерации.
     from bot import notify
     entry = await db.entry_by_id(entry_id)
-    await notify.admins_submission(message.bot, file_id, texts.admin_new_submission(entry),
+    caption = texts.admin_new_submission(entry)
+    dup = await db.duplicate_screenshot(unique_id, entry_id)
+    if dup:
+        caption += texts.admin_duplicate_warn(dup)
+    await notify.admins_submission(message.bot, file_id, caption,
                                    keyboards.moderate_kb(entry_id))
 
 

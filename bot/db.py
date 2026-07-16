@@ -346,18 +346,32 @@ async def get_streak(tg_id: int) -> StreakState:
     return StreakState(row["current_len"], row["last_qualifying_date"])
 
 
-async def save_submission(tg_id: int, day: date, steps: int, screenshot_file_id: str) -> int:
+async def save_submission(tg_id: int, day: date, steps: int, screenshot_file_id: str,
+                          screenshot_unique_id: str | None = None) -> int:
     """Участник отправил результат на модерацию: статус pending, points=0.
     Повторная отправка того же дня перезаписывает (например, после отклонения)."""
     return int(await pool().fetchval(
         """INSERT INTO daily_entries
-             (participant_id, entry_date, steps, points, status, source, screenshot_file_id)
-           VALUES ($1,$2,$3,0,'pending','manual',$4)
+             (participant_id, entry_date, steps, points, status, source,
+              screenshot_file_id, screenshot_unique_id)
+           VALUES ($1,$2,$3,0,'pending','manual',$4,$5)
            ON CONFLICT (participant_id, entry_date) DO UPDATE
              SET steps=$3, points=0, status='pending',
-                 screenshot_file_id=$4, reviewed_at=NULL, created_at=now()
+                 screenshot_file_id=$4, screenshot_unique_id=$5,
+                 reviewed_at=NULL, created_at=now()
            RETURNING id""",
-        tg_id, day, steps, screenshot_file_id))
+        tg_id, day, steps, screenshot_file_id, screenshot_unique_id))
+
+
+async def duplicate_screenshot(unique_id: str, exclude_entry_id: int) -> asyncpg.Record | None:
+    """Ищет, присылали ли такой же файл раньше (анти-накрутка).
+    Возвращает самое раннее другое использование этого скриншота."""
+    return await pool().fetchrow(
+        """SELECT d.entry_date, p.full_name, p.telegram_id
+             FROM daily_entries d
+             JOIN participants p ON p.telegram_id=d.participant_id
+            WHERE d.screenshot_unique_id=$1 AND d.id<>$2
+            ORDER BY d.created_at LIMIT 1""", unique_id, exclude_entry_id)
 
 
 async def entry_by_id(entry_id: int) -> asyncpg.Record | None:
@@ -628,3 +642,31 @@ async def cancel_scheduled_broadcast(sb_id: int) -> bool:
         """UPDATE scheduled_broadcasts SET cancelled_at=now()
             WHERE id=$1 AND sent_at IS NULL AND cancelled_at IS NULL RETURNING id""", sb_id)
     return row is not None
+
+
+# ---- Ежедневный дайджест P&C ------------------------------------------------
+
+async def digest_stats(day: date) -> dict:
+    """Сводка за день: сдали/принято/на проверке + молчуны 2+ дней."""
+    row = await pool().fetchrow(
+        """SELECT count(*)                                    AS total,
+                  count(*) FILTER (WHERE status='accepted')   AS accepted,
+                  count(*) FILTER (WHERE status='pending')    AS pending,
+                  count(*) FILTER (WHERE status='rejected')   AS rejected
+             FROM daily_entries WHERE entry_date=$1""", day)
+    active = await pool().fetchval(
+        """SELECT count(*) FROM participants
+            WHERE approved_at IS NOT NULL AND disqualified_at IS NULL""")
+    silent = await pool().fetch(
+        """SELECT p.full_name, t.name AS team_name,
+                  max(d.entry_date) AS last_entry
+             FROM participants p
+             LEFT JOIN teams t ON t.id=p.team_id
+             LEFT JOIN daily_entries d ON d.participant_id=p.telegram_id
+            WHERE p.approved_at IS NOT NULL AND p.disqualified_at IS NULL
+            GROUP BY p.telegram_id, p.full_name, t.name
+           HAVING max(d.entry_date) IS NULL OR max(d.entry_date) <= ($1::date - 2)
+            ORDER BY last_entry NULLS FIRST, p.full_name""", day)
+    return {"total": row["total"], "accepted": row["accepted"],
+            "pending": row["pending"], "rejected": row["rejected"],
+            "active": active, "silent": silent}
