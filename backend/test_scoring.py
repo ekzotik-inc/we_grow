@@ -1,6 +1,6 @@
 from datetime import date, timedelta
 
-from scoring import (
+from backend.scoring import (
     StreakState,
     needs_review,
     points_for_steps,

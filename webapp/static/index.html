@@ -34,7 +34,10 @@
       radial-gradient(120% 60% at 0% 0%, rgba(0,209,210,.16), transparent 55%),
       var(--bg);
     color:var(--text);
-    padding:calc(var(--safe-top) + 8px) 0 calc(104px + var(--safe-bottom)) 0;
+    /* Нижний отступ = высота навигации (подставляется из JS) + запас,
+       чтобы кнопки в конце страниц не перекрывались панелью. */
+    --nav-h:88px;
+    padding:calc(var(--safe-top) + 8px) 0 calc(var(--nav-h) + 36px + var(--safe-bottom)) 0;
     overflow-x:hidden;
   }
   .wrap{max-width:620px;margin:0 auto;padding:0 16px}
@@ -587,6 +590,16 @@ function show(tab){
 document.querySelectorAll(".nav button").forEach(b=>{
   b.addEventListener("click",()=>{ hsel(); V.dataset.tab=""; show(b.dataset.tab); });
 });
+// Фактическая высота панели навигации → нижний отступ контента, чтобы кнопки
+// в конце страниц никогда не пряталась под панелью (высота зависит от
+// платформы, safe-area и масштаба шрифта).
+function fitNavPadding(){
+  const nav=document.getElementById("nav");
+  if(nav) document.body.style.setProperty("--nav-h", nav.offsetHeight+"px");
+}
+fitNavPadding();
+window.addEventListener("resize",fitNavPadding);
+try{ tg?.onEvent?.("viewportChanged",fitNavPadding); }catch(e){}
 // Загрузка: если есть Telegram-авторизация или сохранённая сессия — сразу к
 // прогрессу; иначе показываем вход по номеру телефона.
 async function boot(){
