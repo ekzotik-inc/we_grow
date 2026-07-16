@@ -76,6 +76,10 @@ Telegram-бот **Step Together** (@wegrowmarathon_bot) — корпоратив
   шлются только в даты марафона (17.07–07.08). Задачи: 20:00 серия под угрозой,
   21:00 не сдал шаги, вс 12:00/21:00 недельная сводка, вс 23:55 бонусы,
   пн 10:00 лидерборд.
+- **Дедлайн сдачи — 23:55** (`bot/handlers/steps.py:_day_closed`), после —
+  `texts.DAY_CLOSED`. **Анти-дубль**: `daily_entries.screenshot_unique_id`,
+  при совпадении админ видит предупреждение. **09:00 — дайджест P&C**
+  (`pc_daily_digest`), **23:59 — Excel-бэкап админам** (`nightly_backup`).
 - **Отложенные рассылки**: кнопка «⏰ Отложить отправку» в билдере /broadcast,
   список/отмена — /scheduled. Хранятся в `scheduled_broadcasts` (draft jsonb),
   отправляет job `send_due_broadcasts` раз в минуту.
