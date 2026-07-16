@@ -2,6 +2,8 @@
 многошаговый билдер рассылки (текст + медиа + кнопки + премиум-эмодзи)."""
 from __future__ import annotations
 
+import re
+from datetime import datetime
 from html import escape
 
 from aiogram import F, Router
@@ -46,6 +48,7 @@ class BC(StatesGroup):
     text = State()
     wait_media = State()
     wait_button = State()
+    wait_when = State()
 
 
 # ---- Медиа главного меню --------------------------------------------------
@@ -988,6 +991,86 @@ async def bc_preview(cb: CallbackQuery, state: FSMContext) -> None:
 async def bc_cancel(cb: CallbackQuery, state: FSMContext) -> None:
     await state.clear()
     await cb.message.answer("Рассылка отменена ✖️")
+    await cb.answer()
+
+
+@router.callback_query(F.data == "bc:later")
+async def bc_later(cb: CallbackQuery, state: FSMContext) -> None:
+    if not _is_admin(cb.from_user.id):
+        return await cb.answer()
+    data = await state.get_data()
+    draft = data.get("bc", {})
+    if not draft.get("text") and not draft.get("media"):
+        return await cb.answer("Нужен текст или медиа.", show_alert=True)
+    await state.set_state(BC.wait_when)
+    now = datetime.now(config.tz)
+    await cb.message.answer(
+        "⏰ Когда отправить? Пришли дату и время (таймзона Ташкент):\n"
+        "<code>ДД.ММ ЧЧ:ММ</code> — например <code>17.07 09:00</code>\n"
+        "или просто <code>ЧЧ:ММ</code> — сегодня.\n\n"
+        f"Сейчас: {now.strftime('%d.%m %H:%M')}. /cancel — отмена.")
+    await cb.answer()
+
+
+@router.message(BC.wait_when, F.text)
+async def bc_when_save(message: Message, state: FSMContext) -> None:
+    raw = message.text.strip()
+    now = datetime.now(config.tz)
+    m = re.fullmatch(r"(?:(\d{1,2})\.(\d{1,2})(?:\.(\d{4}))?\s+)?(\d{1,2}):(\d{2})", raw)
+    if not m:
+        await message.answer("Не понял формат. Пример: <code>17.07 09:00</code> или <code>21:30</code>")
+        return
+    dd, mm, yy, hh, mi = m.groups()
+    try:
+        when = now.replace(day=int(dd) if dd else now.day,
+                           month=int(mm) if mm else now.month,
+                           year=int(yy) if yy else now.year,
+                           hour=int(hh), minute=int(mi), second=0, microsecond=0)
+    except ValueError:
+        await message.answer("Такой даты не существует, проверь и пришли ещё раз.")
+        return
+    if when <= now:
+        await message.answer("Это время уже прошло. Пришли время в будущем.")
+        return
+    data = await state.get_data()
+    draft = data.get("bc", {})
+    sb_id = await db.add_scheduled_broadcast(message.from_user.id, draft, when)
+    await state.clear()
+    await message.answer(
+        f"⏰ Рассылка #{sb_id} запланирована на <b>{when.strftime('%d.%m.%Y %H:%M')}</b> "
+        f"(Ташкент) ✅\nСписок и отмена: /scheduled")
+
+
+@router.message(Command("scheduled"))
+async def cmd_scheduled(message: Message) -> None:
+    if not _is_admin(message.from_user.id):
+        return
+    rows = await db.pending_scheduled_broadcasts()
+    if not rows:
+        await message.answer("Отложенных рассылок нет.")
+        return
+    import json as _json
+    for r in rows:
+        draft = r["draft"]
+        if isinstance(draft, str):
+            draft = _json.loads(draft)
+        preview = (draft.get("text") or "[медиа без текста]")[:150]
+        when = r["scheduled_at"].astimezone(config.tz).strftime("%d.%m.%Y %H:%M")
+        kb = InlineKeyboardMarkup(inline_keyboard=[[
+            InlineKeyboardButton(text="🗑 Отменить", callback_data=f"sbdel:{r['id']}")]])
+        await message.answer(f"⏰ <b>#{r['id']}</b> — {when} (Ташкент)\n{escape(preview)}",
+                             reply_markup=kb)
+
+
+@router.callback_query(F.data.startswith("sbdel:"))
+async def sb_delete(cb: CallbackQuery) -> None:
+    if not _is_admin(cb.from_user.id):
+        return await cb.answer()
+    sb_id = int(cb.data.split(":")[1])
+    ok = await db.cancel_scheduled_broadcast(sb_id)
+    await cb.message.edit_reply_markup(reply_markup=None)
+    await cb.message.answer(f"Рассылка #{sb_id} отменена ✖️" if ok
+                            else f"Рассылка #{sb_id} уже отправлена или отменена.")
     await cb.answer()
 
 

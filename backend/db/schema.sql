@@ -86,6 +86,21 @@ CREATE TABLE IF NOT EXISTS broadcasts (
     recipients    int     NOT NULL DEFAULT 0
 );
 
+-- Отложенные рассылки: админ готовит сообщение заранее, планировщик
+-- отправляет его всем активным участникам в назначенное время.
+CREATE TABLE IF NOT EXISTS scheduled_broadcasts (
+    id           bigserial PRIMARY KEY,
+    admin_id     bigint      NOT NULL REFERENCES participants(telegram_id),
+    draft        jsonb       NOT NULL,               -- {text, html, media, buttons}
+    scheduled_at timestamptz NOT NULL,
+    created_at   timestamptz NOT NULL DEFAULT now(),
+    sent_at      timestamptz,
+    recipients   int         NOT NULL DEFAULT 0,
+    cancelled_at timestamptz
+);
+CREATE INDEX IF NOT EXISTS scheduled_broadcasts_due
+    ON scheduled_broadcasts (scheduled_at) WHERE sent_at IS NULL AND cancelled_at IS NULL;
+
 -- Настройки, управляемые из админ-панели (медиа меню, подписи кнопок и т.п.).
 CREATE TABLE IF NOT EXISTS settings (
     key   text PRIMARY KEY,

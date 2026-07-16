@@ -214,8 +214,9 @@ def bc_builder_kb(draft: dict) -> InlineKeyboardMarkup:
     b.button(text=f"🔘 Кнопки ({nbtn})", callback_data="bc:buttons")
     b.button(text="👁 Предпросмотр", callback_data="bc:preview")
     b.button(text="🚀 Отправить всем", callback_data="bc:send")
+    b.button(text="⏰ Отложить отправку", callback_data="bc:later")
     b.button(text="✖️ Отмена", callback_data="bc:cancel")
-    b.adjust(2, 1, 1, 1)
+    b.adjust(2, 1, 1, 1, 1)
     return b.as_markup()
 
 

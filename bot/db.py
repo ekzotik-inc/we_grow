@@ -590,3 +590,41 @@ async def team_members(team_id: int) -> list[asyncpg.Record]:
             ORDER BY points DESC, p.full_name""",
         team_id,
     )
+
+
+# ---- Отложенные рассылки ---------------------------------------------------
+
+async def add_scheduled_broadcast(admin_id: int, draft: dict, when: datetime) -> int:
+    import json
+    return await pool().fetchval(
+        """INSERT INTO scheduled_broadcasts (admin_id, draft, scheduled_at)
+           VALUES ($1, $2::jsonb, $3) RETURNING id""",
+        admin_id, json.dumps(draft, ensure_ascii=False), when)
+
+
+async def due_scheduled_broadcasts(now: datetime) -> list[asyncpg.Record]:
+    """Рассылки, чьё время пришло (ещё не отправлены и не отменены)."""
+    return await pool().fetch(
+        """SELECT id, admin_id, draft FROM scheduled_broadcasts
+            WHERE sent_at IS NULL AND cancelled_at IS NULL AND scheduled_at <= $1
+            ORDER BY scheduled_at""", now)
+
+
+async def mark_scheduled_sent(sb_id: int, recipients: int) -> None:
+    await pool().execute(
+        "UPDATE scheduled_broadcasts SET sent_at=now(), recipients=$2 WHERE id=$1",
+        sb_id, recipients)
+
+
+async def pending_scheduled_broadcasts() -> list[asyncpg.Record]:
+    return await pool().fetch(
+        """SELECT id, draft, scheduled_at FROM scheduled_broadcasts
+            WHERE sent_at IS NULL AND cancelled_at IS NULL
+            ORDER BY scheduled_at""")
+
+
+async def cancel_scheduled_broadcast(sb_id: int) -> bool:
+    row = await pool().fetchval(
+        """UPDATE scheduled_broadcasts SET cancelled_at=now()
+            WHERE id=$1 AND sent_at IS NULL AND cancelled_at IS NULL RETURNING id""", sb_id)
+    return row is not None
