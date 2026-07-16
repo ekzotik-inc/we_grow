@@ -14,7 +14,7 @@ services:
     runtime: python
     region: oregon            # та же зона, что и база test_bd (Oregon) — нужно для Internal URL
     plan: starter             # воркер на Render платный (free-тарифа для worker нет)
-    branch: claude/laughing-babbage-2tyt1p
+    branch: main
     buildCommand: pip install -r requirements.txt
     startCommand: python -m bot.main
     envVars:
@@ -37,7 +37,7 @@ services:
     runtime: python
     region: oregon
     plan: starter             # платный — веб-сервис не засыпает, мгновенный отклик
-    branch: claude/laughing-babbage-2tyt1p
+    branch: main
     buildCommand: pip install -r requirements.txt
     startCommand: uvicorn webapp.server:app --host 0.0.0.0 --port $PORT
     envVars:
