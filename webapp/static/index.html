@@ -137,6 +137,30 @@
   .howto .st div{font-size:13.5px;line-height:1.45;padding-top:3px}
   .note{background:rgba(255,198,92,.1);border:1px solid rgba(255,198,92,.35);border-radius:14px;
     padding:12px 14px;font-size:13px;line-height:1.5;color:#ffe1a6}
+  /* Аккордеоны (правила / FAQ): свёрнутые секции с плавным раскрытием */
+  details.acc{background:linear-gradient(180deg,var(--card2),var(--card));
+    border:1px solid var(--line);border-radius:18px;margin:10px 0;overflow:hidden;
+    transition:border-color .25s}
+  details.acc[open]{border-color:rgba(0,209,210,.45)}
+  details.acc summary{list-style:none;cursor:pointer;display:flex;align-items:center;
+    gap:12px;padding:15px 16px;font-weight:700;font-size:14.5px;user-select:none;
+    -webkit-user-select:none;transition:background .2s}
+  details.acc summary::-webkit-details-marker{display:none}
+  details.acc summary:active{background:rgba(0,209,210,.06)}
+  .acc-ic{flex:0 0 34px;height:34px;border-radius:11px;background:var(--bg2);
+    border:1px solid var(--line);display:grid;place-items:center;font-size:16px;
+    transition:background .25s,border-color .25s}
+  details.acc[open] .acc-ic{background:var(--grad);border:none}
+  .acc-t{flex:1}
+  .acc-t small{display:block;font-weight:600;font-size:11px;color:var(--muted);margin-top:1px}
+  .chev{flex:0 0 auto;width:22px;height:22px;display:grid;place-items:center;
+    color:var(--muted);transition:transform .3s cubic-bezier(.2,.8,.2,1),color .25s}
+  .chev svg{width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:2.4;
+    stroke-linecap:round;stroke-linejoin:round}
+  details.acc[open] .chev{transform:rotate(180deg);color:var(--tq)}
+  .acc-body{padding:2px 16px 16px;animation:accIn .3s cubic-bezier(.2,.8,.2,1) both}
+  @keyframes accIn{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:none}}
+
   .faq{padding:12px 0;border-bottom:1px solid var(--line)}
   .faq:last-child{border-bottom:none;padding-bottom:0}
   .faq .q2{font-weight:700;font-size:14px}
@@ -382,6 +406,14 @@ function stepyBox(html){
   return `<div class="stepy"><div class="av">🪴</div><div class="tx">${html}</div></div>`;
 }
 
+const CHEV=`<span class="chev"><svg viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></svg></span>`;
+function acc(icon,title,sub,body,open=false){
+  return `<details class="acc"${open?" open":""}>
+    <summary><span class="acc-ic">${icon}</span>
+      <span class="acc-t">${title}${sub?`<small>${sub}</small>`:""}</span>${CHEV}</summary>
+    <div class="acc-body">${body}</div></details>`;
+}
+
 function renderRules(){
   const r=[
     "Участвовать могут все сотрудники <b>нашей дружной компании</b>.",
@@ -393,17 +425,20 @@ function renderRules(){
     "Даты: <b>17 июля — 7 августа</b> включительно.",
     "Каждую неделю выходит лидерборд участников и команд.",
     "Шаги присылай <b>каждый день до 23:55</b>: число + скриншот из Fitbit.",
-    "В <b>воскресенье до 23:55</b> — недельная сводка для бонуса.",
+    "В <b>воскресенье с 22:00 до 23:55</b> — еженедельный отчёт: скриншот недельной статистики (кнопка «📈 Еженедельный отчёт»).",
     "P&C может запросить дополнительный скрин для проверки.",
     "Нарушение правил — дисквалификация, результаты не в зачёт.",
   ];
-  const rn=i=>i<8?i+1:i+3;  // пункты 9–10 (баллы/бонус) — карточками ниже
+  const rn=i=>i<8?i+1:i+3;  // пункты 9–10 (баллы/бонус) — отдельными секциями
   const items=r.map((t,i)=>`<div class="rule"><div class="rnum">${rn(i)}</div><p>${t}</p></div>`).join("");
 
   V.innerHTML=`<div class="view">
     <div class="card d1">
       <div class="sec-title">🪴 Привет, я Stepy!</div>
-      ${stepyBox("Объясню всё <b>на пальцах</b>, как для новичка. Твоя задача — ходить и раз в день присылать результат. Остальное я беру на себя 😉")}
+      ${stepyBox("Объясню всё <b>на пальцах</b>, как для новичка. Разделы ниже — жми на любой, он раскроется 👇")}
+    </div>
+
+    ${acc("🚀","Как участвовать","6 простых шагов",`
       <div class="howto">
         <div class="st"><div><b>Установи Fitbit</b> — приложение, которое считает шаги. Ссылки: <a class="link" href="${FIT_A}" target="_blank">Android</a> · <a class="link" href="${FIT_I}" target="_blank">iOS</a>. Зарегистрируйся и разреши доступ к шагам.</div></div>
         <div class="st"><div><b>Носи телефон с собой</b> и просто ходи в течение дня — Fitbit сам посчитает шаги.</div></div>
@@ -413,46 +448,35 @@ function renderRules(){
         <div class="st"><div>Как примут — день станет <b>зелёным</b> ✅, капнут баллы, а растение подрастёт 🪴</div></div>
       </div>
       <div class="note" style="margin-top:12px">📸 <b>Как сделать скриншот:</b><br>
-        • <b>iPhone</b> без кнопки «Домой»: боковая кнопка + кнопка громкости вверх одновременно.<br>
+        • <b>iPhone</b> без кнопки «Домой»: боковая кнопка + громкость вверх одновременно.<br>
         • <b>iPhone</b> с кнопкой «Домой»: кнопка «Домой» + боковая кнопка.<br>
-        • <b>Android</b>: кнопка питания + кнопка громкости вниз одновременно.</div>
-    </div>
+        • <b>Android</b>: кнопка питания + громкость вниз одновременно.</div>`,true)}
 
-    <div class="card d2">
-      <div class="sec-title">⏰ Что и когда делать</div>
-      <div class="howto" style="margin-top:10px">
-        <div class="st"><div><b>Каждый день до 23:55</b> — присылай число шагов + скриншот за этот день.</div></div>
-        <div class="st"><div><b>В воскресенье до 23:55</b> — пришли недельную сводку из Fitbit: так закрепим серию и начислим бонус.</div></div>
-        <div class="st"><div>Не успел до полуночи — день пропущен, а серия обнулится. Старайся не пропускать 🙌</div></div>
-      </div>
-    </div>
+    ${acc("⏰","Что и когда делать","ежедневно · воскресенье",`
+      <div class="howto">
+        <div class="st"><div><b>Каждый день до 23:55</b> — присылай число шагов + скриншот за этот день. После 23:55 день закрывается.</div></div>
+        <div class="st"><div><b>В воскресенье с 22:00 до 23:55</b> — жми «📈 Еженедельный отчёт» в боте и пришли скриншот недельной статистики из Fitbit: так закрепим серию и начислим бонус.</div></div>
+        <div class="st"><div>Не успел до 23:55 — день пропущен, а серия обнулится. Старайся не пропускать 🙌</div></div>
+      </div>`)}
 
-    <div class="card d2">
-      <div class="badge">🎯 Баллы за день</div>
-      <p class="muted" style="margin:8px 0 4px">Считаются шаги за текущий день. Меньше 5 000 — 0 баллов.</p>
+    ${acc("🎯","Баллы за день","от 1 до 3 баллов",`
+      <p class="muted" style="margin:4px 0">Считаются шаги за текущий день. Меньше 5 000 — 0 баллов.</p>
       <div class="scoregrid"><div class="k">5 000 – 9 999</div><div class="v">1 балл</div>
         <div class="k">10 000 – 14 999</div><div class="v">2 балла</div>
-        <div class="k">15 000 – 30 000</div><div class="v">3 балла</div></div>
-    </div>
+        <div class="k">15 000 – 30 000</div><div class="v">3 балла</div></div>`)}
 
-    <div class="card d3">
-      <div class="badge">🔥 Бонус за серию</div>
-      <p class="muted" style="margin:8px 0 4px">Серия — дни подряд по 10 000+ шагов. Пропуск или меньше 10 000 обнуляет серию.</p>
+    ${acc("🔥","Бонус за серию","+2 или +4 балла в неделю",`
+      <p class="muted" style="margin:4px 0">Серия — дни подряд по 10 000+ шагов. Пропуск или меньше 10 000 обнуляет серию.</p>
       <div class="scoregrid"><div class="k">5 дней подряд 10 000+</div><div class="v">+2 балла</div>
-        <div class="k">7 дней подряд 10 000+</div><div class="v">+4 балла</div></div>
-    </div>
+        <div class="k">7 дней подряд 10 000+</div><div class="v">+4 балла</div></div>`)}
 
-    <div class="card d3">
-      <div class="sec-title" style="margin-bottom:6px">📋 Все правила</div>${items}
-      <div class="note" style="margin-top:12px">⚠️ <b>Важно:</b> на скриншоте должны быть видны <b>дата</b> и <b>число шагов</b>, а результат засчитывается только после проверки P&C.</div>
-    </div>
+    ${acc("📋","Все правила","полный список из 12 пунктов",`${items}
+      <div class="note" style="margin-top:12px">⚠️ <b>Важно:</b> на скриншоте должны быть видны <b>дата</b> и <b>число шагов</b>, а результат засчитывается только после проверки P&C.</div>`)}
 
     <div class="card d3" style="text-align:center">
       <div class="sec-title" style="justify-content:center;margin-bottom:6px">💬 Остались вопросы?</div>
       <p class="muted" style="margin:0 0 12px">Напиши сотруднику P&amp;C напрямую — поможем.</p>
-      <button onclick="openPC()" style="background:var(--grad);color:#06222b;border:none;
-        border-radius:14px;padding:12px 20px;font-weight:800;font-size:14px;cursor:pointer">
-        💬 Написать P&amp;C</button>
+      <button class="btn-grad" onclick="openPC()">💬 Написать P&amp;C</button>
     </div></div>`;
 }
 
@@ -480,22 +504,22 @@ function renderPrizes(){
 
 function renderFAQ(){
   const qa=[
-    ["👟 Как сдать шаги?","Жми «Шаги за сегодня», пришли <b>число</b>, затем <b>скриншот</b> из Fitbit. Успей до <b>23:55</b>."],
-    ["⏳ Почему баллы не начислились сразу?","Каждый результат проверяет P&C. В календаре день сначала <b>⏳ на проверке</b>, после подтверждения становится зелёным — и капают баллы."],
-    ["🎯 Сколько баллов за день?","5 000–9 999 → <b>1</b>, 10 000–14 999 → <b>2</b>, 15 000–30 000 → <b>3</b>. Меньше 5 000 — 0 баллов."],
-    ["🔥 Что за серия и бонус?","Серия — дни <b>подряд</b> по 10 000+ шагов. 5 дней → <b>+2</b>, 7 дней → <b>+4</b> (по итогам недели). Пропуск обнуляет серию."],
-    ["📸 Какой скриншот подойдёт?","Из приложения Fitbit — чтобы были видны <b>дата</b> и <b>число шагов</b> за сегодня."],
-    ["🗓 Что нужно в воскресенье?","До 23:55 пришли <b>недельную сводку</b> из Fitbit — так закрепим серию и начислим бонус."],
-    ["📊 Где прогресс и лидерборд?","В приложении: табы «Прогресс» и «Лидерборд» — там растение, календарь и рейтинг команд."],
-    ["❌ Результат отклонили — что делать?","Проверь данные и пришли заново кнопкой «Шаги за сегодня». Не помогло — напиши в обратную связь."],
+    ["👟","Как сдать шаги?","Жми «Шаги за сегодня», пришли <b>число</b>, затем <b>скриншот</b> из Fitbit. Успей до <b>23:55</b>."],
+    ["📈","Что за еженедельный отчёт?","Каждое <b>воскресенье с 22:00 до 23:55</b> жми кнопку «📈 Еженедельный отчёт» в боте и пришли <b>скриншот недельной статистики</b> из Fitbit. Это закрепляет серию и бонус за неделю. В другое время кнопка закрыта — бот напомнит."],
+    ["⏳","Почему баллы не начислились сразу?","Каждый результат проверяет P&C. В календаре день сначала <b>⏳ на проверке</b>, после подтверждения становится зелёным — и капают баллы."],
+    ["🎯","Сколько баллов за день?","5 000–9 999 → <b>1</b>, 10 000–14 999 → <b>2</b>, 15 000–30 000 → <b>3</b>. Меньше 5 000 — 0 баллов."],
+    ["🔥","Что за серия и бонус?","Серия — дни <b>подряд</b> по 10 000+ шагов. 5 дней → <b>+2</b>, 7 дней → <b>+4</b> (по итогам недели). Пропуск обнуляет серию."],
+    ["📸","Какой скриншот подойдёт?","Из приложения Fitbit — чтобы были видны <b>дата</b> и <b>число шагов</b> за сегодня. Для недельного отчёта — экран со статистикой за неделю."],
+    ["📊","Где прогресс и лидерборд?","В приложении: табы «Прогресс» и «Лидерборд» — там растение, календарь и рейтинг команд."],
+    ["❌","Результат отклонили — что делать?","Проверь данные и пришли заново кнопкой «Шаги за сегодня». Не помогло — напиши в обратную связь."],
   ];
-  const items=qa.map(([q,a])=>`<div class="faq"><div class="q2">${q}</div><p>${a}</p></div>`).join("");
+  const items=qa.map(([ic,q,a])=>acc(ic,q,"",`<p style="margin:2px 0 4px;font-size:13.5px;line-height:1.5;color:var(--muted)">${a}</p>`)).join("");
   V.innerHTML=`<div class="view">
     <div class="card d1">
       <div class="sec-title">❓ Помощь</div>
-      ${stepyBox("Я Stepy 🪴 — собрал ответы на частые вопросы. Не нашёл своё? Напиши в обратную связь.")}
+      ${stepyBox("Я Stepy 🪴 — собрал ответы на частые вопросы. Жми на вопрос — раскрою ответ. Не нашёл своё? Напиши в обратную связь.")}
     </div>
-    <div class="card d2">${items}</div>
+    ${items}
     <div class="card d3" style="text-align:center">
       <button class="btn-grad" onclick="show('rules')">📋 Открыть правила</button>
       <button class="btn-ghost" onclick="openPC()">💬 Написать P&amp;C</button>

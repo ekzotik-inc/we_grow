@@ -37,10 +37,27 @@ async def remind_streak_at_risk(bot: Bot) -> None:
 
 
 async def weekly_summary_reminder(bot: Bot) -> None:
-    """Вс 12:00 и 21:00 — напоминание прислать недельную сводку (правило 12)."""
+    """Вс 12:00 — анонс: вечером с 22:00 открывается приём недельных отчётов."""
     if not _marathon_active():
         return
     await notify.broadcast_all(bot, texts.WEEKLY_SUMMARY_REMINDER)
+
+
+async def weekly_report_open(bot: Bot) -> None:
+    """Вс 22:00 — приём еженедельных отчётов открыт (кнопка активна)."""
+    if not _marathon_active():
+        return
+    await notify.broadcast_all(bot, texts.WEEKLY_OPEN_PUSH)
+
+
+async def weekly_report_last_call(bot: Bot) -> None:
+    """Вс 23:15 — последний звонок только тем, кто ещё не прислал отчёт."""
+    if not _marathon_active():
+        return
+    today = datetime.now(config.tz).date()
+    monday = today - timedelta(days=today.weekday())
+    ids = await db.ids_without_weekly_report(monday)
+    await notify.broadcast(bot, ids, texts.WEEKLY_LAST_CALL)
 
 
 async def award_weekly_bonuses(bot: Bot) -> None:
@@ -138,7 +155,8 @@ def setup_scheduler(bot: Bot) -> AsyncIOScheduler:
     sched.add_job(remind_streak_at_risk, "cron", hour=20, minute=0, args=[bot])
     sched.add_job(remind_no_steps, "cron", hour=21, minute=0, args=[bot])
     sched.add_job(weekly_summary_reminder, "cron", day_of_week="sun", hour=12, minute=0, args=[bot])
-    sched.add_job(weekly_summary_reminder, "cron", day_of_week="sun", hour=21, minute=0, args=[bot])
+    sched.add_job(weekly_report_open, "cron", day_of_week="sun", hour=22, minute=0, args=[bot])
+    sched.add_job(weekly_report_last_call, "cron", day_of_week="sun", hour=23, minute=15, args=[bot])
     sched.add_job(award_weekly_bonuses, "cron", day_of_week="sun", hour=23, minute=55, args=[bot])
     sched.add_job(monday_leaderboard, "cron", day_of_week="mon", hour=10, minute=0, args=[bot])
     sched.add_job(pc_daily_digest, "cron", hour=9, minute=0, args=[bot])

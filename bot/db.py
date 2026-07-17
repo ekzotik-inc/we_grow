@@ -670,3 +670,57 @@ async def digest_stats(day: date) -> dict:
     return {"total": row["total"], "accepted": row["accepted"],
             "pending": row["pending"], "rejected": row["rejected"],
             "active": active, "silent": silent}
+
+
+# ---- Еженедельные отчёты (скриншот недельной статистики Fitbit) -------------
+
+async def save_weekly_report(tg_id: int, monday: date, file_id: str) -> int:
+    """Сохраняет скриншот недельного отчёта. Повторная отправка заменяет файл.
+    Не трогает bonus_points/computed_total — их ведёт award_weekly_bonus."""
+    return int(await pool().fetchval(
+        """INSERT INTO weekly_summaries
+             (participant_id, week_start, reported_total, computed_total,
+              reconciled, screenshot_file_id, reported_at)
+           VALUES ($1,$2,0,0,false,$3,now())
+           ON CONFLICT (participant_id, week_start) DO UPDATE
+             SET screenshot_file_id=$3, reported_at=now()
+           RETURNING id""",
+        tg_id, monday, file_id))
+
+
+async def has_weekly_report(tg_id: int, monday: date) -> bool:
+    return bool(await pool().fetchval(
+        """SELECT screenshot_file_id IS NOT NULL FROM weekly_summaries
+            WHERE participant_id=$1 AND week_start=$2""", tg_id, monday))
+
+
+async def ids_without_weekly_report(monday: date) -> list[int]:
+    """Активные участники, не приславшие недельный отчёт за эту неделю."""
+    rows = await pool().fetch(
+        """SELECT p.telegram_id FROM participants p
+            WHERE p.approved_at IS NOT NULL AND p.disqualified_at IS NULL
+              AND NOT EXISTS (SELECT 1 FROM weekly_summaries w
+                               WHERE w.participant_id=p.telegram_id
+                                 AND w.week_start=$1
+                                 AND w.screenshot_file_id IS NOT NULL)""", monday)
+    return [r["telegram_id"] for r in rows]
+
+
+async def weekly_summary_by_id(ws_id: int) -> asyncpg.Record | None:
+    return await pool().fetchrow(
+        "SELECT * FROM weekly_summaries WHERE id=$1", ws_id)
+
+
+async def export_weekly_reports() -> list[asyncpg.Record]:
+    return await pool().fetch(
+        """SELECT w.id, w.week_start, w.reported_at, w.computed_total,
+                  w.bonus_points, w.screenshot_file_id,
+                  p.full_name, t.name AS team_name
+             FROM weekly_summaries w
+             JOIN participants p ON p.telegram_id=w.participant_id
+             LEFT JOIN teams t ON t.id=p.team_id
+            ORDER BY w.week_start, t.name NULLS LAST, p.full_name""")
+
+
+async def team_name(team_id: int) -> str | None:
+    return await pool().fetchval("SELECT name FROM teams WHERE id=$1", team_id)

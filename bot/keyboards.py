@@ -56,6 +56,7 @@ def main_kb() -> ReplyKeyboardMarkup:
     return ReplyKeyboardMarkup(
         keyboard=[
             [_mbtn("steps")],
+            [_mbtn("weekly")],
             [_mbtn("progress"), _mbtn("board")],
             [_mbtn("rules"), _mbtn("help")],
             [_mbtn("feedback")],

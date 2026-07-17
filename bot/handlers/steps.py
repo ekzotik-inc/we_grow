@@ -24,6 +24,10 @@ class Steps(StatesGroup):
     screenshot = State()
 
 
+class Weekly(StatesGroup):
+    screenshot = State()
+
+
 def _today():
     return datetime.now(config.tz).date()
 
@@ -134,3 +138,84 @@ async def on_screenshot(message: Message, state: FSMContext) -> None:
 @router.message(Steps.screenshot)
 async def need_screenshot(message: Message) -> None:
     await message.answer(texts.STEP2_NEED_PHOTO)
+
+
+# ---- Еженедельный отчёт (вс 22:00–23:55) -----------------------------------
+
+WEEKLY_OPEN = (22, 0)
+
+
+def _weekly_window() -> str:
+    """closed_day | too_early | open | closed — статус окна приёма отчётов."""
+    now = datetime.now(config.tz)
+    if now.weekday() != 6:                      # не воскресенье
+        return "closed_day"
+    if (now.hour, now.minute) < WEEKLY_OPEN:
+        return "too_early"
+    if (now.hour, now.minute) >= DEADLINE:      # 23:55
+        return "closed"
+    return "open"
+
+
+def _this_monday():
+    today = datetime.now(config.tz).date()
+    from datetime import timedelta
+    return today - timedelta(days=today.weekday())
+
+
+@router.message(lambda m: bool(m.text) and m.text == settings.label("weekly"))
+async def ask_weekly(message: Message, state: FSMContext) -> None:
+    if not await _require_approved(message):
+        return
+    today = _today()
+    if today < config.marathon_start:
+        await message.answer(texts.marathon_not_started(config.marathon_start))
+        return
+    if today > config.marathon_end:
+        await message.answer(texts.MARATHON_FINISHED)
+        return
+    w = _weekly_window()
+    if w == "closed_day":
+        await message.answer(texts.WEEKLY_ONLY_SUNDAY)
+        return
+    if w == "too_early":
+        await message.answer(texts.WEEKLY_TOO_EARLY)
+        return
+    if w == "closed":
+        await message.answer(texts.WEEKLY_CLOSED)
+        return
+    await message.answer(texts.WEEKLY_ASK_SHOT)
+    await state.set_state(Weekly.screenshot)
+
+
+@router.message(Weekly.screenshot, F.photo | F.document)
+async def on_weekly_shot(message: Message, state: FSMContext) -> None:
+    if message.photo:
+        file_id = message.photo[-1].file_id
+    elif message.document and (message.document.mime_type or "").startswith("image/"):
+        file_id = "doc:" + message.document.file_id
+    else:
+        await message.answer(texts.WEEKLY_NEED_SHOT)
+        return
+    if _weekly_window() != "open":
+        await state.clear()
+        await message.answer(texts.WEEKLY_CLOSED)
+        return
+    tg_id = message.from_user.id
+    monday = _this_monday()
+    already = await db.has_weekly_report(tg_id, monday)
+    await db.save_weekly_report(tg_id, monday, file_id)
+    await state.clear()
+    await message.answer(texts.WEEKLY_UPDATED if already else texts.WEEKLY_SAVED)
+
+    # Копия — P&C (информационно, без модерации).
+    from bot import notify
+    p = await db.get_participant(tg_id)
+    team = await db.team_name(p["team_id"]) if p["team_id"] else None
+    await notify.admins_submission(message.bot, file_id,
+                                   texts.admin_weekly_report(p, team, monday), None)
+
+
+@router.message(Weekly.screenshot)
+async def weekly_need_shot(message: Message) -> None:
+    await message.answer(texts.WEEKLY_NEED_SHOT)

@@ -210,20 +210,12 @@ async def api_leaderboard(x_init_data: str | None = Header(default=None),
     }
 
 
-@app.get("/shot/{entry_id}/{sig}")
-async def api_screenshot(entry_id: int, sig: str):
-    """Отдаёт скриншот участника по подписанной ссылке (для выгрузки Excel).
-    Файл скачивается у Telegram на сервере — токен бота наружу не попадает."""
+async def _serve_screenshot(file_id: str):
+    """Скачивает файл у Telegram на сервере и отдаёт как изображение —
+    токен бота наружу не попадает."""
     import aiohttp
     from fastapi.responses import Response
 
-    from bot.export import shot_sig
-    if not hmac.compare_digest(shot_sig(entry_id), sig):
-        raise HTTPException(status_code=403, detail="bad signature")
-    entry = await db.entry_by_id(entry_id)
-    if entry is None or not entry["screenshot_file_id"]:
-        raise HTTPException(status_code=404, detail="no screenshot")
-    file_id = entry["screenshot_file_id"]
     if file_id.startswith("doc:"):          # скрин, присланный файлом
         file_id = file_id[4:]
 
@@ -242,6 +234,30 @@ async def api_screenshot(entry_id: int, sig: str):
     media = {"png": "image/png", "webp": "image/webp"}.get(ext, "image/jpeg")
     return Response(content=data, media_type=media,
                     headers={"Cache-Control": "private, max-age=3600"})
+
+
+@app.get("/shot/{entry_id}/{sig}")
+async def api_screenshot(entry_id: int, sig: str):
+    """Дневной скриншот по подписанной ссылке (для выгрузки Excel)."""
+    from bot.export import shot_sig
+    if not hmac.compare_digest(shot_sig(entry_id), sig):
+        raise HTTPException(status_code=403, detail="bad signature")
+    entry = await db.entry_by_id(entry_id)
+    if entry is None or not entry["screenshot_file_id"]:
+        raise HTTPException(status_code=404, detail="no screenshot")
+    return await _serve_screenshot(entry["screenshot_file_id"])
+
+
+@app.get("/wshot/{ws_id}/{sig}")
+async def api_weekly_screenshot(ws_id: int, sig: str):
+    """Скриншот еженедельного отчёта по подписанной ссылке (для Excel)."""
+    from bot.export import shot_sig
+    if not hmac.compare_digest(shot_sig(ws_id, "wshot"), sig):
+        raise HTTPException(status_code=403, detail="bad signature")
+    row = await db.weekly_summary_by_id(ws_id)
+    if row is None or not row["screenshot_file_id"]:
+        raise HTTPException(status_code=404, detail="no screenshot")
+    return await _serve_screenshot(row["screenshot_file_id"])
 
 
 @app.get("/health")

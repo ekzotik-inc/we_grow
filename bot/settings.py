@@ -18,6 +18,7 @@ _cache: dict[str, str] = {}
 
 DEFAULT_LABELS = {
     "steps": "👟 Шаги за сегодня",
+    "weekly": "📈 Еженедельный отчёт",
     "progress": "📊 Мой прогресс",
     "board": "🏆 Лидерборд",
     "rules": "📋 Правила",

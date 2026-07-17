@@ -18,18 +18,19 @@ _HEAD_FILL = PatternFill("solid", fgColor="2F2B39")
 _LINK = Font(color="0563C1", underline="single")
 
 
-def shot_sig(entry_id: int) -> str:
+def shot_sig(entry_id: int, kind: str = "shot") -> str:
     """HMAC-подпись ссылки на скриншот: постороннему её не подобрать,
-    токен бота в URL не участвует. Проверяется в webapp/server.py."""
-    return hmac.new(config.bot_token.encode(), f"shot:{entry_id}".encode(),
+    токен бота в URL не участвует. Проверяется в webapp/server.py.
+    kind: shot — дневной скрин, wshot — еженедельный отчёт."""
+    return hmac.new(config.bot_token.encode(), f"{kind}:{entry_id}".encode(),
                     hashlib.sha256).hexdigest()[:20]
 
 
-def shot_url(entry_id: int) -> str | None:
+def shot_url(entry_id: int, kind: str = "shot") -> str | None:
     base = settings.webapp_url()
     if not base:
         return None
-    return f"{base.rstrip('/')}/shot/{entry_id}/{shot_sig(entry_id)}"
+    return f"{base.rstrip('/')}/{kind}/{entry_id}/{shot_sig(entry_id, kind)}"
 
 
 def _fmt(dt) -> str:
@@ -87,6 +88,23 @@ async def build_workbook() -> tuple[bytes, str]:
             url = shot_url(e["id"])
             if url:
                 cell = ws2.cell(row=row_i, column=photo_col)
+                cell.hyperlink = url
+                cell.font = _LINK
+
+    weekly = await db.export_weekly_reports()
+    ws3 = wb.create_sheet("Недельные отчёты")
+    _sheet(ws3,
+           ["Неделя с", "ФИО", "Команда", "Шаги за неделю", "Бонус",
+            "Отчёт прислан", "Фото"],
+           [[w["week_start"].strftime("%d.%m.%Y"), w["full_name"], w["team_name"] or "",
+             w["computed_total"], w["bonus_points"], _fmt(w["reported_at"]),
+             "открыть" if w["screenshot_file_id"] else "не прислан"]
+            for w in weekly])
+    for row_i, w in enumerate(weekly, start=2):
+        if w["screenshot_file_id"]:
+            url = shot_url(w["id"], "wshot")
+            if url:
+                cell = ws3.cell(row=row_i, column=7)
                 cell.hyperlink = url
                 cell.font = _LINK
 

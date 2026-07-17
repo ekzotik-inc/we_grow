@@ -80,6 +80,14 @@ Telegram-бот **Step Together** (@wegrowmarathon_bot) — корпоратив
   `texts.DAY_CLOSED`. **Анти-дубль**: `daily_entries.screenshot_unique_id`,
   при совпадении админ видит предупреждение. **09:00 — дайджест P&C**
   (`pc_daily_digest`), **23:59 — Excel-бэкап админам** (`nightly_backup`).
+- **Еженедельный отчёт**: кнопка «📈 Еженедельный отчёт» работает только в
+  вс 22:00–23:55 (`steps.py:_weekly_window`); принимается один скриншот
+  недельной статистики Fitbit → `weekly_summaries.screenshot_file_id` +
+  `reported_at` (повтор заменяет файл, бонусы не трогает). Пуши: вс 12:00
+  анонс, 22:00 открытие, 23:15 last-call не сдавшим. В Excel — лист
+  «Недельные отчёты» со ссылками `/wshot/{id}/{sig}`.
+- **Webapp**: разделы «Правила» и «Помощь» — аккордеоны (`acc()` в
+  index.html), первый раздел правил открыт по умолчанию.
 - **Отложенные рассылки**: кнопка «⏰ Отложить отправку» в билдере /broadcast,
   список/отмена — /scheduled. Хранятся в `scheduled_broadcasts` (draft jsonb),
   отправляет job `send_due_broadcasts` раз в минуту.
