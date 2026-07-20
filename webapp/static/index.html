@@ -2,7 +2,7 @@
 <html lang="ru">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Step Together</title>
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
 <style>
@@ -21,8 +21,8 @@
     --muted:#9b96a8;
     --grad:linear-gradient(135deg,#00d1d2 0%,#7a5cff 100%);
     --grad-warm:linear-gradient(135deg,#ff7a59 0%,#ffc65c 100%);
-    --safe-top:env(safe-area-inset-top,0px);
-    --safe-bottom:env(safe-area-inset-bottom,0px);
+    --safe-top:var(--tg-safe-area-inset-top, env(safe-area-inset-top,0px));
+    --safe-bottom:var(--tg-safe-area-inset-bottom, env(safe-area-inset-bottom,0px));
   }
   *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;
     -webkit-user-select:none;user-select:none}
@@ -283,6 +283,7 @@ const FIT_A="https://play.google.com/store/apps/details?id=com.fitbit.FitbitMobi
 const FIT_I="https://apps.apple.com/us/app/fitbit-health-fitness/id462638897";
 const FEEDBACK="https://t.me/DaryaPMI";
 function openPC(){ try{ tg?.openTelegramLink?.(FEEDBACK); }catch(e){ location.href=FEEDBACK; } }
+function openExt(u){ try{ if(tg?.openLink){ tg.openLink(u); return false; } }catch(e){} window.open(u,"_blank"); return false; }
 
 async function api(path){
   const r = await fetch(path, {headers:{"X-Init-Data": getInit(), "X-Session": session()}});
@@ -316,8 +317,11 @@ function stageIndex(p,streak){ if(streak>=7||p>=50)return 4; if(p>=30)return 3; 
 function pcls(p){ return p>=3?"p3":p>=2?"p2":p>=1?"p1":""; }
 function rk(i){ return `<div class="rk ${i===0?'g1':i===1?'g2':i===2?'g3':''}">${i<3?["🥇","🥈","🥉"][i]:i+1}</div>`; }
 
+let renderGen=0;
 async function renderProgress(){
-  let d; try{ d=await api("/api/me"); }catch(e){ return notice(e); }
+  const my=++renderGen;
+  let d; try{ d=await api("/api/me"); }catch(e){ if(my===renderGen)notice(e); return; }
+  if(my!==renderGen) return;
   if(!d.registered) return regNotice();
   document.getElementById("head-sub").textContent = d.team_name ? "Команда: "+d.team_name : "марафон шагов";
   const si=stageIndex(d.total_points,d.best_streak), st=STAGES[si];
@@ -328,7 +332,7 @@ async function renderProgress(){
     else if(c.status==="pending"){ base="pend"; badge="<small>⏳</small>"; }
     else if(c.status==="rejected"){ base="rej"; badge="<small>✕</small>"; }
     const cls=["day",base,c.is_today?"today":"",c.future?"future":""].join(" ");
-    return `<div class="${cls}"><b>${new Date(c.date).getDate()}</b>${badge}</div>`;
+    return `<div class="${cls}"><b>${parseInt(c.date.slice(8),10)}</b>${badge}</div>`;
   }).join("");
   const ts=d.today_status;
   const todayMark=ts==="accepted"?"✅":ts==="pending"?"⏳":ts==="rejected"?"❌":"—";
@@ -354,10 +358,9 @@ async function renderProgress(){
       </div>
     </div>`;
 
-  // До старта марафона «Прогресс» заблюрен + дисклеймер (пункт 5).
-  const startDate=new Date(d.marathon.start+"T00:00:00");
-  const today0=new Date(new Date().toDateString());
-  const notStarted=today0<startDate;
+  // До старта марафона «Прогресс» заблюрен + дисклеймер. Считаем по
+  // СЕРВЕРНЫМ флагам future (таймзона Ташкента), а не по часам клиента.
+  const notStarted=d.calendar.length>0&&d.calendar.every(c=>c.future);
   const inner=notStarted
     ? `<div class="locked"><div class="blurwrap">${body}</div>
          <div class="lockmsg">
@@ -375,7 +378,9 @@ async function renderProgress(){
 }
 
 async function renderTeam(){
-  let d; try{ d=await api("/api/team"); }catch(e){ return notice(e); }
+  const my=++renderGen;
+  let d; try{ d=await api("/api/team"); }catch(e){ if(my===renderGen)notice(e); return; }
+  if(my!==renderGen) return;
   if(!d.registered) return regNotice();
   const rows=d.members.map((m,i)=>`<div class="item">${rk(i)}<div class="nm">${esc(m.name)}</div><div class="pts">${m.points}</div></div>`).join("");
   V.innerHTML=`<div class="view">
@@ -394,7 +399,9 @@ async function renderTeam(){
 }
 
 async function renderBoard(){
-  let d; try{ d=await api("/api/leaderboard"); }catch(e){ return notice(e); }
+  const my=++renderGen;
+  let d; try{ d=await api("/api/leaderboard"); }catch(e){ if(my===renderGen)notice(e); return; }
+  if(my!==renderGen) return;
   const teams=d.teams.map((t,i)=>`<div class="item">${rk(i)}<div class="nm">${esc(t.name)}</div><div class="pts">${t.points}</div></div>`).join("")||emptyRow();
   const top=d.top.map((p,i)=>`<div class="item">${rk(i)}<div class="nm">${esc(p.name)}</div><div class="pts">${p.points}</div></div>`).join("")||emptyRow();
   V.innerHTML=`<div class="view">
@@ -418,7 +425,7 @@ function renderRules(){
   const r=[
     "Участвовать могут все сотрудники <b>нашей дружной компании</b>.",
     "Регистрация и распределение по командам — прямо в боте.",
-    `Шаги считает приложение <b>Fitbit</b> (Google Health): <a class="link" href="${FIT_A}" target="_blank">Android</a> · <a class="link" href="${FIT_I}" target="_blank">iOS</a>.`,
+    `Шаги считает приложение <b>Fitbit</b> (Google Health): <a class="link" href="${FIT_A}" onclick="return openExt(FIT_A)">Android</a> · <a class="link" href="${FIT_I}" onclick="return openExt(FIT_I)">iOS</a>.`,
     "В команде — от <b>8 до 10</b> человек.",
     "Если команда заполнена, P&C предложит другую.",
     "Присоединяясь, ты обещаешь дойти до финиша 🏁",
@@ -440,7 +447,7 @@ function renderRules(){
 
     ${acc("🚀","Как участвовать","6 простых шагов",`
       <div class="howto">
-        <div class="st"><div><b>Установи Fitbit</b> — приложение, которое считает шаги. Ссылки: <a class="link" href="${FIT_A}" target="_blank">Android</a> · <a class="link" href="${FIT_I}" target="_blank">iOS</a>. Зарегистрируйся и разреши доступ к шагам.</div></div>
+        <div class="st"><div><b>Установи Fitbit</b> — приложение, которое считает шаги. Ссылки: <a class="link" href="${FIT_A}" onclick="return openExt(FIT_A)">Android</a> · <a class="link" href="${FIT_I}" onclick="return openExt(FIT_I)">iOS</a>. Зарегистрируйся и разреши доступ к шагам.</div></div>
         <div class="st"><div><b>Носи телефон с собой</b> и просто ходи в течение дня — Fitbit сам посчитает шаги.</div></div>
         <div class="st"><div>Вечером <b>открой Fitbit</b> и посмотри число шагов за сегодня. Сделай <b>скриншот</b> экрана, где видно <b>дату</b> и <b>количество шагов</b>.</div></div>
         <div class="st"><div>Вернись в бот, нажми кнопку <b>«👟 Шаги за сегодня»</b>, напиши <b>число шагов</b> и пришли <b>скриншот</b>.</div></div>
@@ -568,6 +575,8 @@ async function doLogin(){
     msg.textContent="Доступ закрыт: участник дисквалифицирован.";
   } else if(d.reason==="bad_phone"){
     msg.textContent="Введите корректный номер телефона";
+  } else if(d.reason==="rate_limited"){
+    msg.textContent="Слишком много попыток. Подожди 10 минут и попробуй снова.";
   } else {
     msg.textContent="Не удалось войти. Проверь номер и попробуй снова.";
   }
@@ -587,14 +596,14 @@ function diagText(){
   return parts.join("\n");
 }
 function notice(e){
-  if(!getInit()){
+  if(!getInit() && !session()){
     V.innerHTML=`<div class="center">Открой это приложение <b>из бота</b> Step Together 🌱
       <br><br><button class="btn-grad" style="max-width:220px;margin:0 auto" onclick="retryInit()">Обновить</button>
       <pre style="text-align:left;white-space:pre-wrap;font-size:11px;color:var(--muted);margin-top:18px;background:var(--bg2);border:1px solid var(--line);border-radius:12px;padding:12px">${esc(diagText())}</pre>
       </div>`;
     return;
   }
-  V.innerHTML=`<div class="center">Не удалось загрузить 😔<br><br><span class="muted">${esc(e&&e.message||e||"")}</span><br><br>Потяни вниз, чтобы обновить.
+  V.innerHTML=`<div class="center">Не удалось загрузить 😔<br><br><span class="muted">${esc(e&&e.message||e||"")}</span><br><br><button class="btn-grad" style="max-width:220px;margin:0 auto" onclick="retryInit()">🔄 Обновить</button>
     <pre style="text-align:left;white-space:pre-wrap;font-size:11px;color:var(--muted);margin-top:18px;background:var(--bg2);border:1px solid var(--line);border-radius:12px;padding:12px">${esc(diagText())}</pre></div>`;
 }
 async function retryInit(){
@@ -607,7 +616,7 @@ const views={progress:renderProgress,team:renderTeam,board:renderBoard,rules:ren
 const loaded={};
 function show(tab){
   document.querySelectorAll(".nav button").forEach(b=>b.classList.toggle("on",b.dataset.tab===tab));
-  if(tab==="rules"||tab==="prizes"||tab==="faq"){ views[tab](); return; }   // статичны — всегда свежие
+  if(tab==="rules"||tab==="prizes"||tab==="faq"){ renderGen++; views[tab](); return; }   // статичны — всегда свежие
   if(loaded[tab]&&V.dataset.tab===tab) return;
   V.dataset.tab=tab; loaded[tab]=true; views[tab]();
 }
@@ -627,6 +636,7 @@ try{ tg?.onEvent?.("viewportChanged",fitNavPadding); }catch(e){}
 // Загрузка: если есть Telegram-авторизация или сохранённая сессия — сразу к
 // прогрессу; иначе показываем вход по номеру телефона.
 async function boot(){
+  if(!window.Telegram?.WebApp && session()){ show("progress"); return; }
   await waitInit();
   if(getInit() || session()){ show("progress"); }
   else { renderLogin(); }

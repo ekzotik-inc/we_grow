@@ -575,7 +575,7 @@ async def participant_card(tg_id: int) -> asyncpg.Record | None:
     """Профиль участника с названием команды."""
     return await pool().fetchrow(
         """SELECT p.telegram_id, p.full_name, p.team_id, p.disqualified_at,
-                  t.name AS team_name
+                  p.approved_at, t.name AS team_name
              FROM participants p LEFT JOIN teams t ON t.id = p.team_id
             WHERE p.telegram_id = $1""",
         tg_id,

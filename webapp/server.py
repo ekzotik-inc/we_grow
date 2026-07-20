@@ -10,12 +10,13 @@ import hashlib
 import hmac
 import json
 import re
+import time
 from contextlib import asynccontextmanager
 from datetime import date, datetime
 from pathlib import Path
 from urllib.parse import parse_qsl
 
-from fastapi import Body, FastAPI, Header, HTTPException
+from fastapi import Body, FastAPI, Header, HTTPException, Request
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
@@ -60,6 +61,15 @@ def _verify_init_data(init_data: str) -> int:
     if not hmac.compare_digest(calc_hash, received_hash):
         raise HTTPException(status_code=401, detail="bad signature")
 
+    # Защита от replay: initData живёт не дольше суток (официальный алгоритм
+    # требует проверять auth_date, иначе перехваченная строка валидна вечно).
+    try:
+        auth_ts = int(pairs.get("auth_date", "0"))
+    except ValueError:
+        auth_ts = 0
+    if abs(time.time() - auth_ts) > 86400:
+        raise HTTPException(status_code=401, detail="stale initData")
+
     try:
         user = json.loads(pairs["user"])
         return int(user["id"])
@@ -69,25 +79,50 @@ def _verify_init_data(init_data: str) -> int:
 
 # ---- Сессия по номеру телефона (fallback, когда initData недоступен) -------
 
+TOKEN_TTL = 30 * 24 * 3600          # телефонная сессия живёт 30 дней
+
+
 def _make_token(tg_id: int) -> str:
-    """Подписанный токен сессии: telegram_id + HMAC на секрете бота. Подделать
-    чужой токен без BOT_TOKEN нельзя."""
-    sig = hmac.new(config.bot_token.encode(), str(tg_id).encode(), hashlib.sha256).hexdigest()
-    return f"{tg_id}.{sig}"
+    """Подписанный токен сессии: telegram_id + срок жизни + HMAC на секрете
+    бота. Подделать чужой токен без BOT_TOKEN нельзя, просроченный — невалиден."""
+    expires = int(time.time()) + TOKEN_TTL
+    payload = f"{tg_id}.{expires}"
+    sig = hmac.new(config.bot_token.encode(), payload.encode(), hashlib.sha256).hexdigest()
+    return f"{payload}.{sig}"
 
 
 def _verify_token(token: str) -> int | None:
     try:
-        tg_id_s, sig = token.split(".", 1)
+        tg_id_s, expires_s, sig = token.split(".", 2)
+        expires = int(expires_s)
+    except ValueError:
+        return None                              # в т.ч. старый формат без TTL
+    expected = hmac.new(config.bot_token.encode(),
+                        f"{tg_id_s}.{expires_s}".encode(), hashlib.sha256).hexdigest()
+    if not hmac.compare_digest(expected, sig) or time.time() > expires:
+        return None
+    try:
+        return int(tg_id_s)
     except ValueError:
         return None
-    expected = hmac.new(config.bot_token.encode(), tg_id_s.encode(), hashlib.sha256).hexdigest()
-    if hmac.compare_digest(expected, sig):
-        try:
-            return int(tg_id_s)
-        except ValueError:
-            return None
-    return None
+
+
+# Rate limit входа по телефону: до 10 попыток за 10 минут с одного IP —
+# защита от перебора чужих номеров. In-memory: процесс webapp один.
+_LOGIN_ATTEMPTS: dict[str, list[float]] = {}
+
+
+def _login_allowed(ip: str) -> bool:
+    now = time.time()
+    attempts = [t for t in _LOGIN_ATTEMPTS.get(ip, []) if now - t < 600]
+    if len(attempts) >= 10:
+        _LOGIN_ATTEMPTS[ip] = attempts
+        return False
+    attempts.append(now)
+    _LOGIN_ATTEMPTS[ip] = attempts
+    if len(_LOGIN_ATTEMPTS) > 10_000:            # не даём словарю расти вечно
+        _LOGIN_ATTEMPTS.clear()
+    return True
 
 
 async def _auth(init_data: str | None, session: str | None = None) -> int:
@@ -120,9 +155,13 @@ def _best_streak(steps_by_date: dict[date, int]) -> int:
 # ---- API -----------------------------------------------------------------
 
 @app.post("/api/login")
-async def api_login(phone: str = Body(..., embed=True)):
+async def api_login(request: Request, phone: str = Body(..., embed=True)):
     """Вход по номеру телефона: сверяем с базой (участник должен быть
     зарегистрирован — с командой). Возвращаем токен сессии, если найден."""
+    ip = (request.headers.get("x-forwarded-for") or "").split(",")[0].strip() \
+        or (request.client.host if request.client else "?")
+    if not _login_allowed(ip):
+        return {"ok": False, "reason": "rate_limited"}
     digits = re.sub(r"\D", "", phone or "")
     if len(digits) < 9:
         return {"ok": False, "reason": "bad_phone"}
@@ -139,7 +178,8 @@ async def api_me(x_init_data: str | None = Header(default=None),
                  x_session: str | None = Header(default=None)):
     tg_id = await _auth(x_init_data, x_session)
     card = await db.participant_card(tg_id)
-    if card is None or card["team_id"] is None:
+    if card is None or card["team_id"] is None or card["disqualified_at"] is not None \
+            or card["approved_at"] is None:
         return {"registered": False}
 
     entries = await db.entries_list(tg_id)
@@ -182,7 +222,8 @@ async def api_team(x_init_data: str | None = Header(default=None),
                    x_session: str | None = Header(default=None)):
     tg_id = await _auth(x_init_data, x_session)
     card = await db.participant_card(tg_id)
-    if card is None or card["team_id"] is None:
+    if card is None or card["team_id"] is None or card["disqualified_at"] is not None \
+            or card["approved_at"] is None:
         return {"registered": False}
 
     members = await db.team_members(card["team_id"])
