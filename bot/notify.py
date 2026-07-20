@@ -118,3 +118,38 @@ async def admins_submission(bot: Bot, file_id: str, caption: str, markup) -> Non
 
 async def broadcast_all(bot: Bot, text: str, **kw) -> int:
     return await broadcast(bot, await db.all_active_ids(), text, **kw)
+
+
+async def _send_instruction(bot: Bot, chat_id: int, text: str,
+                            albums: list[list[dict]]) -> bool:
+    """Инструкция: текст + альбомы-«карусели» (file_id уже в Telegram)."""
+    from aiogram.types import InputMediaPhoto
+    try:
+        await bot.send_message(chat_id, text)
+        for album in albums:
+            media = [InputMediaPhoto(media=m["file_id"], caption=m.get("caption"))
+                     for m in album]
+            await bot.send_media_group(chat_id, media)
+        return True
+    except TelegramRetryAfter as e:
+        await asyncio.sleep(e.retry_after)
+        return await _send_instruction(bot, chat_id, text, albums)
+    except Exception as e:  # noqa: BLE001
+        log.warning("instruction to %s failed: %s", chat_id, e)
+        return False
+
+
+async def broadcast_instruction(bot: Bot, ids: list[int], text: str,
+                                albums: list[list[dict]]) -> int:
+    """Рассылка инструкции. Батчи меньше обычного: на участника уходит
+    3 запроса (текст + 2 альбома), держимся заметно ниже 30 msg/s."""
+    sent = 0
+    batch = 6
+    for i in range(0, len(ids), batch):
+        chunk = ids[i:i + batch]
+        results = await asyncio.gather(
+            *(_send_instruction(bot, cid, text, albums) for cid in chunk))
+        sent += sum(results)
+        if i + batch < len(ids):
+            await asyncio.sleep(_PAUSE)
+    return sent

@@ -7,7 +7,7 @@
 
 Telegram-бот **Step Together** (@wegrowmarathon_bot) — корпоративный шаговый
 марафон для сотрудников компании. Участники ежедневно присылают количество
-шагов + скриншот из Fitbit, P&C модерирует, начисляются баллы, команды
+шагов + скриншот из Google Health (бывший Fitbit), P&C модерирует, начисляются баллы, команды
 соревнуются. Маскот и «ведущий» всех диалогов — росток **Stepy 🪴**
 (премиум-эмодзи id `5305729158385533791`); его реплики оборачиваются в
 `<blockquote>` через `texts.stepy()`. Админ-сообщения (P&C) — без Stepy,
@@ -85,7 +85,7 @@ Telegram-бот **Step Together** (@wegrowmarathon_bot) — корпоратив
   (`pc_daily_digest`), **23:59 — Excel-бэкап админам** (`nightly_backup`).
 - **Еженедельный отчёт**: кнопка «📈 Еженедельный отчёт» работает только в
   вс 22:00–23:55 (`steps.py:_weekly_window`); принимается один скриншот
-  недельной статистики Fitbit → `weekly_summaries.screenshot_file_id` +
+  недельной статистики Google Health → `weekly_summaries.screenshot_file_id` +
   `reported_at` (повтор заменяет файл, бонусы не трогает). Пуши: вс 12:00
   анонс, 22:00 открытие, 23:15 last-call не сдавшим. В Excel — лист
   «Недельные отчёты» со ссылками `/wshot/{id}/{sig}`.
@@ -104,6 +104,11 @@ Telegram-бот **Step Together** (@wegrowmarathon_bot) — корпоратив
   по Mini App — через него; перед работой самообновляется из
   docs.telegram-mini-apps.com, github.com/telegram-mini-apps и
   core.telegram.org/bots/webapps.
+- **Приложение шагов — Google Health (бывший Fitbit)**: во всех текстах бота и
+  webapp фигурирует Google Health; принимается ТОЛЬКО скриншот страницы «Шаги»
+  с фильтром «Все источники». Команда админа **/instruction** — рассылка
+  инструкции (текст + 2 карусели iPhone/Android из `assets/instruction/`,
+  превью с подтверждением; file_id кешируются после превью).
 - **Отложенные рассылки**: кнопка «⏰ Отложить отправку» в билдере /broadcast,
   список/отмена — /scheduled. Хранятся в `scheduled_broadcasts` (draft jsonb),
   отправляет job `send_due_broadcasts` раз в минуту.

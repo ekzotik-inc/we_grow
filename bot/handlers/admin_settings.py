@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import re
+from pathlib import Path
 from datetime import datetime
 from html import escape
 
@@ -1092,4 +1093,73 @@ async def bc_send(cb: CallbackQuery, state: FSMContext) -> None:
         cb.from_user.id, draft.get("text") or "[media]", sent,
     )
     await cb.message.answer(f"Готово! Доставлено: {sent}/{len(ids)} 🚀")
+    await cb.answer()
+
+
+# --- Рассылка инструкции по скриншотам (/instruction) -----------------------
+# Картинки лежат в репозитории (assets/instruction). При превью они загружаются
+# в Telegram один раз, полученные file_id переиспользуются для всей рассылки.
+
+_INSTR_DIR = Path(__file__).resolve().parents[2] / "assets" / "instruction"
+_instr_albums: dict[int, list[list[dict]]] = {}   # admin_id -> альбомы с file_id
+
+
+def _instr_media(kind: str, caption: str) -> list:
+    from aiogram.types import FSInputFile, InputMediaPhoto
+    return [
+        InputMediaPhoto(media=FSInputFile(_INSTR_DIR / f"{kind}_{i}.png"),
+                        caption=caption if i == 1 else None)
+        for i in range(1, 5)
+    ]
+
+
+@router.message(Command("instruction"))
+async def cmd_instruction(message: Message) -> None:
+    if not _is_admin(message.from_user.id):
+        return
+    await message.answer("👀 Превью рассылки-инструкции:")
+    await message.answer(texts.INSTRUCTION_BC)
+    albums: list[list[dict]] = []
+    for kind, cap in (("ios", texts.INSTRUCTION_IOS_CAPTION),
+                      ("android", texts.INSTRUCTION_ANDROID_CAPTION)):
+        msgs = await message.bot.send_media_group(
+            message.chat.id, _instr_media(kind, cap))
+        albums.append(
+            [{"file_id": m.photo[-1].file_id,
+              "caption": cap if j == 0 else None} for j, m in enumerate(msgs)])
+    _instr_albums[message.from_user.id] = albums
+    kb = InlineKeyboardMarkup(inline_keyboard=[[
+        InlineKeyboardButton(text="🚀 Отправить всем", callback_data="instr:send"),
+        InlineKeyboardButton(text="✖️ Отмена", callback_data="instr:cancel"),
+    ]])
+    await message.answer(
+        "Так рассылку увидят участники: сообщение + две карусели.\n"
+        "Отправляем всем подтверждённым участникам?", reply_markup=kb)
+
+
+@router.callback_query(F.data == "instr:cancel")
+async def instr_cancel(cb: CallbackQuery) -> None:
+    if not _is_admin(cb.from_user.id):
+        return await cb.answer()
+    _instr_albums.pop(cb.from_user.id, None)
+    await cb.message.edit_text("Рассылка инструкции отменена.")
+    await cb.answer()
+
+
+@router.callback_query(F.data == "instr:send")
+async def instr_send(cb: CallbackQuery) -> None:
+    if not _is_admin(cb.from_user.id):
+        return await cb.answer()
+    albums = _instr_albums.pop(cb.from_user.id, None)
+    if not albums:
+        return await cb.answer("Превью устарело — вызови /instruction ещё раз.",
+                               show_alert=True)
+    ids = await db.all_active_ids()
+    await cb.message.edit_text(f"Отправляю инструкцию {len(ids)} участникам…")
+    sent = await notify.broadcast_instruction(cb.bot, ids, texts.INSTRUCTION_BC, albums)
+    await db.pool().execute(
+        "INSERT INTO broadcasts (admin_id, text, audience, recipients) VALUES ($1,$2,'all',$3)",
+        cb.from_user.id, "[инструкция по скриншотам]", sent,
+    )
+    await cb.message.answer(f"Готово! Инструкция доставлена: {sent}/{len(ids)} 🚀")
     await cb.answer()
