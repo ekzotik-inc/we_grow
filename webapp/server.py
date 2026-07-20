@@ -308,7 +308,10 @@ async def health():
 
 @app.get("/")
 async def index():
-    return FileResponse(_STATIC / "index.html")
+    # no-cache: WKWebView в iOS Telegram иначе кэширует страницу эвристически
+    # и после деплоя пользователи подолгу видят старую версию фронтенда.
+    return FileResponse(_STATIC / "index.html",
+                        headers={"Cache-Control": "no-cache"})
 
 
 app.mount("/", StaticFiles(directory=_STATIC), name="static")
