@@ -1357,6 +1357,182 @@ async def bc_send(cb: CallbackQuery, state: FSMContext) -> None:
     await cb.answer()
 
 
+# ---- Отмена результата: календарь участника (доступно всем админам) --------
+
+class UndoResult(StatesGroup):
+    query = State()
+
+
+_STATUS_RU = {"accepted": "принят ✅", "pending": "на проверке ⏳",
+              "rejected": "отклонён ❌"}
+
+
+async def _results_view(cb: CallbackQuery, tg_id: int) -> None:
+    """Календарь результатов участника: день с записью открывает карточку."""
+    p = await db.user_detail(tg_id)
+    if p is None:
+        return await cb.answer("Участник не найден.", show_alert=True)
+    rows = await db.entries_for_admin(tg_id)
+    by_date = {r["entry_date"]: r for r in rows}
+    today = datetime.now(config.tz).date()
+    days, d = [], config.marathon_start
+    while d <= min(today, config.marathon_end):
+        days.append((d, by_date.get(d)))
+        d += timedelta(days=1)
+    accepted = [r for r in rows if r["status"] == "accepted"]
+    pts = sum(r["points"] for r in accepted)
+    text = (
+        "🗑 <b>Отмена результата</b>\n"
+        f"👤 <b>{escape(p['full_name'])}</b> · 🌳 {escape(p['team_name'] or '—')}\n\n"
+        f"Сдано дней: <b>{len(rows)}</b> · принято: <b>{len(accepted)}</b> "
+        f"· баллов за дни: <b>{pts}</b>\n"
+        "✅ принят · ⏳ на проверке · ❌ отклонён · · результата нет\n"
+        "Выбери день, чтобы посмотреть и отменить результат."
+    )
+    kb = keyboards.results_days_kb(tg_id, days)
+    try:
+        await cb.message.edit_text(text, reply_markup=kb)
+    except Exception:  # noqa: BLE001
+        await cb.message.answer(text, reply_markup=kb)
+
+
+async def _result_card(cb: CallbackQuery, entry_id: int, note: str = "") -> None:
+    e = await db.entry_by_id(entry_id)
+    if e is None:
+        return await cb.answer("Запись не найдена — возможно, её уже отменили.",
+                               show_alert=True)
+    who = "P&C вручную ✍️" if e["source"] == "admin" else "участник 📸"
+    text = (
+        f"🗓 <b>{e['entry_date'].strftime('%d.%m.%Y')}</b> — "
+        f"{escape(e['full_name'])}\n\n"
+        f"👟 Шагов: <b>{e['steps']}</b>\n"
+        f"⭐ Баллов: <b>{e['points']}</b>\n"
+        f"📌 Статус: <b>{_STATUS_RU.get(e['status'], e['status'])}</b>\n"
+        f"✍️ Внёс: {who}\n"
+        f"🕓 Отправлен: {_fmt(e['created_at'])} · Проверен: {_fmt(e['reviewed_at'])}"
+        + note
+    )
+    kb = keyboards.result_card_kb(e)
+    try:
+        await cb.message.edit_text(text, reply_markup=kb)
+    except Exception:  # noqa: BLE001
+        await cb.message.answer(text, reply_markup=kb)
+
+
+@router.callback_query(F.data == "adm:undo")
+async def undo_start(cb: CallbackQuery, state: FSMContext) -> None:
+    if not _is_admin(cb.from_user.id):
+        return await cb.answer()
+    await state.set_state(UndoResult.query)
+    await cb.message.answer(
+        "🗑 <b>Отмена результата</b>\n\n"
+        "У кого отменить результат? Пришли <b>ID</b> или часть <b>ФИО</b>.\n"
+        "Дальше откроется календарь его результатов.\n/cancel — отмена.")
+    await cb.answer()
+
+
+@router.message(UndoResult.query, F.text)
+async def undo_search(message: Message, state: FSMContext) -> None:
+    rows = await db.find_participants(message.text.strip())
+    if not rows:
+        await message.answer("Никого не нашёл. Попробуй ещё раз или /cancel.")
+        return
+    b = keyboards.InlineKeyboardBuilder()
+    for r in rows:
+        b.button(text=f"{r['full_name']} ({r['team_name'] or '—'})",
+                 callback_data=f"res:{r['telegram_id']}")
+    b.adjust(1)
+    await state.clear()
+    await message.answer("Выбери участника:", reply_markup=b.as_markup())
+
+
+@router.callback_query(F.data == "resnone")
+async def undo_empty_day(cb: CallbackQuery) -> None:
+    await cb.answer("За этот день результата нет — отменять нечего.", show_alert=True)
+
+
+@router.callback_query(F.data.startswith("res:"))
+async def undo_calendar(cb: CallbackQuery) -> None:
+    if not _is_admin(cb.from_user.id):
+        return await cb.answer()
+    await _results_view(cb, int(cb.data.split(":")[1]))
+    await cb.answer()
+
+
+@router.callback_query(F.data.startswith("resd:"))
+async def undo_day_card(cb: CallbackQuery) -> None:
+    if not _is_admin(cb.from_user.id):
+        return await cb.answer()
+    await _result_card(cb, int(cb.data.split(":")[1]))
+    await cb.answer()
+
+
+@router.callback_query(F.data.startswith("resdelok:"))
+async def undo_delete_do(cb: CallbackQuery) -> None:
+    if not _is_admin(cb.from_user.id):
+        return await cb.answer()
+    row = await db.delete_entry(int(cb.data.split(":")[1]))
+    if row is None:
+        return await cb.answer("Запись уже отменена.", show_alert=True)
+    tg_id, day = row["participant_id"], row["entry_date"]
+    await db.recompute_streak(tg_id)
+    await db.recompute_weekly_bonus(tg_id, day)
+    try:
+        await cb.bot.send_message(tg_id, texts.result_cancelled_note(
+            day, row["steps"], row["points"] if row["status"] == "accepted" else 0))
+    except Exception:  # noqa: BLE001 — участник заблокировал бота
+        pass
+    await _results_view(cb, tg_id)
+    await cb.answer(f"Результат за {day.strftime('%d.%m')} отменён 🗑")
+
+
+@router.callback_query(F.data.startswith("resdel:"))
+async def undo_delete_confirm(cb: CallbackQuery) -> None:
+    if not _is_admin(cb.from_user.id):
+        return await cb.answer()
+    entry_id = int(cb.data.split(":")[1])
+    e = await db.entry_by_id(entry_id)
+    if e is None:
+        return await cb.answer("Запись не найдена.", show_alert=True)
+    lost = (f"\nБаллы за день (<b>{e['points']}</b>) снимутся, серия и недельный "
+            "бонус пересчитаются." if e["status"] == "accepted" else "")
+    text = (
+        f"🗑 Отменить результат <b>{escape(e['full_name'])}</b> за "
+        f"<b>{e['entry_date'].strftime('%d.%m.%Y')}</b> "
+        f"(<b>{e['steps']}</b> шагов)?\n"
+        f"{lost}\n"
+        "Запись удалится, день освободится — можно будет внести результат заново. "
+        "Участник получит уведомление."
+    )
+    try:
+        await cb.message.edit_text(
+            text, reply_markup=keyboards.result_delete_confirm_kb(entry_id))
+    except Exception:  # noqa: BLE001
+        await cb.message.answer(
+            text, reply_markup=keyboards.result_delete_confirm_kb(entry_id))
+    await cb.answer()
+
+
+@router.callback_query(F.data.startswith("resrep:"))
+async def undo_reopen(cb: CallbackQuery) -> None:
+    if not _is_admin(cb.from_user.id):
+        return await cb.answer()
+    entry_id = int(cb.data.split(":")[1])
+    row = await db.reopen_entry(entry_id)
+    if row is None:
+        return await cb.answer("Запись не найдена.", show_alert=True)
+    tg_id, day = row["participant_id"], row["entry_date"]
+    await db.recompute_streak(tg_id)
+    await db.recompute_weekly_bonus(tg_id, day)
+    try:
+        await cb.bot.send_message(tg_id, texts.result_reopened_note(day))
+    except Exception:  # noqa: BLE001
+        pass
+    await _result_card(cb, entry_id,
+                       "\n\n↩️ Возвращён на проверку — карточка ждёт в «🧾 Результаты».")
+    await cb.answer("Вернул на проверку ⏳")
+
+
 # --- Предупреждение о неактивности (/inactive) ------------------------------
 # Текст один (texts.INACTIVITY_WARNING), но адресата выбирает админ: всем
 # участникам или только молчунам — тем, у кого нет результатов 2+ дня.

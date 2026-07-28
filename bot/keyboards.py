@@ -93,6 +93,7 @@ def admin_panel_kb() -> InlineKeyboardMarkup:
     b = InlineKeyboardBuilder()
     b.button(text="🧾 Результаты", callback_data="adm:subs")
     b.button(text="✍️ Ручной ввод", callback_data="adm:manual")
+    b.button(text="🗑 Отмена результата", callback_data="adm:undo")
     b.button(text="👥 Участники", callback_data="adm:users")
     b.button(text="🌳 Команды", callback_data="adm:teams")
     b.button(text="🏆 Лидерборд", callback_data="adm:board")
@@ -182,6 +183,41 @@ def manual_confirm_kb(tg_id: int, day, steps: int) -> InlineKeyboardMarkup:
         InlineKeyboardButton(text="✅ Зачислить",
                              callback_data=f"manok:{tg_id}:{day.isoformat()}:{steps}"),
         InlineKeyboardButton(text="✖️ Отмена", callback_data="man:cancel"),
+    ]])
+
+
+def results_days_kb(tg_id: int, days: list[tuple]) -> InlineKeyboardMarkup:
+    """Календарь результатов участника для админа: days — [(date, entry|None)].
+    День с записью открывает карточку, пустой — только подсказку."""
+    b = InlineKeyboardBuilder()
+    for day, e in days:
+        label = day.strftime("%d.%m")
+        if e is None:
+            b.button(text=f"·{label}", callback_data="resnone")
+        else:
+            b.button(text=f"{_ENTRY_MARKS.get(e['status'], '•')}{label}",
+                     callback_data=f"resd:{e['id']}")
+    b.adjust(4)
+    b.row(InlineKeyboardButton(text="🔍 Другой участник", callback_data="adm:undo"))
+    return b.as_markup()
+
+
+def result_card_kb(e) -> InlineKeyboardMarkup:
+    b = InlineKeyboardBuilder()
+    # Вернуть на проверку есть смысл только тому, у кого есть скриншот:
+    # запись снова попадёт в очередь модерации.
+    if e["screenshot_file_id"] and e["status"] != "pending":
+        b.button(text="↩️ Вернуть на проверку", callback_data=f"resrep:{e['id']}")
+    b.button(text="🗑 Отменить результат", callback_data=f"resdel:{e['id']}")
+    b.button(text="⬅️ К календарю", callback_data=f"res:{e['participant_id']}")
+    b.adjust(1)
+    return b.as_markup()
+
+
+def result_delete_confirm_kb(entry_id: int) -> InlineKeyboardMarkup:
+    return InlineKeyboardMarkup(inline_keyboard=[[
+        InlineKeyboardButton(text="🗑 Да, отменить", callback_data=f"resdelok:{entry_id}"),
+        InlineKeyboardButton(text="Назад", callback_data=f"resd:{entry_id}"),
     ]])
 
 

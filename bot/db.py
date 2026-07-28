@@ -378,6 +378,30 @@ async def add_admin_entry(tg_id: int, day: date, steps: int, points: int) -> int
         tg_id, day, steps, points)
 
 
+async def entries_for_admin(tg_id: int) -> list[asyncpg.Record]:
+    """Все записи участника для админского календаря результатов."""
+    return await pool().fetch(
+        """SELECT id, participant_id, entry_date, steps, points, status, source,
+                  screenshot_file_id, created_at, reviewed_at
+             FROM daily_entries WHERE participant_id=$1 ORDER BY entry_date""", tg_id)
+
+
+async def delete_entry(entry_id: int) -> asyncpg.Record | None:
+    """Полностью отменяет результат: запись удаляется, день освобождается
+    (можно внести заново). Серию и недельный бонус пересчитывает вызывающий."""
+    return await pool().fetchrow(
+        """DELETE FROM daily_entries WHERE id=$1
+           RETURNING participant_id, entry_date, steps, points, status""", entry_id)
+
+
+async def reopen_entry(entry_id: int) -> asyncpg.Record | None:
+    """Возвращает результат на модерацию: статус pending, баллы сняты."""
+    return await pool().fetchrow(
+        """UPDATE daily_entries SET status='pending', points=0, reviewed_at=NULL
+            WHERE id=$1
+        RETURNING participant_id, entry_date, steps""", entry_id)
+
+
 async def entry_status_by_date(tg_id: int) -> dict[date, str]:
     """{дата: статус} по всем дням участника — для выбора свободного дня."""
     rows = await pool().fetch(
