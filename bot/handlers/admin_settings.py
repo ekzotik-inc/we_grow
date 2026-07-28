@@ -763,6 +763,14 @@ async def mod_accept(cb: CallbackQuery) -> None:
     if e["status"] != "pending":
         await _mark_caption(cb, "\n\nℹ️ уже обработано")
         return await cb.answer("Уже обработано.")
+    # Карточка могла уйти в канал до дисквалификации: принимать такой результат
+    # нельзя — баллы дисквалифицированного нигде не учитываются. Статус
+    # оставляем pending: если участника восстановят, результат вернётся в очередь.
+    p = await db.get_participant(e["participant_id"])
+    if p is not None and p["disqualified_at"]:
+        await _mark_caption(cb, "\n\n⛔ Участник дисквалифицирован — результат не засчитан")
+        return await cb.answer("Участник дисквалифицирован — результат не засчитывается.",
+                               show_alert=True)
     pts = points_for_steps(e["steps"])
     await db.set_entry_status(e["id"], "accepted", pts)
     st = await db.recompute_streak(e["participant_id"])

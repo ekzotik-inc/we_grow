@@ -215,7 +215,7 @@ async def export_participants() -> list[asyncpg.Record]:
              LEFT JOIN teams t ON t.id=p.team_id
              LEFT JOIN streaks s ON s.participant_id=p.telegram_id
             WHERE p.team_id IS NOT NULL
-            ORDER BY total_points DESC""")
+            ORDER BY (p.disqualified_at IS NOT NULL), total_points DESC""")
 
 
 async def export_entries() -> list[asyncpg.Record]:
@@ -412,12 +412,17 @@ async def pending_submissions(limit: int = 20) -> list[asyncpg.Record]:
              FROM daily_entries d
              JOIN participants p ON p.telegram_id=d.participant_id
              LEFT JOIN teams t ON t.id=p.team_id
-            WHERE d.status='pending'
+            WHERE d.status='pending' AND p.disqualified_at IS NULL
             ORDER BY d.created_at LIMIT $1""", limit)
 
 
 async def pending_submissions_count() -> int:
-    return int(await pool().fetchval("SELECT count(*) FROM daily_entries WHERE status='pending'"))
+    """Заявки на модерации. Дисквалифицированных не считаем — их результаты
+    всё равно не идут в зачёт."""
+    return int(await pool().fetchval(
+        """SELECT count(*) FROM daily_entries d
+             JOIN participants p ON p.telegram_id=d.participant_id
+            WHERE d.status='pending' AND p.disqualified_at IS NULL"""))
 
 
 async def set_entry_status(entry_id: int, status: str, points: int) -> None:
@@ -685,11 +690,14 @@ async def cancel_scheduled_broadcast(sb_id: int) -> bool:
 async def digest_stats(day: date) -> dict:
     """Сводка за день: сдали/принято/на проверке + молчуны 2+ дней."""
     row = await pool().fetchrow(
-        """SELECT count(*)                                    AS total,
-                  count(*) FILTER (WHERE status='accepted')   AS accepted,
-                  count(*) FILTER (WHERE status='pending')    AS pending,
-                  count(*) FILTER (WHERE status='rejected')   AS rejected
-             FROM daily_entries WHERE entry_date=$1""", day)
+        """SELECT count(*)                                      AS total,
+                  count(*) FILTER (WHERE d.status='accepted')   AS accepted,
+                  count(*) FILTER (WHERE d.status='pending')    AS pending,
+                  count(*) FILTER (WHERE d.status='rejected')   AS rejected
+             FROM daily_entries d
+             JOIN participants p ON p.telegram_id=d.participant_id
+            WHERE d.entry_date=$1
+              AND p.approved_at IS NOT NULL AND p.disqualified_at IS NULL""", day)
     active = await pool().fetchval(
         """SELECT count(*) FROM participants
             WHERE approved_at IS NOT NULL AND disqualified_at IS NULL""")
