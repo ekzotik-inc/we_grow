@@ -7,7 +7,7 @@ from aiogram import Bot
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 
 from backend.scoring import weekly_streak_bonus
-from bot import db, notify, texts
+from bot import db, notify, settings, texts
 from bot.config import config
 
 
@@ -123,7 +123,7 @@ async def nightly_backup(bot: Bot) -> None:
     from bot.export import build_workbook
     data, name = await build_workbook()
     doc = BufferedInputFile(data, filename=f"backup_{name}")
-    for admin_id in config.admin_ids:
+    for admin_id in sorted(settings.admin_ids()):
         try:
             await bot.send_document(admin_id, doc,
                                     caption="🗄 Ночная резервная копия данных марафона")

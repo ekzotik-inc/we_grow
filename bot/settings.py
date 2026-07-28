@@ -101,6 +101,17 @@ def extra_admin_ids() -> set[int]:
     return {int(x.strip()) for x in raw.split(",") if x.strip().lstrip("-").isdigit()}
 
 
+def admin_ids() -> set[int]:
+    """ВСЕ админы: базовые из env (ADMIN_IDS) + добавленные через /addadmin.
+
+    Везде, где бот пишет «админам» (карточки на модерацию, дайджест, бэкап),
+    нужно брать этот список, а не config.admin_ids — иначе доп-админы не
+    получают уведомления и не могут модерировать.
+    """
+    # {*...}, а не set(...): имя set в этом модуле перекрыто функцией set().
+    return {*config.admin_ids} | extra_admin_ids()
+
+
 def is_admin(tg_id: int) -> bool:
     return tg_id in config.admin_ids or tg_id in extra_admin_ids()
 

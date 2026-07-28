@@ -232,9 +232,15 @@ async def add_admin_cmd(message: Message) -> None:
         return
     await settings.add_admin(tid)
     await db.set_role(tid, "admin")  # если у пользователя уже есть запись участника
+    # Меню команд ставим сразу — иначе новый админ не увидит /admin у себя.
+    from bot import commands
+    ok = await commands.apply_for(message.bot, tid)
+    hint = ("Админ-команды уже в его меню." if ok else
+            "Ему нужно открыть чат с ботом и нажать /start — тогда админ-команды "
+            "появятся в меню.")
     await message.answer(
-        f"✅ Пользователь <code>{tid}</code> теперь администратор.\n"
-        "Ему нужно нажать /start, чтобы в меню появились админ-команды.")
+        f"✅ Пользователь <code>{tid}</code> теперь администратор.\n" + hint + "\n"
+        "Ему доступны /admin и все уведомления P&amp;C наравне с остальными админами.")
 
 
 @router.message(Command("deladmin"))
@@ -250,6 +256,9 @@ async def del_admin_cmd(message: Message) -> None:
                              "только там. Доп-админов снимаю без проблем.")
         return
     await settings.remove_admin(tid)
+    await db.set_role(tid, "participant")
+    from bot import commands
+    await commands.apply_for(message.bot, tid)   # вернуть обычное меню команд
     await message.answer(f"✅ Пользователь <code>{tid}</code> больше не администратор.")
 
 

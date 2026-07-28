@@ -7,51 +7,10 @@ import logging
 from aiogram import Bot, Dispatcher
 from aiogram.client.default import DefaultBotProperties
 
-from bot import db, settings
+from bot import commands, db, settings
 from bot.config import config
 from bot.handlers import admin, admin_settings, onboarding, steps
 from bot.scheduler import setup_scheduler
-
-# Списки команд (меню «/»). Участникам показываем только три базовые команды —
-# остальное скрыто и доступно лишь админам через отдельный scope.
-USER_COMMANDS = [
-    ("start", "Регистрация / главное меню"),
-    ("help", "Как участвовать"),
-    ("rules", "Правила марафона"),
-]
-ADMIN_EXTRA = [
-    ("admin", "Админ-панель P&C"),
-    ("leaderboard", "Лидерборд"),
-    ("stats", "Вовлечённость за день"),
-    ("broadcast", "Рассылка участникам"),
-    ("instruction", "Рассылка инструкции по скриншотам"),
-    ("scheduled", "Отложенные рассылки"),
-    ("export", "Выгрузка в Excel"),
-    ("move", "Перевести участника в команду"),
-    ("dq", "Дисквалификация: /dq ID"),
-    ("delete", "Удалить данные участника: /delete ID"),
-    ("addadmin", "Назначить админа: /addadmin ID"),
-    ("deladmin", "Снять админа: /deladmin ID"),
-    ("emojiid", "Получить emoji-id"),
-    ("feedback", "Связь с P&C"),
-    ("reset", "Сбросить регистрацию"),
-    ("app", "Открыть Mini App (web_app-кнопка)"),
-]
-
-
-async def _setup_commands(bot: Bot) -> None:
-    from aiogram.types import BotCommand, BotCommandScopeChat, BotCommandScopeDefault
-
-    def cmds(pairs):
-        return [BotCommand(command=c, description=d) for c, d in pairs]
-
-    await bot.set_my_commands(cmds(USER_COMMANDS), scope=BotCommandScopeDefault())
-    for admin_id in config.admin_ids:
-        try:
-            await bot.set_my_commands(cmds(USER_COMMANDS + ADMIN_EXTRA),
-                                      scope=BotCommandScopeChat(chat_id=admin_id))
-        except Exception as e:  # noqa: BLE001 — админ мог не нажимать /start
-            log.warning("commands for admin %s: %s", admin_id, e)
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
 log = logging.getLogger("wegrow")
@@ -119,8 +78,8 @@ async def main() -> None:
         )
         log.info("Кнопка меню Mini App: %s", webapp_url)
 
-    await _setup_commands(bot)
-    log.info("Команды меню настроены")
+    await commands.setup_all(bot)
+    log.info("Команды меню настроены (админов: %s)", len(settings.admin_ids()))
 
     scheduler = setup_scheduler(bot)
     scheduler.start()

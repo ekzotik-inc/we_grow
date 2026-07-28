@@ -8,7 +8,6 @@ from aiogram import Bot
 from aiogram.exceptions import TelegramRetryAfter
 
 from bot import db, settings
-from bot.config import config
 
 log = logging.getLogger(__name__)
 
@@ -76,7 +75,9 @@ async def broadcast_rich(bot: Bot, ids: list[int], text: str, media: dict | None
 
 
 async def notify_admins(bot: Bot, text: str, **kw) -> None:
-    for admin_id in config.admin_ids:
+    # settings.admin_ids() — env + добавленные через /addadmin: доп-админы
+    # получают всё то же, что и основные.
+    for admin_id in sorted(settings.admin_ids()):
         await _send(bot, admin_id, text, **kw)
 
 
@@ -109,7 +110,7 @@ async def admins_submission(bot: Bot, file_id: str, caption: str, markup) -> Non
             return
         except Exception as e:  # noqa: BLE001
             log.warning("submission to review channel %s failed: %s — шлю админам", chat_id, e)
-    for admin_id in config.admin_ids:
+    for admin_id in sorted(settings.admin_ids()):
         try:
             await send_screenshot(bot, admin_id, file_id, caption, markup)
         except Exception as e:  # noqa: BLE001
