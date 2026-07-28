@@ -491,6 +491,20 @@ async def total_points(tg_id: int) -> int:
     return int(val)
 
 
+async def silent_ids(day: date, days: int = 2) -> list[int]:
+    """Активные участники без единого результата за последние `days` дней —
+    кандидаты на предупреждение о неактивности (и дальше на дисквалификацию)."""
+    rows = await pool().fetch(
+        """SELECT p.telegram_id FROM participants p
+            WHERE p.approved_at IS NOT NULL AND p.disqualified_at IS NULL
+              AND NOT EXISTS (
+                  SELECT 1 FROM daily_entries d
+                   WHERE d.participant_id = p.telegram_id
+                     AND d.entry_date > $1::date - $2::int)""",
+        day, days)
+    return [r["telegram_id"] for r in rows]
+
+
 async def ids_without_entry_today(day: date) -> list[int]:
     rows = await pool().fetch(
         """SELECT p.telegram_id FROM participants p

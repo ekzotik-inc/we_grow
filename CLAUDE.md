@@ -128,6 +128,10 @@ Telegram-бот **Step Together** (@wegrowmarathon_bot) — корпоратив
   с фильтром «Все источники». Команда админа **/instruction** — рассылка
   инструкции (текст + 2 карусели iPhone/Android из `assets/instruction/`,
   превью с подтверждением; file_id кешируются после превью).
+- **Предупреждение о неактивности** — команда админа **/inactive**:
+  превью `texts.INACTIVITY_WARNING` + выбор адресата (только молчуны 2+ дня
+  по `db.silent_ids`, либо все активные). Пишется в `broadcasts`
+  (audience `silent`/`all`).
 - **Отложенные рассылки**: кнопка «⏰ Отложить отправку» в билдере /broadcast,
   список/отмена — /scheduled. Хранятся в `scheduled_broadcasts` (draft jsonb),
   отправляет job `send_due_broadcasts` раз в минуту.

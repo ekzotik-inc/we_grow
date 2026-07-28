@@ -1349,6 +1349,63 @@ async def bc_send(cb: CallbackQuery, state: FSMContext) -> None:
     await cb.answer()
 
 
+# --- Предупреждение о неактивности (/inactive) ------------------------------
+# Текст один (texts.INACTIVITY_WARNING), но адресата выбирает админ: всем
+# участникам или только молчунам — тем, у кого нет результатов 2+ дня.
+
+@router.message(Command("inactive"))
+async def cmd_inactive(message: Message) -> None:
+    if not _is_admin(message.from_user.id):
+        return
+    await message.answer("👀 Превью предупреждения о неактивности:")
+    await message.answer(texts.INACTIVITY_WARNING, disable_web_page_preview=True)
+    day = datetime.now(config.tz).date()
+    everyone = await db.all_active_ids()
+    silent = await db.silent_ids(day)
+    kb = InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text=f"😴 Только молчунам, 2+ дня ({len(silent)})",
+                              callback_data="inact:silent")],
+        [InlineKeyboardButton(text=f"🚀 Всем участникам ({len(everyone)})",
+                              callback_data="inact:all")],
+        [InlineKeyboardButton(text="✖️ Отмена", callback_data="inact:cancel")],
+    ])
+    await message.answer(
+        "Кому отправить?\n"
+        "<i>«Молчуны» — подтверждённые участники без единого результата за "
+        "последние 2 дня.</i>", reply_markup=kb)
+
+
+@router.callback_query(F.data == "inact:cancel")
+async def inactive_cancel(cb: CallbackQuery) -> None:
+    if not _is_admin(cb.from_user.id):
+        return await cb.answer()
+    await cb.message.edit_text("Отправка предупреждения отменена ✖️")
+    await cb.answer()
+
+
+@router.callback_query(F.data.in_({"inact:all", "inact:silent"}))
+async def inactive_send(cb: CallbackQuery) -> None:
+    if not _is_admin(cb.from_user.id):
+        return await cb.answer()
+    silent_only = cb.data.endswith("silent")
+    ids = (await db.silent_ids(datetime.now(config.tz).date()) if silent_only
+           else await db.all_active_ids())
+    if not ids:
+        await cb.message.edit_text("😴 Молчунов нет — отправлять некому ✅")
+        return await cb.answer()
+    who = "молчунам" if silent_only else "всем участникам"
+    await cb.message.edit_text(f"Отправляю предупреждение {who} ({len(ids)})…")
+    sent = await notify.broadcast(cb.bot, ids, texts.INACTIVITY_WARNING,
+                                  disable_web_page_preview=True)
+    await db.pool().execute(
+        "INSERT INTO broadcasts (admin_id, text, audience, recipients) VALUES ($1,$2,$3,$4)",
+        cb.from_user.id, "[предупреждение о неактивности]",
+        "silent" if silent_only else "all", sent,
+    )
+    await cb.message.answer(f"Готово! Доставлено: {sent}/{len(ids)} 🚀")
+    await cb.answer()
+
+
 # --- Рассылка инструкции по скриншотам (/instruction) -----------------------
 # Картинки лежат в репозитории (assets/instruction). При превью они загружаются
 # в Telegram один раз, полученные file_id переиспользуются для всей рассылки.
