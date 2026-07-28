@@ -41,7 +41,7 @@ CREATE TABLE IF NOT EXISTS daily_entries (
     steps              int     NOT NULL,
     points             int     NOT NULL DEFAULT 0,   -- начисляется при принятии P&C
     status             text    NOT NULL DEFAULT 'pending',  -- pending | accepted | rejected
-    source             text    NOT NULL,          -- manual | ocr
+    source             text    NOT NULL,          -- manual (участник) | admin (ручной ввод P&C) | ocr
     screenshot_file_id text,
     needs_review       boolean NOT NULL DEFAULT false,
     created_at         timestamptz NOT NULL DEFAULT now(),

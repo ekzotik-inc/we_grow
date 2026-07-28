@@ -327,6 +327,15 @@ REJECTED_NOTE = "❌ <b>Результат отклонён</b>\n" + stepy(
     "кнопкой «👟 Шаги за сегодня». Если непонятно почему — напиши в «Обратную связь».")
 
 
+def manual_entry_note(day, steps: int, points: int, streak_len: int) -> str:
+    """Пуш участнику: результат внесён сотрудником P&C вручную (без скриншота)."""
+    s = f"\nТвоя серия: <b>{streak_len}</b> дн. подряд 🔥" if streak_len > 0 else ""
+    return "📝 <b>Результат зачислен!</b>\n" + stepy(
+        f"Сотрудник P&amp;C внёс твой результат за <b>{day.strftime('%d.%m.%Y')}</b>: "
+        f"<b>{steps}</b> шагов = <b>+{points}</b> балл(а) по правилам марафона.{s}\n"
+        "Если что-то не сходится — напиши в «Обратную связь».")
+
+
 def warning_note(comment: str) -> str:
     return "⚠️ <b>Сообщение от P&amp;C</b>\n" + stepy(comment)
 

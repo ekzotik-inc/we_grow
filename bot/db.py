@@ -363,6 +363,28 @@ async def save_submission(tg_id: int, day: date, steps: int, screenshot_file_id:
         tg_id, day, steps, screenshot_file_id, screenshot_unique_id))
 
 
+async def add_admin_entry(tg_id: int, day: date, steps: int, points: int) -> int | None:
+    """Ручной ввод результата админом (без скриншота): сразу accepted.
+
+    ON CONFLICT DO NOTHING — если за этот день у участника уже есть запись
+    (в любом статусе), ручной результат не засчитывается и возвращается None.
+    """
+    return await pool().fetchval(
+        """INSERT INTO daily_entries
+             (participant_id, entry_date, steps, points, status, source, reviewed_at)
+           VALUES ($1,$2,$3,$4,'accepted','admin',now())
+           ON CONFLICT (participant_id, entry_date) DO NOTHING
+           RETURNING id""",
+        tg_id, day, steps, points)
+
+
+async def entry_status_by_date(tg_id: int) -> dict[date, str]:
+    """{дата: статус} по всем дням участника — для выбора свободного дня."""
+    rows = await pool().fetch(
+        "SELECT entry_date, status FROM daily_entries WHERE participant_id=$1", tg_id)
+    return {r["entry_date"]: r["status"] for r in rows}
+
+
 async def duplicate_screenshot(unique_id: str, exclude_entry_id: int) -> asyncpg.Record | None:
     """Ищет, присылали ли такой же файл раньше (анти-накрутка).
     Возвращает самое раннее другое использование этого скриншота."""

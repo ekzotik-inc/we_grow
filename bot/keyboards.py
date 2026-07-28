@@ -92,6 +92,7 @@ def admin_panel_kb() -> InlineKeyboardMarkup:
     """Главная админ-панель — сгруппирована, оформление вынесено в подменю."""
     b = InlineKeyboardBuilder()
     b.button(text="🧾 Результаты", callback_data="adm:subs")
+    b.button(text="✍️ Ручной ввод", callback_data="adm:manual")
     b.button(text="👥 Участники", callback_data="adm:users")
     b.button(text="🌳 Команды", callback_data="adm:teams")
     b.button(text="🏆 Лидерборд", callback_data="adm:board")
@@ -154,6 +155,34 @@ def moderate_kb(entry_id: int) -> InlineKeyboardMarkup:
     b.button(text="⚠️ Предупреждение", callback_data=f"mod_warn:{entry_id}")
     b.adjust(2, 1)
     return b.as_markup()
+
+
+_ENTRY_MARKS = {"accepted": "✅", "pending": "⏳", "rejected": "❌"}
+
+
+def manual_days_kb(tg_id: int, days: list[tuple]) -> InlineKeyboardMarkup:
+    """Дни марафона для ручного ввода: days — [(date, status|None)].
+    День с уже существующим результатом кликается, но только чтобы показать
+    подсказку — зачесть поверх него нельзя."""
+    b = InlineKeyboardBuilder()
+    for day, status in days:
+        label = day.strftime("%d.%m")
+        if status is None:
+            b.button(text=label, callback_data=f"mand:{tg_id}:{day.isoformat()}")
+        else:
+            b.button(text=f"{_ENTRY_MARKS.get(status, '•')}{label}",
+                     callback_data=f"manbusy:{status}")
+    b.adjust(4)
+    b.row(InlineKeyboardButton(text="🔍 Другой участник", callback_data="adm:manual"))
+    return b.as_markup()
+
+
+def manual_confirm_kb(tg_id: int, day, steps: int) -> InlineKeyboardMarkup:
+    return InlineKeyboardMarkup(inline_keyboard=[[
+        InlineKeyboardButton(text="✅ Зачислить",
+                             callback_data=f"manok:{tg_id}:{day.isoformat()}:{steps}"),
+        InlineKeyboardButton(text="✖️ Отмена", callback_data="man:cancel"),
+    ]])
 
 
 def _status_mark(r) -> str:

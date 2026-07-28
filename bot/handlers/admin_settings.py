@@ -4,13 +4,14 @@ from __future__ import annotations
 
 import re
 from pathlib import Path
-from datetime import datetime
+from datetime import date, datetime, timedelta
 from html import escape
 
 from aiogram import F, Router
 from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
+from aiogram.fsm.storage.base import StorageKey
 from aiogram.types import (
     CallbackQuery,
     InlineKeyboardButton,
@@ -18,7 +19,7 @@ from aiogram.types import (
     Message,
 )
 
-from backend.scoring import points_for_steps
+from backend.scoring import needs_review, points_for_steps
 from bot import db, keyboards, notify, premium_emoji, settings, textfmt, texts
 from bot.config import config
 
@@ -796,30 +797,282 @@ async def mod_reject(cb: CallbackQuery) -> None:
     await cb.answer("Отклонено ❌")
 
 
+def _private_ctx(state: FSMContext, bot_id: int, admin_id: int) -> FSMContext:
+    """FSM-контекст ЛИЧНОГО чата админа с ботом.
+
+    Кнопки модерации живут в канале проверки результатов, а текст админ пишет
+    боту в личку — это другой чат, и состояние по умолчанию кладётся под ключ
+    канала (bot, chat, user). Из-за этого ответ админа не попадал ни в один
+    хендлер и «Предупреждение» не работало. Здесь состояние сохраняется под
+    ключом личного чата, где админ и будет отвечать.
+    """
+    return FSMContext(
+        storage=state.storage,
+        key=StorageKey(bot_id=bot_id, chat_id=admin_id, user_id=admin_id),
+    )
+
+
+async def _submission_caption(e) -> str:
+    """Пересобирает подпись карточки модерации (с анти-дубль-предупреждением)."""
+    caption = texts.admin_new_submission(e)
+    if e["screenshot_unique_id"]:
+        dup = await db.duplicate_screenshot(e["screenshot_unique_id"], e["id"])
+        if dup:
+            caption += texts.admin_duplicate_warn(dup)
+    return caption
+
+
 @router.callback_query(F.data.startswith("mod_warn:"))
 async def mod_warn(cb: CallbackQuery, state: FSMContext) -> None:
     if not _is_admin(cb.from_user.id):
         return await cb.answer()
-    await state.set_state(Warn.waiting)
-    await state.update_data(warn_entry=int(cb.data.split(":")[1]))
-    await cb.message.answer("✍️ Напиши текст предупреждения участнику. "
-                            "Результат при этом НЕ принимается. /cancel — отмена.")
-    await cb.answer()
+    entry_id = int(cb.data.split(":")[1])
+    e = await db.entry_by_id(entry_id)
+    if e is None:
+        return await cb.answer("Запись не найдена.", show_alert=True)
+    try:
+        await cb.bot.send_message(
+            cb.from_user.id,
+            f"✍️ Напиши текст предупреждения для <b>{escape(e['full_name'])}</b> "
+            f"(результат за {e['entry_date'].strftime('%d.%m.%Y')}, "
+            f"{e['steps']} шагов).\n"
+            "Результат при этом НЕ принимается — прими или отклони его кнопками "
+            "под скриншотом. /cancel — отмена.")
+    except Exception:  # noqa: BLE001 — админ не начинал чат с ботом
+        return await cb.answer(
+            "Не могу написать тебе в личку. Открой чат с ботом, нажми /start "
+            "и попробуй снова.", show_alert=True)
+    ctx = _private_ctx(state, cb.bot.id, cb.from_user.id)
+    await ctx.set_state(Warn.waiting)
+    await ctx.update_data(warn_entry=entry_id,
+                          warn_src_chat=cb.message.chat.id,
+                          warn_src_msg=cb.message.message_id)
+    await cb.answer("Написал тебе в личку — пришли текст предупреждения там.",
+                    show_alert=True)
 
 
 @router.message(Warn.waiting, F.text)
 async def warn_send(message: Message, state: FSMContext) -> None:
     data = await state.get_data()
     await state.clear()
-    e = await db.entry_by_id(data.get("warn_entry"))
+    e = await db.entry_by_id(data["warn_entry"]) if data.get("warn_entry") else None
     if e is None:
-        return await message.answer("Запись не найдена.")
+        return await message.answer("Запись не найдена — возможно, её уже удалили.")
     try:
-        await message.bot.send_message(e["participant_id"], texts.warning_note(escape(message.text)))
+        await message.bot.send_message(e["participant_id"],
+                                       texts.warning_note(escape(message.text)))
+    except Exception as exc:  # noqa: BLE001 — участник заблокировал бота и т.п.
+        return await message.answer(
+            f"Не удалось доставить предупреждение участнику <b>{escape(e['full_name'])}</b> 😔\n"
+            f"<code>{escape(str(exc))}</code>")
+    await message.answer(
+        f"⚠️ Предупреждение отправлено участнику <b>{escape(e['full_name'])}</b>.\n"
+        "Результат остаётся на проверке — прими или отклони его кнопками под скриншотом.")
+
+    # Отмечаем в исходной карточке (канал проверки или личка), кнопки оставляем:
+    # результат всё ещё ждёт решения.
+    chat_id, msg_id = data.get("warn_src_chat"), data.get("warn_src_msg")
+    if chat_id and msg_id and e["status"] == "pending":
+        try:
+            caption = await _submission_caption(e)
+            caption += f"\n\n⚠️ Предупреждение отправлено ({escape(message.from_user.first_name)})"
+            await message.bot.edit_message_caption(
+                chat_id=chat_id, message_id=msg_id, caption=caption,
+                reply_markup=keyboards.moderate_kb(e["id"]))
+        except Exception:  # noqa: BLE001 — карточка могла быть удалена/изменена
+            pass
+
+
+# ---- Ручной ввод результата админом (без скриншота) ------------------------
+
+class ManualEntry(StatesGroup):
+    query = State()
+    steps = State()
+
+
+def _parse_steps(text: str) -> int | None:
+    """Число шагов из текста админа (пробелы/разделители допустимы)."""
+    digits = "".join(ch for ch in text if ch.isdigit())
+    if not digits:
+        return None
+    val = int(digits)
+    return val if 0 < val < 200_000 else None
+
+
+async def _manual_days(tg_id: int) -> list[tuple]:
+    """Дни марафона от старта до сегодня: (дата, статус существующей записи|None)."""
+    taken = await db.entry_status_by_date(tg_id)
+    today = datetime.now(config.tz).date()
+    last = min(today, config.marathon_end)
+    days, d = [], config.marathon_start
+    while d <= last:
+        days.append((d, taken.get(d)))
+        d += timedelta(days=1)
+    return days
+
+
+async def _manual_days_view(cb: CallbackQuery, tg_id: int) -> None:
+    p = await db.user_detail(tg_id)
+    days = await _manual_days(tg_id)
+    free = sum(1 for _, s in days if s is None)
+    if not days:
+        await cb.message.answer("Марафон ещё не начался — вносить результаты не за что.")
+        return
+    text = (
+        f"✍️ <b>Ручной ввод результата</b>\n"
+        f"👤 <b>{escape(p['full_name'])}</b> · 🌳 {escape(p['team_name'] or '—')}\n\n"
+        f"Выбери день. Свободных дней: <b>{free}</b> из {len(days)}.\n"
+        "✅ ⏳ ❌ — за этот день результат уже есть, вручную зачесть нельзя."
+    )
+    kb = keyboards.manual_days_kb(tg_id, days)
+    try:
+        await cb.message.edit_text(text, reply_markup=kb)
     except Exception:  # noqa: BLE001
-        pass
-    await message.answer("Предупреждение отправлено ⚠️ Результат остаётся на проверке — "
-                         "прими или отклони его кнопками под скриншотом.")
+        await cb.message.answer(text, reply_markup=kb)
+
+
+@router.callback_query(F.data == "adm:manual")
+async def manual_start(cb: CallbackQuery, state: FSMContext) -> None:
+    if not _is_admin(cb.from_user.id):
+        return await cb.answer()
+    await state.set_state(ManualEntry.query)
+    await cb.message.answer(
+        "✍️ <b>Ручной ввод результата</b>\n\n"
+        "Кому зачислить результат? Пришли <b>ID</b> или часть <b>ФИО</b>.\n"
+        "Скриншот не нужен — только число шагов, баллы начислятся по правилам "
+        "марафона, а участнику придёт уведомление.\n/cancel — отмена.")
+    await cb.answer()
+
+
+@router.message(ManualEntry.query, F.text)
+async def manual_search(message: Message, state: FSMContext) -> None:
+    rows = await db.find_participants(message.text.strip())
+    if not rows:
+        await message.answer("Никого не нашёл. Попробуй ещё раз или /cancel.")
+        return
+    b = keyboards.InlineKeyboardBuilder()
+    for r in rows:
+        b.button(text=f"{r['full_name']} ({r['team_name'] or '—'})",
+                 callback_data=f"manp:{r['telegram_id']}")
+    b.adjust(1)
+    await state.clear()
+    await message.answer("Выбери участника:", reply_markup=b.as_markup())
+
+
+@router.callback_query(F.data.startswith("manp:"))
+async def manual_pick_person(cb: CallbackQuery) -> None:
+    if not _is_admin(cb.from_user.id):
+        return await cb.answer()
+    tg_id = int(cb.data.split(":")[1])
+    p = await db.user_detail(tg_id)
+    if p is None:
+        return await cb.answer("Участник не найден.", show_alert=True)
+    if p["disqualified_at"]:
+        return await cb.answer("Участник дисквалифицирован — результаты не идут в зачёт.",
+                               show_alert=True)
+    if not p["approved_at"]:
+        return await cb.answer("Участник ещё не подтверждён P&C.", show_alert=True)
+    await _manual_days_view(cb, tg_id)
+    await cb.answer()
+
+
+@router.callback_query(F.data.startswith("manbusy:"))
+async def manual_busy_day(cb: CallbackQuery) -> None:
+    status = cb.data.split(":")[1]
+    ru = {"accepted": "уже принят", "pending": "на проверке",
+          "rejected": "отклонён"}.get(status, status)
+    await cb.answer(f"За этот день результат уже есть ({ru}) — вручную зачесть нельзя. "
+                    "Обработай его кнопками модерации.", show_alert=True)
+
+
+@router.callback_query(F.data.startswith("mand:"))
+async def manual_pick_day(cb: CallbackQuery, state: FSMContext) -> None:
+    if not _is_admin(cb.from_user.id):
+        return await cb.answer()
+    _, raw_tg, raw_day = cb.data.split(":")
+    tg_id, day = int(raw_tg), date.fromisoformat(raw_day)
+    if await db.get_entry(tg_id, day) is not None:
+        await _manual_days_view(cb, tg_id)   # кто-то сдал/внёс, пока выбирали
+        return await cb.answer("За этот день результат уже появился — зачесть нельзя.",
+                               show_alert=True)
+    p = await db.user_detail(tg_id)
+    await state.set_state(ManualEntry.steps)
+    await state.update_data(man_tg=tg_id, man_day=day.isoformat())
+    await cb.message.answer(
+        f"👟 Сколько шагов зачислить участнику <b>{escape(p['full_name'])}</b> "
+        f"за <b>{day.strftime('%d.%m.%Y')}</b>?\n"
+        "Пришли число, например 12340. /cancel — отмена.")
+    await cb.answer()
+
+
+@router.message(ManualEntry.steps, F.text)
+async def manual_steps(message: Message, state: FSMContext) -> None:
+    steps = _parse_steps(message.text)
+    if steps is None:
+        return await message.answer("Нужно число шагов от 1 до 199 999, например 12340.")
+    data = await state.get_data()
+    tg_id, raw_day = data.get("man_tg"), data.get("man_day")
+    await state.clear()
+    if not tg_id or not raw_day:
+        return await message.answer("Сессия истекла — начни заново через «✍️ Ручной ввод».")
+    day = date.fromisoformat(raw_day)
+    if await db.get_entry(tg_id, day) is not None:
+        return await message.answer("За этот день у участника уже есть результат — "
+                                    "вручную зачесть нельзя.")
+    p = await db.user_detail(tg_id)
+    pts = points_for_steps(steps)
+    note = ("\n\n⚠️ Больше 30 000 шагов — обычно такой результат идёт на дополнительную "
+            "проверку. Убедись, что число верное." if needs_review(steps) else "")
+    await message.answer(
+        "✍️ <b>Проверь перед зачислением</b>\n\n"
+        f"👤 <b>{escape(p['full_name'])}</b> · 🌳 {escape(p['team_name'] or '—')}\n"
+        f"📅 {day.strftime('%d.%m.%Y')}\n"
+        f"👟 Шагов: <b>{steps}</b>\n"
+        f"⭐ Баллов за день: <b>+{pts}</b>{note}",
+        reply_markup=keyboards.manual_confirm_kb(tg_id, day, steps))
+
+
+@router.callback_query(F.data == "man:cancel")
+async def manual_cancel(cb: CallbackQuery) -> None:
+    if not _is_admin(cb.from_user.id):
+        return await cb.answer()
+    await cb.message.edit_text("Ручной ввод отменён ✖️")
+    await cb.answer()
+
+
+@router.callback_query(F.data.startswith("manok:"))
+async def manual_commit(cb: CallbackQuery) -> None:
+    if not _is_admin(cb.from_user.id):
+        return await cb.answer()
+    _, raw_tg, raw_day, raw_steps = cb.data.split(":")
+    tg_id, day, steps = int(raw_tg), date.fromisoformat(raw_day), int(raw_steps)
+    pts = points_for_steps(steps)
+    entry_id = await db.add_admin_entry(tg_id, day, steps, pts)
+    if entry_id is None:
+        # Гонка: пока админ подтверждал, за этот день появился результат.
+        await cb.message.edit_text("❌ За этот день у участника уже есть результат — "
+                                   "вручную зачесть нельзя.")
+        return await cb.answer("Не зачтено: день уже занят.", show_alert=True)
+    st = await db.recompute_streak(tg_id)
+    bonus = await db.recompute_weekly_bonus(tg_id, day)
+    total = await db.total_points(tg_id)
+    delivered = True
+    try:
+        await cb.bot.send_message(tg_id, texts.manual_entry_note(day, steps, pts,
+                                                                 st.current_len))
+    except Exception:  # noqa: BLE001 — участник заблокировал бота
+        delivered = False
+    p = await db.user_detail(tg_id)
+    await cb.message.edit_text(
+        "✅ <b>Результат зачислен</b>\n\n"
+        f"👤 <b>{escape(p['full_name'])}</b> · 🌳 {escape(p['team_name'] or '—')}\n"
+        f"📅 {day.strftime('%d.%m.%Y')} · 👟 <b>{steps}</b> шагов · ⭐ <b>+{pts}</b>\n"
+        f"🔥 Серия: <b>{st.current_len}</b> дн. · 🏅 Бонус за неделю: <b>{bonus}</b>\n"
+        f"⭐ Всего баллов у участника: <b>{total}</b>\n"
+        f"👮 Внёс: {escape(cb.from_user.first_name)}\n\n"
+        + ("Участнику отправлено уведомление 📩" if delivered
+           else "⚠️ Уведомление участнику не доставлено (возможно, он заблокировал бота)."))
+    await cb.answer("Зачислено ✅")
 
 
 # ---- Билдер рассылки ------------------------------------------------------
