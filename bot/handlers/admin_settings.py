@@ -771,16 +771,21 @@ async def mod_accept(cb: CallbackQuery) -> None:
         await _mark_caption(cb, "\n\n⛔ Участник дисквалифицирован — результат не засчитан")
         return await cb.answer("Участник дисквалифицирован — результат не засчитывается.",
                                show_alert=True)
-    pts = points_for_steps(e["steps"])
+    # Тайный челлендж: множитель зависит от дня, команды и времени ОТПРАВКИ
+    # результата — не от момента модерации.
+    mult, _ch = await db.challenge_multiplier(e["participant_id"], e["entry_date"],
+                                              e["created_at"])
+    pts = points_for_steps(e["steps"]) * mult
     await db.set_entry_status(e["id"], "accepted", pts)
     st = await db.recompute_streak(e["participant_id"])
     await db.recompute_weekly_bonus(e["participant_id"], e["entry_date"])
     try:
         await cb.bot.send_message(e["participant_id"],
-                                  texts.accepted_note(e["steps"], pts, st.current_len))
+                                  texts.accepted_note(e["steps"], pts, st.current_len, mult))
     except Exception:  # noqa: BLE001
         pass
-    await _mark_caption(cb, f"\n\n✅ Принято, +{pts} ({escape(cb.from_user.first_name)})")
+    x = f" ×{mult} 🎲" if mult > 1 else ""
+    await _mark_caption(cb, f"\n\n✅ Принято, +{pts}{x} ({escape(cb.from_user.first_name)})")
     await cb.answer("Принято ✅")
 
 
@@ -1028,9 +1033,12 @@ async def manual_steps(message: Message, state: FSMContext) -> None:
         return await message.answer("За этот день у участника уже есть результат — "
                                     "вручную зачесть нельзя.")
     p = await db.user_detail(tg_id)
-    pts = points_for_steps(steps)
+    mult, _ch = await db.challenge_multiplier(tg_id, day, datetime.now(config.tz))
+    pts = points_for_steps(steps) * mult
     note = ("\n\n⚠️ Больше 30 000 шагов — обычно такой результат идёт на дополнительную "
             "проверку. Убедись, что число верное." if needs_review(steps) else "")
+    if mult > 1:
+        note += f"\n\n🎲 Действует тайный челлендж: баллы ×{mult}."
     await message.answer(
         "✍️ <b>Проверь перед зачислением</b>\n\n"
         f"👤 <b>{escape(p['full_name'])}</b> · 🌳 {escape(p['team_name'] or '—')}\n"
@@ -1054,7 +1062,8 @@ async def manual_commit(cb: CallbackQuery) -> None:
         return await cb.answer()
     _, raw_tg, raw_day, raw_steps = cb.data.split(":")
     tg_id, day, steps = int(raw_tg), date.fromisoformat(raw_day), int(raw_steps)
-    pts = points_for_steps(steps)
+    mult, _ch = await db.challenge_multiplier(tg_id, day, datetime.now(config.tz))
+    pts = points_for_steps(steps) * mult
     entry_id = await db.add_admin_entry(tg_id, day, steps, pts)
     if entry_id is None:
         # Гонка: пока админ подтверждал, за этот день появился результат.
@@ -1074,7 +1083,8 @@ async def manual_commit(cb: CallbackQuery) -> None:
     await cb.message.edit_text(
         "✅ <b>Результат зачислен</b>\n\n"
         f"👤 <b>{escape(p['full_name'])}</b> · 🌳 {escape(p['team_name'] or '—')}\n"
-        f"📅 {day.strftime('%d.%m.%Y')} · 👟 <b>{steps}</b> шагов · ⭐ <b>+{pts}</b>\n"
+        f"📅 {day.strftime('%d.%m.%Y')} · 👟 <b>{steps}</b> шагов · ⭐ <b>+{pts}</b>"
+        + (f" (×{mult} 🎲)" if mult > 1 else "") + "\n"
         f"🔥 Серия: <b>{st.current_len}</b> дн. · 🏅 Бонус за неделю: <b>{bonus}</b>\n"
         f"⭐ Всего баллов у участника: <b>{total}</b>\n"
         f"👮 Внёс: {escape(cb.from_user.first_name)}\n\n"

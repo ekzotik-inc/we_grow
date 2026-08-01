@@ -316,10 +316,45 @@ def admin_weekly_report(p, team_name: str | None, monday) -> str:
     )
 
 
-def accepted_note(steps: int, points: int, streak_len: int) -> str:
+def accepted_note(steps: int, points: int, streak_len: int, multiplier: int = 1) -> str:
     s = f"\nТвоя серия: <b>{streak_len}</b> дн. подряд 🔥" if streak_len > 0 else ""
+    ch = (f"\n🎲 <b>Тайный челлендж:</b> баллы за этот день ×{multiplier}!"
+          if multiplier > 1 else "")
     return "🎉 <b>Результат принят!</b>\n" + stepy(
-        f"{steps} шагов = <b>+{points}</b> балл(а).{s}\nТак держать — растение подрастает! 🪴")
+        f"{steps} шагов = <b>+{points}</b> балл(а).{ch}{s}\n"
+        "Так держать — растение подрастает! 🪴")
+
+
+# --- «Тайный челлендж»: разовый множитель баллов на день --------------------
+
+def challenge_rule(ch) -> str:
+    """Условие челленджа человеческим языком (для админа и для анонса)."""
+    if ch["after_time"] is None:
+        return f"все результаты за день ×{ch['multiplier']}"
+    hh = ch["after_time"].strftime("%H:%M")
+    return f"результаты, присланные после {hh}, ×{ch['multiplier']}"
+
+
+def challenge_announce(ch) -> str:
+    """Анонс участникам выбранных команд — на один день."""
+    if ch["after_time"] is None:
+        rule = (f"Сегодня все твои баллы за день умножаются на "
+                f"<b>×{ch['multiplier']}</b> 🚀")
+        how = ("Просто пройди свои шаги и пришли результат как обычно — "
+               "до <b>23:55</b>.")
+    else:
+        hh = ch["after_time"].strftime("%H:%M")
+        rule = (f"Сегодня баллы ×<b>{ch['multiplier']}</b> получают те, кто пришлёт "
+                f"результат <b>после {hh}</b> ⏰")
+        how = (f"Успей нагулять побольше шагов, а результат отправь "
+               f"<b>после {hh}</b> и до <b>23:55</b> — тогда баллы за день удвоятся"
+               if ch["multiplier"] == 2 else
+               f"Отправь результат <b>после {hh}</b> и до <b>23:55</b>")
+    return (
+        "🎲 <b>ТАЙНЫЙ ЧЕЛЛЕНДЖ!</b>\n\n"
+        + stepy(f"Тс-с-с… У меня для тебя сюрприз 🪴\n\n{rule}\n\n{how}\n\n"
+                "Действует <b>только сегодня</b>. Погнали! 💪")
+    )
 
 
 REJECTED_NOTE = "❌ <b>Результат отклонён</b>\n" + stepy(

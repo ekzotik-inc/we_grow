@@ -94,6 +94,7 @@ def admin_panel_kb() -> InlineKeyboardMarkup:
     b.button(text="🧾 Результаты", callback_data="adm:subs")
     b.button(text="✍️ Ручной ввод", callback_data="adm:manual")
     b.button(text="🗑 Отмена результата", callback_data="adm:undo")
+    b.button(text="🎲 Тайный челлендж", callback_data="adm:chal")
     b.button(text="👥 Участники", callback_data="adm:users")
     b.button(text="🌳 Команды", callback_data="adm:teams")
     b.button(text="🏆 Лидерборд", callback_data="adm:board")
@@ -219,6 +220,61 @@ def result_delete_confirm_kb(entry_id: int) -> InlineKeyboardMarkup:
         InlineKeyboardButton(text="🗑 Да, отменить", callback_data=f"resdelok:{entry_id}"),
         InlineKeyboardButton(text="Назад", callback_data=f"resd:{entry_id}"),
     ]])
+
+
+# ---- «Тайный челлендж» -----------------------------------------------------
+
+def challenge_card_kb(announced: bool) -> InlineKeyboardMarkup:
+    b = InlineKeyboardBuilder()
+    b.button(text="📣 Отправить анонс ещё раз" if announced else "📣 Отправить анонс",
+             callback_data="chann")
+    b.button(text="✏️ Пересоздать", callback_data="chnew")
+    b.button(text="🗑 Удалить челлендж", callback_data="chdel")
+    b.button(text="⬅️ Назад", callback_data="adm:back")
+    b.adjust(1)
+    return b.as_markup()
+
+
+def challenge_mult_kb() -> InlineKeyboardMarkup:
+    b = InlineKeyboardBuilder()
+    b.button(text="×2", callback_data="chmul:2")
+    b.button(text="×3", callback_data="chmul:3")
+    b.button(text="⬅️ Назад", callback_data="adm:back")
+    b.adjust(2, 1)
+    return b.as_markup()
+
+
+def challenge_time_kb() -> InlineKeyboardMarkup:
+    b = InlineKeyboardBuilder()
+    b.button(text="🌞 Весь день", callback_data="chtime:all")
+    for hh in (18, 19, 20):
+        b.button(text=f"⏰ После {hh}:00", callback_data=f"chtime:{hh}")
+    b.button(text="⬅️ Назад", callback_data="adm:chal")
+    b.adjust(1, 3, 1)
+    return b.as_markup()
+
+
+def challenge_teams_kb(teams: list[asyncpg.Record], picked: set) -> InlineKeyboardMarkup:
+    b = InlineKeyboardBuilder()
+    for t in teams:
+        mark = "✅" if t["id"] in picked else "▫️"
+        b.button(text=f"{mark} {t['name']}", callback_data=f"chteam:{t['id']}")
+    b.adjust(1)
+    all_on = len(picked) == len(teams)
+    b.row(InlineKeyboardButton(text="◻️ Снять все" if all_on else "🌳 Все команды",
+                               callback_data="chteam:all"))
+    b.row(InlineKeyboardButton(text="Далее ➡️", callback_data="chteams:done"))
+    b.row(InlineKeyboardButton(text="⬅️ Назад", callback_data="adm:chal"))
+    return b.as_markup()
+
+
+def challenge_confirm_kb() -> InlineKeyboardMarkup:
+    b = InlineKeyboardBuilder()
+    b.button(text="🎲 Создать и анонсировать", callback_data="chsave:1")
+    b.button(text="🤫 Создать без анонса", callback_data="chsave:0")
+    b.button(text="✖️ Отмена", callback_data="adm:back")
+    b.adjust(1)
+    return b.as_markup()
 
 
 def _status_mark(r) -> str:

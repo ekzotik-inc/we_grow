@@ -12,6 +12,7 @@ from pathlib import Path
 import asyncpg
 
 from backend.scoring import StreakState
+from bot.config import config
 
 _pool: asyncpg.Pool | None = None
 _SCHEMA = Path(__file__).resolve().parent.parent / "backend" / "db" / "schema.sql"
@@ -543,6 +544,96 @@ async def ids_without_entry_today(day: date) -> list[int]:
                    WHERE d.participant_id = p.telegram_id AND d.entry_date = $1)""",
         day,
     )
+    return [r["telegram_id"] for r in rows]
+
+
+# ---- «Тайный челлендж»: множитель баллов на день ---------------------------
+
+async def challenge_for(day: date) -> asyncpg.Record | None:
+    return await pool().fetchrow("SELECT * FROM challenges WHERE challenge_date=$1", day)
+
+
+async def save_challenge(day: date, multiplier: int, after_time, team_ids: list[int],
+                         admin_id: int) -> asyncpg.Record:
+    """Создаёт/заменяет челлендж дня (один день — один челлендж)."""
+    return await pool().fetchrow(
+        """INSERT INTO challenges (challenge_date, multiplier, after_time, team_ids, created_by)
+           VALUES ($1,$2,$3,$4::int[],$5)
+           ON CONFLICT (challenge_date) DO UPDATE
+             SET multiplier=$2, after_time=$3, team_ids=$4::int[], created_by=$5,
+                 created_at=now(), announced_at=NULL, recipients=0
+           RETURNING *""",
+        day, multiplier, after_time, team_ids, admin_id)
+
+
+async def delete_challenge(day: date) -> asyncpg.Record | None:
+    return await pool().fetchrow(
+        "DELETE FROM challenges WHERE challenge_date=$1 RETURNING *", day)
+
+
+async def mark_challenge_announced(day: date, recipients: int) -> None:
+    await pool().execute(
+        "UPDATE challenges SET announced_at=now(), recipients=$2 WHERE challenge_date=$1",
+        day, recipients)
+
+
+def challenge_applies(ch, team_id: int | None, submitted_at: datetime | None) -> bool:
+    """Подпадает ли результат под челлендж: команда из списка (пустой — все)
+    и время отправки не раньше after_time (NULL — весь день)."""
+    if ch is None:
+        return False
+    if ch["team_ids"] and team_id not in ch["team_ids"]:
+        return False
+    if ch["after_time"] is not None:
+        if submitted_at is None:
+            return False
+        local = submitted_at.astimezone(config.tz).time()
+        if local < ch["after_time"]:
+            return False
+    return True
+
+
+async def challenge_multiplier(tg_id: int, day: date,
+                               submitted_at: datetime | None = None) -> tuple[int, asyncpg.Record | None]:
+    """Множитель баллов для конкретного результата: (множитель, челлендж)."""
+    ch = await challenge_for(day)
+    if ch is None:
+        return 1, None
+    team_id = await pool().fetchval(
+        "SELECT team_id FROM participants WHERE telegram_id=$1", tg_id)
+    if not challenge_applies(ch, team_id, submitted_at):
+        return 1, None
+    return ch["multiplier"], ch
+
+
+async def recount_day_points(day: date, ch: asyncpg.Record | None) -> int:
+    """Пересчитывает баллы уже ПРИНЯТЫХ результатов за день под челлендж
+    (ch=None — вернуть базовые баллы). Возвращает число изменённых записей."""
+    from backend.scoring import points_for_steps
+    rows = await pool().fetch(
+        """SELECT d.id, d.steps, d.points, d.created_at, p.team_id
+             FROM daily_entries d
+             JOIN participants p ON p.telegram_id=d.participant_id
+            WHERE d.entry_date=$1 AND d.status='accepted'
+              AND p.disqualified_at IS NULL""", day)
+    changed = 0
+    for r in rows:
+        mult = ch["multiplier"] if challenge_applies(ch, r["team_id"], r["created_at"]) else 1
+        new = points_for_steps(r["steps"]) * mult
+        if new != r["points"]:
+            await pool().execute("UPDATE daily_entries SET points=$2 WHERE id=$1", r["id"], new)
+            changed += 1
+    return changed
+
+
+async def team_member_ids(team_ids: list[int]) -> list[int]:
+    """Активные участники выбранных команд (пустой список — все активные)."""
+    if not team_ids:
+        return await all_active_ids()
+    rows = await pool().fetch(
+        """SELECT telegram_id FROM participants
+            WHERE approved_at IS NOT NULL AND disqualified_at IS NULL
+              AND team_id = ANY($1::int[])""", team_ids)
     return [r["telegram_id"] for r in rows]
 
 

@@ -108,6 +108,22 @@ CREATE TABLE IF NOT EXISTS scheduled_broadcasts (
 CREATE INDEX IF NOT EXISTS scheduled_broadcasts_due
     ON scheduled_broadcasts (scheduled_at) WHERE sent_at IS NULL AND cancelled_at IS NULL;
 
+-- «Тайный челлендж»: разовый множитель баллов на один день марафона.
+-- team_ids пустой = все команды; after_time NULL = весь день, иначе множитель
+-- получают результаты, ПРИСЛАННЫЕ позже этого времени (время шагов боту
+-- неизвестно — участник присылает одно число за день).
+CREATE TABLE IF NOT EXISTS challenges (
+    id             bigserial   PRIMARY KEY,
+    challenge_date date        NOT NULL UNIQUE,
+    multiplier     int         NOT NULL DEFAULT 2,
+    after_time     time,
+    team_ids       int[]       NOT NULL DEFAULT '{}',
+    created_by     bigint,
+    created_at     timestamptz NOT NULL DEFAULT now(),
+    announced_at   timestamptz,
+    recipients     int         NOT NULL DEFAULT 0
+);
+
 -- Настройки, управляемые из админ-панели (медиа меню, подписи кнопок и т.п.).
 CREATE TABLE IF NOT EXISTS settings (
     key   text PRIMARY KEY,
