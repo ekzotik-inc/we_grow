@@ -204,11 +204,15 @@ async def api_me(x_init_data: str | None = Header(default=None),
         })
         d = d.fromordinal(d.toordinal() + 1)
 
+    # Личное место — то же, что бот показывает в главном меню.
+    summary = await db.participant_summary(tg_id) or {}
     return {
         "registered": True,
         "full_name": card["full_name"],
         "team_name": card["team_name"],
         "total_points": await db.total_points(tg_id),
+        "rank": summary.get("rnk"),
+        "participants": summary.get("total"),
         "today_status": status_by_date.get(today),    # для плитки «Сегодня»
         "current_streak": streak.current_len,
         "best_streak": _best_streak(accepted_steps),
