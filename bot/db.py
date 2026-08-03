@@ -637,6 +637,98 @@ async def team_member_ids(team_ids: list[int]) -> list[int]:
     return [r["telegram_id"] for r in rows]
 
 
+# ---- «Командный флешмоб»: бонус команде за массовость ----------------------
+
+async def flashmob_for(day: date) -> asyncpg.Record | None:
+    return await pool().fetchrow("SELECT * FROM flashmobs WHERE flash_date=$1", day)
+
+
+async def save_flashmob(day: date, pct: int, min_steps: int, bonus: int,
+                        team_ids: list[int], admin_id: int) -> asyncpg.Record:
+    return await pool().fetchrow(
+        """INSERT INTO flashmobs (flash_date, threshold_pct, min_steps, bonus_points,
+                                  team_ids, created_by)
+           VALUES ($1,$2,$3,$4,$5::int[],$6)
+           ON CONFLICT (flash_date) DO UPDATE
+             SET threshold_pct=$2, min_steps=$3, bonus_points=$4, team_ids=$5::int[],
+                 created_by=$6, created_at=now(), announced_at=NULL, recipients=0
+           RETURNING *""",
+        day, pct, min_steps, bonus, team_ids, admin_id)
+
+
+async def delete_flashmob(day: date) -> asyncpg.Record | None:
+    row = await pool().fetchrow("DELETE FROM flashmobs WHERE flash_date=$1 RETURNING *", day)
+    await pool().execute(
+        "DELETE FROM team_bonuses WHERE bonus_date=$1 AND source='flashmob'", day)
+    return row
+
+
+async def mark_flashmob_announced(day: date, recipients: int) -> None:
+    await pool().execute(
+        "UPDATE flashmobs SET announced_at=now(), recipients=$2 WHERE flash_date=$1",
+        day, recipients)
+
+
+async def flashmob_progress(day: date, min_steps: int) -> list[dict]:
+    """По каждой команде: сколько активных участников и сколько из них сдали
+    в этот день принятый результат от min_steps шагов."""
+    rows = await pool().fetch(
+        """SELECT t.id, t.name,
+                  count(p.telegram_id) FILTER (
+                      WHERE p.approved_at IS NOT NULL AND p.disqualified_at IS NULL
+                  ) AS total,
+                  count(p.telegram_id) FILTER (
+                      WHERE p.approved_at IS NOT NULL AND p.disqualified_at IS NULL
+                        AND EXISTS (SELECT 1 FROM daily_entries d
+                                     WHERE d.participant_id=p.telegram_id
+                                       AND d.entry_date=$1 AND d.status='accepted'
+                                       AND d.steps >= $2)
+                  ) AS done
+             FROM teams t
+             LEFT JOIN participants p ON p.team_id = t.id
+            GROUP BY t.id, t.name ORDER BY t.id""", day, min_steps)
+    out = []
+    for r in rows:
+        total, done = int(r["total"]), int(r["done"])
+        out.append({"id": r["id"], "name": r["name"], "total": total, "done": done,
+                    "pct": round(done / total * 100) if total else 0})
+    return out
+
+
+async def recompute_flashmob(day: date) -> dict:
+    """Пересчитывает бонусы флешмоба за день (идемпотентно).
+
+    Возвращает {"rows": прогресс по командам, "new": id команд, которым бонус
+    начислен именно сейчас} — по "new" отправляются поздравления.
+    """
+    fm = await flashmob_for(day)
+    if fm is None:
+        return {"rows": [], "new": [], "flashmob": None}
+    scope = list(fm["team_ids"])
+    rows = [r for r in await flashmob_progress(day, fm["min_steps"])
+            if not scope or r["id"] in scope]
+    already = {r["team_id"] for r in await pool().fetch(
+        "SELECT team_id FROM team_bonuses WHERE bonus_date=$1 AND source='flashmob'", day)}
+    new = []
+    for r in rows:
+        r["done_pct"] = r["pct"]
+        r["awarded"] = r["total"] > 0 and r["pct"] >= fm["threshold_pct"]
+        if r["awarded"]:
+            await pool().execute(
+                """INSERT INTO team_bonuses (team_id, bonus_date, source, points)
+                   VALUES ($1,$2,'flashmob',$3)
+                   ON CONFLICT (team_id, bonus_date, source) DO UPDATE SET points=$3""",
+                r["id"], day, fm["bonus_points"])
+            if r["id"] not in already:
+                new.append(r["id"])
+        elif r["id"] in already:
+            await pool().execute(
+                """DELETE FROM team_bonuses
+                    WHERE team_id=$1 AND bonus_date=$2 AND source='flashmob'""",
+                r["id"], day)
+    return {"rows": rows, "new": new, "flashmob": fm}
+
+
 # ---- Лидерборд -----------------------------------------------------------
 
 async def team_leaderboard() -> list[asyncpg.Record]:
@@ -650,7 +742,9 @@ async def team_leaderboard() -> list[asyncpg.Record]:
                                AND p.disqualified_at IS NULL AND d.status='accepted'),0)
                 + COALESCE((SELECT sum(w.bonus_points) FROM weekly_summaries w
                               JOIN participants p ON p.telegram_id=w.participant_id
-                             WHERE p.team_id=t.id AND p.disqualified_at IS NULL),0) AS points
+                             WHERE p.team_id=t.id AND p.disqualified_at IS NULL),0)
+                + COALESCE((SELECT sum(b.points) FROM team_bonuses b
+                             WHERE b.team_id=t.id),0) AS points
              FROM teams t ORDER BY points DESC, t.name"""
     )
 

@@ -95,6 +95,7 @@ def admin_panel_kb() -> InlineKeyboardMarkup:
     b.button(text="✍️ Ручной ввод", callback_data="adm:manual")
     b.button(text="🗑 Отмена результата", callback_data="adm:undo")
     b.button(text="🎲 Тайный челлендж", callback_data="adm:chal")
+    b.button(text="🤝 Командный флешмоб", callback_data="adm:flash")
     b.button(text="👥 Участники", callback_data="adm:users")
     b.button(text="🌳 Команды", callback_data="adm:teams")
     b.button(text="🏆 Лидерборд", callback_data="adm:board")
@@ -273,6 +274,64 @@ def challenge_confirm_kb() -> InlineKeyboardMarkup:
     b.button(text="🎲 Создать и анонсировать", callback_data="chsave:1")
     b.button(text="🤫 Создать без анонса", callback_data="chsave:0")
     b.button(text="✖️ Отмена", callback_data="adm:back")
+    b.adjust(1)
+    return b.as_markup()
+
+
+# ---- «Командный флешмоб» ---------------------------------------------------
+
+def _pick_kb(options: list[tuple[str, str]], back: str) -> InlineKeyboardMarkup:
+    b = InlineKeyboardBuilder()
+    for text, data in options:
+        b.button(text=text, callback_data=data)
+    b.adjust(3)
+    b.row(InlineKeyboardButton(text="⬅️ Назад", callback_data=back))
+    return b.as_markup()
+
+
+def flashmob_pct_kb() -> InlineKeyboardMarkup:
+    return _pick_kb([(f"{p}%", f"fmpct:{p}") for p in (60, 70, 80, 100)], "adm:back")
+
+
+def flashmob_steps_kb() -> InlineKeyboardMarkup:
+    return _pick_kb([(f"{s}", f"fmsteps:{s}") for s in (5000, 8000, 10000)], "adm:flash")
+
+
+def flashmob_bonus_kb() -> InlineKeyboardMarkup:
+    return _pick_kb([(f"+{p}", f"fmbonus:{p}") for p in (10, 20, 30, 50)], "adm:flash")
+
+
+def flashmob_teams_kb(teams: list[asyncpg.Record], picked: set) -> InlineKeyboardMarkup:
+    b = InlineKeyboardBuilder()
+    for t in teams:
+        mark = "✅" if t["id"] in picked else "▫️"
+        b.button(text=f"{mark} {t['name']}", callback_data=f"fmteam:{t['id']}")
+    b.adjust(1)
+    all_on = len(picked) == len(teams)
+    b.row(InlineKeyboardButton(text="◻️ Снять все" if all_on else "🌳 Все команды",
+                               callback_data="fmteam:all"))
+    b.row(InlineKeyboardButton(text="Далее ➡️", callback_data="fmteams:done"))
+    b.row(InlineKeyboardButton(text="⬅️ Назад", callback_data="adm:flash"))
+    return b.as_markup()
+
+
+def flashmob_confirm_kb() -> InlineKeyboardMarkup:
+    b = InlineKeyboardBuilder()
+    b.button(text="🤝 Создать и анонсировать", callback_data="fmsave:1")
+    b.button(text="🤫 Создать без анонса", callback_data="fmsave:0")
+    b.button(text="✖️ Отмена", callback_data="adm:back")
+    b.adjust(1)
+    return b.as_markup()
+
+
+def flashmob_card_kb(announced: bool) -> InlineKeyboardMarkup:
+    b = InlineKeyboardBuilder()
+    b.button(text="♻️ Обновить прогресс", callback_data="adm:flash")
+    b.button(text="📣 Отправить анонс ещё раз" if announced else "📣 Отправить анонс",
+             callback_data="fmann")
+    b.button(text="✏️ Пересоздать", callback_data="fmnew")
+    b.button(text="🗑 Удалить флешмоб", callback_data="fmdel")
+    b.button(text="⬅️ Назад", callback_data="adm:back")
     b.adjust(1)
     return b.as_markup()
 

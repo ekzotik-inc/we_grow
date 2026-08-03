@@ -9,7 +9,7 @@ from aiogram.client.default import DefaultBotProperties
 
 from bot import commands, db, settings
 from bot.config import config
-from bot.handlers import admin, admin_settings, challenge, onboarding, steps
+from bot.handlers import admin, admin_settings, challenge, flashmob, onboarding, steps
 from bot.scheduler import setup_scheduler
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
@@ -61,6 +61,7 @@ async def main() -> None:
     dp.include_router(admin.router)
     dp.include_router(admin_settings.router)
     dp.include_router(challenge.router)
+    dp.include_router(flashmob.router)
     dp.include_router(steps.router)
     dp.errors.register(_on_error)
 

@@ -124,6 +124,32 @@ CREATE TABLE IF NOT EXISTS challenges (
     recipients     int         NOT NULL DEFAULT 0
 );
 
+-- «Командный флешмоб»: если за день доля команды (threshold_pct) сдала
+-- min_steps и больше — команда получает bonus_points. Баллы за участие, а не
+-- за километры: они не идут конкретному участнику, а лежат на команде.
+CREATE TABLE IF NOT EXISTS flashmobs (
+    id            bigserial   PRIMARY KEY,
+    flash_date    date        NOT NULL UNIQUE,
+    threshold_pct int         NOT NULL DEFAULT 80,
+    min_steps     int         NOT NULL DEFAULT 8000,
+    bonus_points  int         NOT NULL DEFAULT 20,
+    team_ids      int[]       NOT NULL DEFAULT '{}',   -- пусто = все команды
+    created_by    bigint,
+    created_at    timestamptz NOT NULL DEFAULT now(),
+    announced_at  timestamptz,
+    recipients    int         NOT NULL DEFAULT 0
+);
+
+-- Командные баллы (сейчас — только флешмоб). Учитываются в team_leaderboard.
+CREATE TABLE IF NOT EXISTS team_bonuses (
+    team_id    int         NOT NULL REFERENCES teams(id),
+    bonus_date date        NOT NULL,
+    source     text        NOT NULL DEFAULT 'flashmob',
+    points     int         NOT NULL,
+    created_at timestamptz NOT NULL DEFAULT now(),
+    PRIMARY KEY (team_id, bonus_date, source)
+);
+
 -- Настройки, управляемые из админ-панели (медиа меню, подписи кнопок и т.п.).
 CREATE TABLE IF NOT EXISTS settings (
     key   text PRIMARY KEY,

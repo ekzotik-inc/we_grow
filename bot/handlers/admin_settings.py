@@ -30,6 +30,13 @@ def _is_admin(tg_id: int) -> bool:
     return settings.is_admin(tg_id)
 
 
+async def _flashmob_sync(bot, day) -> None:
+    """Пересчёт командного флешмоба после любой правки результатов за день
+    (импорт локальный — модуль флешмоба тянет keyboards/notify)."""
+    from bot.handlers.flashmob import sync
+    await sync(bot, day)
+
+
 class Media(StatesGroup):
     waiting = State()
 
@@ -779,6 +786,7 @@ async def mod_accept(cb: CallbackQuery) -> None:
     await db.set_entry_status(e["id"], "accepted", pts)
     st = await db.recompute_streak(e["participant_id"])
     await db.recompute_weekly_bonus(e["participant_id"], e["entry_date"])
+    await _flashmob_sync(cb.bot, e["entry_date"])
     try:
         await cb.bot.send_message(e["participant_id"],
                                   texts.accepted_note(e["steps"], pts, st.current_len, mult))
@@ -802,6 +810,7 @@ async def mod_reject(cb: CallbackQuery) -> None:
     await db.set_entry_status(e["id"], "rejected", 0)
     await db.recompute_streak(e["participant_id"])
     await db.recompute_weekly_bonus(e["participant_id"], e["entry_date"])
+    await _flashmob_sync(cb.bot, e["entry_date"])
     try:
         await cb.bot.send_message(e["participant_id"], texts.REJECTED_NOTE)
     except Exception:  # noqa: BLE001
@@ -1072,6 +1081,7 @@ async def manual_commit(cb: CallbackQuery) -> None:
         return await cb.answer("Не зачтено: день уже занят.", show_alert=True)
     st = await db.recompute_streak(tg_id)
     bonus = await db.recompute_weekly_bonus(tg_id, day)
+    await _flashmob_sync(cb.bot, day)
     total = await db.total_points(tg_id)
     delivered = True
     try:
@@ -1487,6 +1497,7 @@ async def undo_delete_do(cb: CallbackQuery) -> None:
     tg_id, day = row["participant_id"], row["entry_date"]
     await db.recompute_streak(tg_id)
     await db.recompute_weekly_bonus(tg_id, day)
+    await _flashmob_sync(cb.bot, day)
     try:
         await cb.bot.send_message(tg_id, texts.result_cancelled_note(
             day, row["steps"], row["points"] if row["status"] == "accepted" else 0))
@@ -1534,6 +1545,7 @@ async def undo_reopen(cb: CallbackQuery) -> None:
     tg_id, day = row["participant_id"], row["entry_date"]
     await db.recompute_streak(tg_id)
     await db.recompute_weekly_bonus(tg_id, day)
+    await _flashmob_sync(cb.bot, day)
     try:
         await cb.bot.send_message(tg_id, texts.result_reopened_note(day))
     except Exception:  # noqa: BLE001
