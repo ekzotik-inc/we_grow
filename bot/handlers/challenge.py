@@ -40,14 +40,15 @@ async def _teams_note(team_ids: list[int]) -> str:
 
 async def _card_text(ch) -> str:
     who = await _teams_note(list(ch["team_ids"]))
-    ann = (f"отправлен {ch['announced_at'].astimezone(config.tz).strftime('%H:%M')}, "
-           f"получили {ch['recipients']}" if ch["announced_at"] else "ещё не отправлен")
+    ann = (f"✅ отправлен в {ch['announced_at'].astimezone(config.tz).strftime('%H:%M')}, "
+           f"получили {ch['recipients']}" if ch["announced_at"]
+           else "❌ ещё не отправлен — участники не знают о челлендже")
     return (
         "🎲 <b>Тайный челлендж</b>\n"
         f"📅 Дата: <b>{ch['challenge_date'].strftime('%d.%m.%Y')}</b>\n"
         f"⚡ Условие: <b>{texts.challenge_rule(ch)}</b>\n"
         f"🌳 Команды: <b>{escape(who)}</b>\n"
-        f"📣 Анонс: {ann}\n\n"
+        f"📣 Пуш: {ann}\n\n"
         "Множитель применяется при принятии результата, а уже принятые за этот "
         "день результаты пересчитаны."
     )
@@ -159,17 +160,36 @@ async def chal_preview(cb: CallbackQuery, state: FSMContext) -> None:
     data["teams"] = team_ids
     await state.update_data(chal=data)
     ids = await db.team_member_ids(team_ids)
-    preview = {"multiplier": data["mult"], "after_time":
-               None if data.get("after") is None else time(data["after"], 0)}
-    rule = texts.challenge_rule(preview)
+    rule = texts.challenge_rule(_draft_ch(data))
     await cb.message.edit_text(
         "🎲 <b>Проверь челлендж</b>\n\n"
         f"📅 Дата: <b>{_today().strftime('%d.%m.%Y')}</b> (только сегодня)\n"
         f"⚡ Условие: <b>{rule}</b>\n"
         f"🌳 Команды: <b>{escape(await _teams_note(team_ids))}</b>\n"
-        f"👥 Получат анонс: <b>{len(ids)}</b> участник(ов)\n\n"
-        "Уже принятые сегодня результаты этих команд будут пересчитаны.",
+        f"👥 Получат пуш: <b>{len(ids)}</b> участник(ов)\n\n"
+        "«🚀 Запустить и оповестить» — челлендж включится и участникам этих "
+        "команд сразу уйдёт пуш. Уже принятые сегодня результаты будут "
+        "пересчитаны.",
         reply_markup=keyboards.challenge_confirm_kb())
+    await cb.answer()
+
+
+def _draft_ch(data: dict) -> dict:
+    """Черновик челленджа в виде записи — для предпросмотра пуша."""
+    return {"multiplier": data["mult"],
+            "after_time": None if data.get("after") is None else time(data["after"], 0)}
+
+
+@router.callback_query(F.data == "chprev")
+async def chal_preview_push(cb: CallbackQuery, state: FSMContext) -> None:
+    """Показывает админу пуш ровно в том виде, в каком его получат участники."""
+    if not _is_admin(cb.from_user.id):
+        return await cb.answer()
+    data = (await state.get_data()).get("chal")
+    if not data:
+        return await cb.answer("Сессия истекла, начни заново.", show_alert=True)
+    await cb.message.answer("👁 Так пуш увидят участники выбранных команд:")
+    await cb.message.answer(texts.challenge_announce(_draft_ch(data)))
     await cb.answer()
 
 
@@ -195,12 +215,14 @@ async def chal_save(cb: CallbackQuery, state: FSMContext) -> None:
         await db.mark_challenge_announced(day, sent)
         ch = await db.challenge_for(day)
 
-    tail = (f"\n\n📣 Анонс доставлен: <b>{sent}</b>" if announce else
-            "\n\n🤫 Анонс не отправлен — кнопка «📣 Отправить анонс» ниже.")
+    tail = (f"\n\n📣 Пуш доставлен: <b>{sent}</b> участник(ам)" if announce else
+            "\n\n🤫 Пуш не отправлен — челлендж работает, но участники о нём не "
+            "знают. Кнопка «🚀 Запустить: оповестить участников» ниже.")
     if changed:
         tail += f"\n♻️ Пересчитано уже принятых результатов: <b>{changed}</b>"
     await cb.message.edit_text(
-        "✅ <b>Челлендж создан</b>\n\n" + await _card_text(ch) + tail,
+        ("🚀 <b>Челлендж запущен</b>\n\n" if announce else "✅ <b>Челлендж создан</b>\n\n")
+        + await _card_text(ch) + tail,
         reply_markup=keyboards.challenge_card_kb(bool(ch["announced_at"])))
     await cb.answer("Челлендж создан 🎲")
 

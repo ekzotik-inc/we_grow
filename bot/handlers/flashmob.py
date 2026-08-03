@@ -57,13 +57,13 @@ async def _card_text(fm) -> str:
             f"не хватает {need}" if r["total"] else "нет участников")
         lines.append(f"{mark} {escape(r['name'])}: <b>{r['done']}/{r['total']}</b> "
                      f"({r['pct']}%) — {tail}")
-    ann = (f"отправлен, получили {fm['recipients']}" if fm["announced_at"]
-           else "ещё не отправлен")
+    ann = (f"✅ отправлен, получили {fm['recipients']}" if fm["announced_at"]
+           else "❌ ещё не отправлен — команды не знают о флешмобе")
     return (
         "🤝 <b>Командный флешмоб</b>\n"
         f"📅 Дата: <b>{fm['flash_date'].strftime('%d.%m.%Y')}</b>\n"
         f"⚡ Условие: <b>{texts.flashmob_rule(fm)}</b>\n"
-        f"📣 Анонс: {ann}\n\n"
+        f"📣 Пуш: {ann}\n\n"
         "<b>Прогресс команд</b>\n" + ("\n".join(lines) or "— нет команд —") + "\n\n"
         "<i>Считаются только принятые результаты — прогресс растёт по мере "
         "модерации.</i>"
@@ -204,9 +204,24 @@ async def flash_preview(cb: CallbackQuery, state: FSMContext) -> None:
         f"📅 Дата: <b>{_today().strftime('%d.%m.%Y')}</b> (только сегодня)\n"
         f"⚡ Условие: <b>{texts.flashmob_rule(preview)}</b>\n"
         f"🌳 Команды: <b>{escape(names)}</b>\n"
-        f"👥 Получат анонс: <b>{len(ids)}</b> участник(ов)\n\n"
+        f"👥 Получат пуш: <b>{len(ids)}</b> участник(ов)\n\n"
         + (f"<b>Сколько нужно сдавших:</b>\n{need}" if need else ""),
         reply_markup=keyboards.flashmob_confirm_kb())
+    await cb.answer()
+
+
+@router.callback_query(F.data == "fmprev")
+async def flash_preview_push(cb: CallbackQuery, state: FSMContext) -> None:
+    """Показывает админу пуш ровно в том виде, в каком его получат участники."""
+    if not _is_admin(cb.from_user.id):
+        return await cb.answer()
+    data = (await state.get_data()).get("fm")
+    if not data:
+        return await cb.answer("Сессия истекла, начни заново.", show_alert=True)
+    fm = {"threshold_pct": data["pct"], "min_steps": data["steps"],
+          "bonus_points": data["bonus"]}
+    await cb.message.answer("👁 Так пуш увидят участники выбранных команд:")
+    await cb.message.answer(texts.flashmob_announce(fm))
     await cb.answer()
 
 
@@ -230,10 +245,12 @@ async def flash_save(cb: CallbackQuery, state: FSMContext) -> None:
         sent = await notify.broadcast(cb.bot, ids, texts.flashmob_announce(fm))
         await db.mark_flashmob_announced(day, sent)
     fm = await db.flashmob_for(day)
-    tail = (f"\n\n📣 Анонс доставлен: <b>{sent}</b>" if announce else
-            "\n\n🤫 Анонс не отправлен — кнопка «📣 Отправить анонс» ниже.")
+    tail = (f"\n\n📣 Пуш доставлен: <b>{sent}</b> участник(ам)" if announce else
+            "\n\n🤫 Пуш не отправлен — флешмоб идёт, но команды о нём не знают. "
+            "Кнопка «🚀 Запустить: оповестить участников» ниже.")
     await cb.message.edit_text(
-        "✅ <b>Флешмоб создан</b>\n\n" + await _card_text(fm) + tail,
+        ("🚀 <b>Флешмоб запущен</b>\n\n" if announce else "✅ <b>Флешмоб создан</b>\n\n")
+        + await _card_text(fm) + tail,
         reply_markup=keyboards.flashmob_card_kb(bool(fm["announced_at"])))
     await cb.answer("Флешмоб создан 🤝")
 

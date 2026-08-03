@@ -227,7 +227,8 @@ def result_delete_confirm_kb(entry_id: int) -> InlineKeyboardMarkup:
 
 def challenge_card_kb(announced: bool) -> InlineKeyboardMarkup:
     b = InlineKeyboardBuilder()
-    b.button(text="📣 Отправить анонс ещё раз" if announced else "📣 Отправить анонс",
+    b.button(text=("📣 Отправить пуш ещё раз" if announced
+                   else "🚀 Запустить: оповестить участников"),
              callback_data="chann")
     b.button(text="✏️ Пересоздать", callback_data="chnew")
     b.button(text="🗑 Удалить челлендж", callback_data="chdel")
@@ -271,8 +272,9 @@ def challenge_teams_kb(teams: list[asyncpg.Record], picked: set) -> InlineKeyboa
 
 def challenge_confirm_kb() -> InlineKeyboardMarkup:
     b = InlineKeyboardBuilder()
-    b.button(text="🎲 Создать и анонсировать", callback_data="chsave:1")
-    b.button(text="🤫 Создать без анонса", callback_data="chsave:0")
+    b.button(text="👁 Предпросмотр пуша", callback_data="chprev")
+    b.button(text="🚀 Запустить и оповестить", callback_data="chsave:1")
+    b.button(text="🤫 Подготовить без пуша", callback_data="chsave:0")
     b.button(text="✖️ Отмена", callback_data="adm:back")
     b.adjust(1)
     return b.as_markup()
@@ -317,8 +319,9 @@ def flashmob_teams_kb(teams: list[asyncpg.Record], picked: set) -> InlineKeyboar
 
 def flashmob_confirm_kb() -> InlineKeyboardMarkup:
     b = InlineKeyboardBuilder()
-    b.button(text="🤝 Создать и анонсировать", callback_data="fmsave:1")
-    b.button(text="🤫 Создать без анонса", callback_data="fmsave:0")
+    b.button(text="👁 Предпросмотр пуша", callback_data="fmprev")
+    b.button(text="🚀 Запустить и оповестить", callback_data="fmsave:1")
+    b.button(text="🤫 Подготовить без пуша", callback_data="fmsave:0")
     b.button(text="✖️ Отмена", callback_data="adm:back")
     b.adjust(1)
     return b.as_markup()
@@ -327,7 +330,8 @@ def flashmob_confirm_kb() -> InlineKeyboardMarkup:
 def flashmob_card_kb(announced: bool) -> InlineKeyboardMarkup:
     b = InlineKeyboardBuilder()
     b.button(text="♻️ Обновить прогресс", callback_data="adm:flash")
-    b.button(text="📣 Отправить анонс ещё раз" if announced else "📣 Отправить анонс",
+    b.button(text=("📣 Отправить пуш ещё раз" if announced
+                   else "🚀 Запустить: оповестить участников"),
              callback_data="fmann")
     b.button(text="✏️ Пересоздать", callback_data="fmnew")
     b.button(text="🗑 Удалить флешмоб", callback_data="fmdel")
