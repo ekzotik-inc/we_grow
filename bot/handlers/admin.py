@@ -115,8 +115,8 @@ async def adm_board(cb: CallbackQuery) -> None:
     if not _is_admin(cb.from_user.id):
         return await cb.answer()
     teams = await db.team_leaderboard()
-    top = await db.top_participants(10)
-    await cb.message.answer(texts.render_leaderboard(teams, top, top_title="Топ-10 участников"))
+    women, men = await db.top_by_gender(3)
+    await cb.message.answer(texts.render_leaderboard(teams, women=women, men=men))
     await cb.answer()
 
 
@@ -282,5 +282,5 @@ async def delete_user_cmd(message: Message) -> None:
 @router.message(Command("leaderboard"))
 async def leaderboard(message: Message) -> None:
     teams = await db.team_leaderboard()
-    top = await db.top_participants(10)
-    await message.answer(texts.render_leaderboard(teams, top, top_title="Топ участников"))
+    women, men = await db.top_by_gender(3)
+    await message.answer(texts.render_leaderboard(teams, women=women, men=men))

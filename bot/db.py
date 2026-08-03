@@ -98,10 +98,35 @@ async def set_consent(tg_id: int) -> None:
 
 
 async def set_profile(tg_id: int, full_name: str, is_asr: bool, username: str | None = None) -> None:
+    from backend.gender import detect_gender
     await pool().execute(
-        "UPDATE participants SET full_name=$2, is_asr=$3, username=$4 WHERE telegram_id=$1",
-        tg_id, full_name, is_asr, username,
+        """UPDATE participants SET full_name=$2, is_asr=$3, username=$4, gender=$5
+            WHERE telegram_id=$1""",
+        tg_id, full_name, is_asr, username, detect_gender(full_name),
     )
+
+
+async def set_gender(tg_id: int, gender: str | None) -> None:
+    """Ручная правка пола админом (перебивает автоопределение)."""
+    await pool().execute("UPDATE participants SET gender=$2 WHERE telegram_id=$1",
+                         tg_id, gender)
+
+
+async def backfill_genders() -> int:
+    """Проставляет пол тем, у кого он ещё не определён (на старте бота).
+    Уже заполненные значения — в том числе поправленные вручную — не трогает."""
+    from backend.gender import detect_gender
+    rows = await pool().fetch(
+        "SELECT telegram_id, full_name FROM participants "
+        "WHERE gender IS NULL AND coalesce(full_name,'') <> ''")
+    n = 0
+    for r in rows:
+        g = detect_gender(r["full_name"])
+        if g:
+            await pool().execute("UPDATE participants SET gender=$2 WHERE telegram_id=$1",
+                                 r["telegram_id"], g)
+            n += 1
+    return n
 
 
 async def set_phone(tg_id: int, phone: str, username: str | None = None) -> None:
@@ -206,7 +231,7 @@ async def export_participants() -> list[asyncpg.Record]:
     """Все участники со сводкой (для выгрузки в Excel)."""
     return await pool().fetch(
         """SELECT p.telegram_id, p.full_name, p.username, t.name AS team_name,
-                  p.is_asr, p.created_at, p.approved_at, p.disqualified_at,
+                  p.is_asr, p.gender, p.created_at, p.approved_at, p.disqualified_at,
                   COALESCE(s.current_len,0) AS streak,
                   COALESCE((SELECT sum(d.points) FROM daily_entries d
                              WHERE d.participant_id=p.telegram_id AND d.status='accepted'),0)
@@ -782,6 +807,39 @@ async def team_leaderboard() -> list[asyncpg.Record]:
                              WHERE b.team_id=t.id),0) AS points
              FROM teams t ORDER BY points DESC, t.name"""
     )
+
+
+async def top_participants_by_gender(gender: str, limit: int = 3) -> list[asyncpg.Record]:
+    """Топ участников одного пола. Участники без определённого пола не попадают
+    ни в один из топов — пол правится в карточке участника."""
+    return await pool().fetch(
+        """SELECT p.full_name,
+                  COALESCE((SELECT sum(d.points) FROM daily_entries d
+                             WHERE d.participant_id=p.telegram_id AND d.status='accepted'),0)
+                + COALESCE((SELECT sum(w.bonus_points) FROM weekly_summaries w
+                             WHERE w.participant_id=p.telegram_id),0) AS points
+             FROM participants p
+            WHERE p.disqualified_at IS NULL AND p.approved_at IS NOT NULL
+              AND p.gender = $1
+            ORDER BY points DESC, p.full_name LIMIT $2""",
+        gender, limit,
+    )
+
+
+async def top_by_gender(limit: int = 3) -> tuple[list, list]:
+    """(женский топ, мужской топ) — для лидербордов."""
+    return (await top_participants_by_gender("f", limit),
+            await top_participants_by_gender("m", limit))
+
+
+async def gender_counts() -> dict:
+    row = await pool().fetchrow(
+        """SELECT count(*) FILTER (WHERE gender='f') AS f,
+                  count(*) FILTER (WHERE gender='m') AS m,
+                  count(*) FILTER (WHERE gender IS NULL) AS unknown
+             FROM participants
+            WHERE team_id IS NOT NULL AND disqualified_at IS NULL""")
+    return dict(row)
 
 
 async def top_participants(limit: int = 10) -> list[asyncpg.Record]:

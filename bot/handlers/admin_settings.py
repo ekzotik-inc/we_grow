@@ -295,6 +295,7 @@ def _fmt(dt) -> str:
 
 
 async def _card(tg_id: int):
+    from backend.gender import RU as gender_ru
     p = await db.user_detail(tg_id)
     if p is None:
         return None, None
@@ -308,6 +309,7 @@ async def _card(tg_id: int):
         f"📱 {phone}\n"
         f"🆔 <code>{p['telegram_id']}</code>\n"
         f"🌳 Команда: <b>{escape(p['team_name'] or '—')}</b>\n"
+        f"⚧ Пол: <b>{gender_ru[p['gender']]}</b>\n"
         f"📌 Статус: {status}\n"
         f"🏢 Наш дружный коллектив: {'да' if p['is_asr'] else 'нет'}\n"
         f"🗓 Регистрация: {_fmt(p['created_at'])}\n"
@@ -435,6 +437,23 @@ async def user_clear_confirm(cb: CallbackQuery) -> None:
     except Exception:  # noqa: BLE001
         await cb.message.answer(text, reply_markup=keyboards.clear_results_confirm_kb(tg))
     await cb.answer()
+
+
+@router.callback_query(F.data.startswith("usrsex:"))
+async def user_gender(cb: CallbackQuery) -> None:
+    """Правка пола вручную: автоопределение по ФИО ошибается на редких именах,
+    а от пола зависит попадание в женский/мужской топ."""
+    if not _is_admin(cb.from_user.id):
+        return await cb.answer()
+    tg = int(cb.data.split(":")[1])
+    p = await db.user_detail(tg)
+    if p is None:
+        return await cb.answer("Участник не найден.", show_alert=True)
+    nxt = {None: "f", "f": "m", "m": None}[p["gender"]]
+    await db.set_gender(tg, nxt)
+    from backend.gender import RU as gender_ru
+    await _refresh_card(cb, tg)
+    await cb.answer(f"Пол: {gender_ru[nxt]}")
 
 
 @router.callback_query(F.data.startswith("usrmv:"))

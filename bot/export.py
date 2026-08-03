@@ -62,10 +62,12 @@ async def build_workbook() -> tuple[bytes, str]:
     ws1 = wb.active
     ws1.title = "Участники"
     _sheet(ws1,
-           ["ФИО", "Username", "Telegram ID", "Команда", "Наш коллектив", "Статус",
-            "Баллов", "Серия", "Регистрация", "Подтверждён"],
+           ["ФИО", "Username", "Telegram ID", "Команда", "Пол", "Наш коллектив",
+            "Статус", "Баллов", "Серия", "Регистрация", "Подтверждён"],
            [[p["full_name"], f"@{p['username']}" if p["username"] else "",
-             p["telegram_id"], p["team_name"] or "", "да" if p["is_asr"] else "нет",
+             p["telegram_id"], p["team_name"] or "",
+             {"f": "жен", "m": "муж"}.get(p["gender"], "—"),
+             "да" if p["is_asr"] else "нет",
              "дисквалифицирован" if p["disqualified_at"] else
              ("подтверждён" if p["approved_at"] else "ожидает"),
              p["total_points"], p["streak"], _fmt(p["created_at"]), _fmt(p["approved_at"])]

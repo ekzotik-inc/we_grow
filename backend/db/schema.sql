@@ -33,6 +33,9 @@ CREATE INDEX IF NOT EXISTS participants_team_idx ON participants(team_id);
 ALTER TABLE participants ADD COLUMN IF NOT EXISTS username text;
 ALTER TABLE participants ADD COLUMN IF NOT EXISTS approved_at timestamptz;
 ALTER TABLE participants ADD COLUMN IF NOT EXISTS phone text;  -- телефон (шаг регистрации)
+-- Пол: 'f' | 'm' | NULL. Определяется по ФИО (backend/gender.py) и правится
+-- админом вручную — нужен для раздельных топов в лидерборде.
+ALTER TABLE participants ADD COLUMN IF NOT EXISTS gender text;
 
 CREATE TABLE IF NOT EXISTS daily_entries (
     id                 bigserial PRIMARY KEY,

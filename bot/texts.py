@@ -557,21 +557,34 @@ def weekly_bonus_note(bonus: int) -> str:
         "Стабильность — твоя суперсила 💪 Так держать!")
 
 
-def render_leaderboard(teams, top, header: str = "Лидерборд", top_title: str = "Участники") -> str:
+def _board_rows(items, key) -> str:
     medals = ["🥇", "🥈", "🥉"]
+    out = []
+    for i, it in enumerate(items):
+        mark = medals[i] if i < 3 else f"{i + 1}."
+        out.append(f"{mark} {escape(it[key] or '—')} — <b>{it['points']}</b>")
+    return "\n".join(out) or "— пока пусто —"
 
-    def rows(items, key):
-        out = []
-        for i, it in enumerate(items):
-            mark = medals[i] if i < 3 else f"{i + 1}."
-            out.append(f"{mark} {escape(it[key] or '—')} — <b>{it['points']}</b>")
-        return "\n".join(out) or "— пока пусто —"
 
-    return (
-        f"🏆 <b>{escape(header)}</b>\n\n"
-        f"<b>Команды</b>\n{rows(teams, 'name')}\n\n"
-        f"<b>{escape(top_title)}</b>\n{rows(top, 'full_name' if top and 'full_name' in top[0] else 'name')}"
-    )
+def render_leaderboard(teams, top=None, header: str = "Лидерборд",
+                       top_title: str = "Участники",
+                       women=None, men=None) -> str:
+    """Лидерборд: команды + раздельные топы (женский/мужской).
+
+    women/men — списки из db.top_by_gender. Если переданы, общий топ (top)
+    не выводится: в чате два коротких топа читаются лучше одного длинного.
+    """
+    def rows(items):
+        key = "full_name" if items and "full_name" in items[0] else "name"
+        return _board_rows(items, key)
+
+    text = f"🏆 <b>{escape(header)}</b>\n\n<b>Команды</b>\n{rows(teams)}"
+    if women is not None or men is not None:
+        text += (f"\n\n👩 <b>Топ-3 среди женщин</b>\n{rows(women or [])}"
+                 f"\n\n👨 <b>Топ-3 среди мужчин</b>\n{rows(men or [])}")
+    elif top is not None:
+        text += f"\n\n<b>{escape(top_title)}</b>\n{rows(top)}"
+    return text
 
 
 # --- Рассылка-инструкция: правильный скриншот -------------------------------

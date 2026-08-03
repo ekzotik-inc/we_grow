@@ -50,7 +50,11 @@ async def main() -> None:
     config.validate()
     await _connect_db_retry()
     await settings.load()
-    log.info("БД подключена, схема применена, настройки загружены")
+    # Пол по ФИО — для раздельных топов. Трогает только тех, у кого он пуст,
+    # поэтому ручные правки админов переживают перезапуск.
+    filled = await db.backfill_genders()
+    log.info("БД подключена, схема применена, настройки загружены "
+             "(пол определён у %s новых участников)", filled)
 
     # HTML по умолчанию — нужно для премиум-эмодзи (<tg-emoji>) и <b>.
     bot = Bot(config.bot_token, default=DefaultBotProperties(parse_mode="HTML"))

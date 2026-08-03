@@ -406,10 +406,13 @@ async function renderBoard(){
   let d; try{ d=await api("/api/leaderboard"); }catch(e){ if(my===renderGen)notice(e); return; }
   if(my!==renderGen) return;
   const teams=d.teams.map((t,i)=>`<div class="item">${rk(i)}<div class="nm">${esc(t.name)}</div><div class="pts">${t.points}</div></div>`).join("")||emptyRow();
-  const top=d.top.map((p,i)=>`<div class="item">${rk(i)}<div class="nm">${esc(p.name)}</div><div class="pts">${p.points}</div></div>`).join("")||emptyRow();
+  const people=(list)=>(list||[]).map((p,i)=>`<div class="item">${rk(i)}<div class="nm">${esc(p.name)}</div><div class="pts">${p.points}</div></div>`).join("")||emptyRow();
+  const top=people(d.top), women=people(d.top_women), men=people(d.top_men);
   V.innerHTML=`<div class="view">
     <div class="card d1"><div class="sec-title" style="margin-bottom:6px">🏆 Команды</div>${teams}</div>
-    <div class="card d2"><div class="sec-title" style="margin-bottom:6px">👣 Топ-10 участников</div>${top}</div></div>`;
+    <div class="card d2"><div class="sec-title" style="margin-bottom:6px">👩 Топ-3 среди женщин</div>${women}</div>
+    <div class="card d2"><div class="sec-title" style="margin-bottom:6px">👨 Топ-3 среди мужчин</div>${men}</div>
+    <div class="card d3"><div class="sec-title" style="margin-bottom:6px">👣 Топ-10 участников</div>${top}</div></div>`;
 }
 
 function stepyBox(html){

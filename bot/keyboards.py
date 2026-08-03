@@ -366,6 +366,9 @@ def users_page_kb(rows, offset: int, total: int, pending: int, page_size: int = 
     return b.as_markup()
 
 
+_GENDER_BTN = {"f": "♀ женский", "m": "♂ мужской", None: "не определён"}
+
+
 def user_card_kb(p) -> InlineKeyboardMarkup:
     tg = p["telegram_id"]
     b = InlineKeyboardBuilder()
@@ -376,11 +379,12 @@ def user_card_kb(p) -> InlineKeyboardMarkup:
             b.button(text="✅ Подтвердить", callback_data=f"appr:{tg}")
             b.button(text="❌ Отклонить", callback_data=f"rej:{tg}")
         b.button(text="⛔ Дисквалифицировать", callback_data=f"usrdq:{tg}")
+    b.button(text=f"⚧ Пол: {_GENDER_BTN[p['gender']]}", callback_data=f"usrsex:{tg}")
     b.button(text="🔀 Перевести в команду", callback_data=f"usrmv:{tg}")
     b.button(text="🧹 Очистить результаты", callback_data=f"usrclr:{tg}")
     b.button(text="🗑 Удалить", callback_data=f"usrdel:{tg}")
     b.button(text="⬅️ К списку", callback_data="usrpg:0")
-    b.adjust(2, 1, 1, 1, 1)
+    b.adjust(2, 1, 1, 1, 1, 1)
     return b.as_markup()
 
 
