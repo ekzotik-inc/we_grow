@@ -8,11 +8,11 @@
 <style>
   :root{
     /* Палитра в стиле IQOS ILUMA: слейт + бирюза + фиолетовый */
-    --bg:#17151d;
-    --bg2:#1f1c26;
-    --card:#272430;
-    --card2:#2f2b39;
-    --line:#38333f;
+    --bg:#0c101b;
+    --bg2:#141a28;
+    --card:#161d2c;
+    --card2:#1c2437;
+    --line:#28304a;
     --tq:#00d1d2;            /* бирюза */
     --vi:#7a5cff;            /* фиолетовый */
     --coral:#ff7a59;         /* тёплый акцент */
@@ -31,8 +31,9 @@
   body{
     font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",sans-serif;
     background:
-      radial-gradient(120% 60% at 100% 0%, rgba(122,92,255,.18), transparent 60%),
-      radial-gradient(120% 60% at 0% 0%, rgba(0,209,210,.16), transparent 55%),
+      radial-gradient(120% 55% at 100% 0%, rgba(122,92,255,.22), transparent 62%),
+      radial-gradient(120% 55% at 0% 0%, rgba(0,209,210,.16), transparent 58%),
+      radial-gradient(90% 40% at 50% 100%, rgba(122,92,255,.10), transparent 70%),
       var(--bg);
     color:var(--text);
     padding-top:calc(var(--safe-top) + 8px);
@@ -82,6 +83,56 @@
   .tile .n{font-size:24px;font-weight:800}
   .tile .n.tq{color:var(--tq)}.tile .n.coral{color:var(--coral)}
   .tile .l{font-size:11px;color:var(--muted);margin-top:3px}
+
+  /* ---- Прогресс: bento-сетка в духе дашборда --------------------------- */
+  .bento{display:grid;grid-template-columns:1fr 1fr;gap:11px}
+  .bento>.w2{grid-column:span 2}
+  .gc{position:relative;overflow:hidden;border-radius:22px;padding:16px;
+    background:linear-gradient(180deg,rgba(255,255,255,.05),rgba(255,255,255,.012));
+    border:1px solid rgba(255,255,255,.08);
+    box-shadow:0 10px 30px rgba(0,0,0,.28),inset 0 1px 0 rgba(255,255,255,.05);
+    animation:rise .5s cubic-bezier(.2,.8,.2,1) both}
+  .gc::before{content:"";position:absolute;inset:-1px -1px auto;height:72px;pointer-events:none;
+    background:radial-gradient(75% 100% at 50% 0,rgba(0,209,210,.13),transparent 72%)}
+  .gc.vi::before{background:radial-gradient(75% 100% at 50% 0,rgba(122,92,255,.16),transparent 72%)}
+  .gc>*{position:relative;z-index:1}
+  .gl{font-size:11.5px;color:var(--muted);font-weight:600}
+  .gv{font-size:29px;font-weight:800;letter-spacing:-.6px;line-height:1.05;margin-top:2px}
+  .gv.sm{font-size:18px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .gsub{font-size:11px;color:var(--muted);margin-top:4px;line-height:1.35}
+  .pill{display:inline-flex;align-items:center;gap:5px;border-radius:999px;padding:5px 10px;
+    font-size:11px;font-weight:700;background:rgba(255,255,255,.07);
+    border:1px solid rgba(255,255,255,.09);color:var(--muted)}
+  .pill .ic{width:13px;height:13px}
+
+  .hi{display:flex;align-items:flex-start;justify-content:space-between;gap:10px}
+  .hi h2{margin:2px 0 0;font-size:23px;font-weight:800;letter-spacing:-.4px}
+  .hi .gl b{color:var(--tq)}
+  .spark{display:block;width:100%;height:74px;margin:6px -2px -6px}
+
+  .mini{display:flex;align-items:center;gap:10px}
+  .mring{width:64px;height:64px;flex:none;position:relative}
+  .mring svg{width:100%;height:100%;transform:rotate(-90deg)}
+  .mring circle{fill:none;stroke-linecap:round;stroke-width:8}
+  .mring .bg{stroke:rgba(255,255,255,.08)}
+  .mring .fg{stroke:url(#g-ring);transition:stroke-dashoffset 1.1s cubic-bezier(.2,.8,.2,1)}
+  .mring .em .ic{width:24px;height:24px;color:var(--vi)}
+  .mring .em{position:absolute;inset:0;display:grid;place-items:center;font-size:26px;
+    animation:bob 4s ease-in-out 1s infinite}
+
+  .bars{display:grid;grid-template-columns:repeat(7,1fr);gap:8px;align-items:end;
+    height:118px;margin-top:14px}
+  .bar7{display:flex;flex-direction:column;align-items:center;gap:7px;height:100%;
+    justify-content:flex-end}
+  .bar7 i{display:block;width:11px;border-radius:99px;background:linear-gradient(180deg,#00d1d2,#7a5cff);
+    animation:grow .9s cubic-bezier(.2,.8,.2,1) both;min-height:5px}
+  .bar7.zero i{background:rgba(255,255,255,.09)}
+  .bar7 span{font-size:10px;color:var(--muted);font-weight:700}
+  .bar7.max span{color:var(--tq)}
+  .btip{position:absolute;transform:translate(-50%,-100%);background:rgba(255,255,255,.1);
+    border:1px solid rgba(255,255,255,.14);border-radius:9px;padding:3px 8px;font-size:10.5px;
+    font-weight:800;white-space:nowrap}
+  .barsw{position:relative}
 
   /* ---- Прогресс: кольцо стадии, полоса «сегодня», серия, календарь ---- */
   .phero{position:relative;overflow:hidden;text-align:center;padding:22px 18px 20px}
@@ -352,6 +403,13 @@
   <linearGradient id="g-ring" x1="0" y1="0" x2="1" y2="1">
     <stop offset="0%" stop-color="#00d1d2"/><stop offset="100%" stop-color="#7a5cff"/>
   </linearGradient>
+  <linearGradient id="g-line" x1="0" y1="0" x2="1" y2="0">
+    <stop offset="0%" stop-color="#00d1d2"/><stop offset="100%" stop-color="#7a5cff"/>
+  </linearGradient>
+  <linearGradient id="g-area" x1="0" y1="0" x2="0" y2="1">
+    <stop offset="0%" stop-color="#00d1d2" stop-opacity=".28"/>
+    <stop offset="100%" stop-color="#00d1d2" stop-opacity="0"/>
+  </linearGradient>
   <symbol id="i-trophy" viewBox="0 0 24 24">
     <path d="M7 4h10v5a5 5 0 0 1-10 0V4Z"/><path d="M7 5H4v2a3 3 0 0 0 3 3"/>
     <path d="M17 5h3v2a3 3 0 0 1-3 3"/><path d="M12 14v4"/><path d="M8.5 21h7"/></symbol>
@@ -437,7 +495,7 @@
 const tg = window.Telegram?.WebApp;
 try{
   tg?.ready(); tg?.expand();
-  tg?.setHeaderColor?.("#17151d"); tg?.setBackgroundColor?.("#17151d");
+  tg?.setHeaderColor?.("#0c101b"); tg?.setBackgroundColor?.("#0c101b");
   tg?.disableVerticalSwipes?.();
 }catch(e){}
 // initData читаем «лениво» при каждом запросе из нескольких источников:
@@ -537,18 +595,45 @@ function todayStrip(d){
     <button class="go" onclick="openBot()">Сдать</button></div>`;
 }
 
-// Прогресс серии до недельного бонуса: 5 дней → +2, 7 дней → +4.
-function streakCard(streak,best){
-  const dots=Array.from({length:7},(_,i)=>
-    `<i class="${i<streak?(i>=5?"gold":"on"):""}"></i>`).join("");
-  const left=streak>=7?0:(streak>=5?7-streak:5-streak);
-  const goal=streak>=7?"Максимальный бонус недели взят"
-    :streak>=5?`До <b>+4</b> осталось дней: <b>${left}</b>`
-    :`До <b>+2</b> осталось дней: <b>${left}</b>`;
-  return `<div class="card d2">${secHead("flame","Серия дней",
-      "Дни подряд по 10 000+ шагов. Пропуск обнуляет серию.")}
-    <div class="dots">${dots}</div>
-    <div class="streak-l"><span>${goal}</span><span>рекорд: <b>${best}</b></span></div></div>`;
+// Спарклайн шагов по дням марафона: плавная линия + заливка под ней.
+function spark(vals){
+  const W=300,H=74,P=6;
+  if(vals.length<2) return "";
+  const max=Math.max(...vals,1), min=Math.min(...vals);
+  const lo=Math.max(0,min-(max-min||max)*0.6), rng=(max-lo)||1;   // без вырождения в полосу
+  const pt=vals.map((v,i)=>[P+i*(W-2*P)/(vals.length-1),
+                            H-P-((v-lo)/rng)*(H-2*P-10)]);
+  // сглаживаем кубическими кривыми по средним точкам — линия без изломов
+  let dpath=`M${pt[0][0].toFixed(1)},${pt[0][1].toFixed(1)}`;
+  for(let i=1;i<pt.length;i++){
+    const [x0,y0]=pt[i-1],[x1,y1]=pt[i],mx=(x0+x1)/2;
+    dpath+=` C${mx.toFixed(1)},${y0.toFixed(1)} ${mx.toFixed(1)},${y1.toFixed(1)} ${x1.toFixed(1)},${y1.toFixed(1)}`;
+  }
+  const last=pt[pt.length-1];
+  return `<svg class="spark" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none">
+    <path d="${dpath} L${W-P},${H} L${P},${H} Z" fill="url(#g-area)" stroke="none"/>
+    <path d="${dpath}" fill="none" stroke="url(#g-line)" stroke-width="2.4"
+          stroke-linecap="round" stroke-linejoin="round"/>
+    <circle cx="${last[0].toFixed(1)}" cy="${last[1].toFixed(1)}" r="3.6" fill="#fff"/>
+  </svg>`;
+}
+
+// Столбики последних 7 дней с подписью на лучшем дне.
+function week7(cal){
+  const days=cal.filter(c=>!c.future).slice(-7);
+  if(!days.length) return "";
+  const WD=["ПН","ВТ","СР","ЧТ","ПТ","СБ","ВС"];
+  const max=Math.max(...days.map(c=>c.steps||0),1);
+  const bi=days.reduce((b,c,i)=>((c.steps||0)>(days[b].steps||0)?i:b),0);
+  const bars=days.map((c,i)=>{
+    const h=Math.round(((c.steps||0)/max)*88);
+    return `<div class="bar7 ${c.steps?"":"zero"} ${i===bi&&c.steps?"max":""}">
+      <i style="height:${Math.max(5,h)}px"></i><span>${WD[isoDow(c.date)]}</span></div>`;
+  }).join("");
+  const best=days[bi].steps||0;
+  const tip=best?`<div class="btip" style="left:${((bi+0.5)/days.length*100).toFixed(1)}%;top:6px">
+      ${nfmt(best)}</div>`:"";
+  return `<div class="barsw">${tip}<div class="bars">${bars}</div></div>`;
 }
 
 async function renderProgress(){
@@ -559,14 +644,22 @@ async function renderProgress(){
   document.getElementById("head-sub").textContent = d.team_name ? "Команда: "+d.team_name : "марафон шагов";
 
   const si=stageIndex(d.total_points,d.best_streak), st=STAGES[si];
-  const nextAt=[5,15,30,50,9999][si], prog=Math.min(100,Math.round(d.total_points/nextAt*100));
-  const R=52, C=2*Math.PI*R;
+  const nextAt=[5,15,30,50,9999][si];
+  const stagePct=Math.min(100,Math.round(d.total_points/nextAt*100));
+  const R=33, C=2*Math.PI*R;
 
   const acc=d.calendar.filter(c=>c.status==="accepted");
   const steps=acc.reduce((s,c)=>s+(c.steps||0),0);
   const done=d.calendar.filter(c=>c.status).length;
   const missed=d.calendar.filter(c=>!c.status&&!c.future&&!c.is_today).length;
   const left=d.calendar.filter(c=>c.future).length;
+  const streak=d.current_streak||0;
+  const goalLeft=streak>=7?0:(streak>=5?7-streak:5-streak);
+  const streakPct=Math.min(100,Math.round(streak/7*100));
+
+  const h=d.hour??12;
+  const hello=h<5?"Доброй ночи":h<12?"Доброе утро":h<18?"Добрый день":"Добрый вечер";
+  const first=(d.full_name||"").split(/\s+/)[1]||(d.full_name||"").split(/\s+/)[0]||"друг";
 
   // Календарь по неделям: первый день марафона сдвигаем на его столбец.
   // Именно смещением, а не пустыми ячейками: пустые div в одной сетке с
@@ -581,57 +674,80 @@ async function renderProgress(){
     else if(!c.is_today){ base="miss"; }
     else base="empty";
     const cls=["day",base,c.is_today?"today":"",c.future?"future":""].join(" ");
-    const st=idx===0&&shift>1?` style="grid-column-start:${shift}"`:"";
-    return `<div class="${cls}"${st}><b>${parseInt(c.date.slice(8),10)}</b>${badge}</div>`;
+    const stl=idx===0&&shift>1?` style="grid-column-start:${shift}"`:"";
+    return `<div class="${cls}"${stl}><b>${parseInt(c.date.slice(8),10)}</b>${badge}</div>`;
   }).join("");
 
-  const rank=d.rank?`<div class="l">место <b style="color:var(--text)">#${d.rank}</b> из ${d.participants}</div>`
-    :`<div class="l">Всего баллов</div>`;
+  const ring=(id,pct,inner,cls="")=>`<div class="mring ${cls}">
+      <svg viewBox="0 0 80 80"><circle class="bg" cx="40" cy="40" r="${R}"/>
+        <circle class="fg" id="${id}" cx="40" cy="40" r="${R}"
+                stroke-dasharray="${C.toFixed(1)}" stroke-dashoffset="${C.toFixed(1)}"/></svg>
+      <div class="em">${inner}</div></div>`;
 
   const body=`
-    <div class="card phero d1">
-      <div class="ringwrap">
-        <svg class="ring" viewBox="0 0 120 120">
-          <circle class="rbg" cx="60" cy="60" r="${R}"/>
-          <circle class="rfg" id="ring" cx="60" cy="60" r="${R}"
-                  stroke-dasharray="${C.toFixed(1)}" stroke-dashoffset="${C.toFixed(1)}"/>
-        </svg>
-        <div class="pl">${st.e}</div>
+    <div class="bento">
+      <div class="gc w2 d1">
+        <div class="hi">
+          <div><div class="gl">${hello},</div><h2>${esc(first)}</h2></div>
+          <div class="pill">${ico("sparkle")}${d.total_points} балл(ов)</div>
+        </div>
+        <div class="gsub">${done?`Шаги за ${done} дн. марафона`:"Здесь появится твоя динамика шагов"}</div>
+        ${spark(d.calendar.filter(c=>!c.future).map(c=>c.steps||0))}
       </div>
-      <div class="pstage">${st.n}</div>
-      <div class="pgoal">${si<4?`До стадии «${STAGES[si+1].n}» — <b>${Math.max(0,nextAt-d.total_points)}</b> балл(ов)`
-                              :"Максимальная стадия — растение расцвело"}</div>
-    </div>
 
-    ${todayStrip(d)}
-
-    <div class="stats">
-      <div class="tile card d1" style="margin:0"><div class="ti">${ico("sparkle")}</div>
-        <div class="n tq" id="s-pts">0</div>${rank}</div>
-      <div class="tile card d2" style="margin:0"><div class="ti">${ico("steps")}</div>
-        <div class="n" id="s-steps">0</div><div class="l">Шагов пройдено</div></div>
-      <div class="tile card d3" style="margin:0"><div class="ti">${ico("flame")}</div>
-        <div class="n coral" id="s-str">0</div><div class="l">Дней подряд</div></div>
-    </div>
-
-    ${streakCard(d.current_streak||0,d.best_streak||0)}
-
-    <div class="card d3">
-      <div class="row"><div class="sec-title">${ico("calendar")}Календарь марафона</div>
-        <span class="muted">${fmtDM(d.marathon.start)}–${fmtDM(d.marathon.end)}</span></div>
-      <div class="cal-wd"><div>ПН</div><div>ВТ</div><div>СР</div><div>ЧТ</div><div>ПТ</div>
-        <div>СБ</div><div>ВС</div></div>
-      <div class="cal">${cal}</div>
-      <div class="calsum">
-        <span>сдано <b>${done}</b> из ${d.calendar.length}</span>
-        <span>принято <b>${acc.length}</b></span>
-        ${missed?`<span>пропущено <b>${missed}</b></span>`:""}
-        ${left?`<span>впереди <b>${left}</b> дн.</span>`:""}
+      <div class="gc d1">
+        <div class="gl">Стадия растения</div>
+        <div class="mini" style="margin-top:10px">
+          ${ring("ring-stage",stagePct,st.e)}
+          <div style="min-width:0"><div class="gv sm">${st.n}</div>
+            <div class="gsub">${si<4?`ещё <b style="color:var(--text)">${Math.max(0,nextAt-d.total_points)}</b> б. до «${STAGES[si+1].n}»`
+                                    :"максимальная стадия"}</div></div>
+        </div>
       </div>
-      <div class="legend">
-        <span><i class="lg-acc"></i>принято</span>
-        <span><i class="lg-pend"></i>на проверке</span>
-        <span><i class="lg-rej"></i>отклонено</span>
+
+      <div class="gc vi d2">
+        <div class="gl">Серия дней</div>
+        <div class="mini" style="margin-top:10px">
+          ${ring("ring-streak",streakPct,ico("flame"))}
+          <div style="min-width:0"><div class="gv sm">${streak} дн.</div>
+            <div class="gsub">${streak>=7?"бонус недели взят"
+              :`до <b style="color:var(--text)">+${streak>=5?4:2}</b> ещё ${goalLeft} дн.`}</div></div>
+        </div>
+      </div>
+
+      <div class="w2">${todayStrip(d)}</div>
+
+      <div class="gc d1"><div class="gl">Шагов пройдено</div>
+        <div class="gv" id="s-steps">0</div>
+        <div class="gsub">принято дней: <b style="color:var(--text)">${acc.length}</b></div></div>
+
+      <div class="gc d2"><div class="gl">Место в марафоне</div>
+        <div class="gv">${d.rank?"#"+d.rank:"—"}</div>
+        <div class="gsub">${d.participants?`из ${d.participants} участников`:"пока без рейтинга"}</div></div>
+
+      <div class="gc w2 d3">
+        <div class="row"><div class="sec-title">${ico("bolt")}Активность недели</div>
+          <span class="pill">${ico("steps")}${nfmt(steps)}</span></div>
+        ${week7(d.calendar)}
+      </div>
+
+      <div class="gc w2 d3">
+        <div class="row"><div class="sec-title">${ico("calendar")}Календарь марафона</div>
+          <span class="muted">${fmtDM(d.marathon.start)}–${fmtDM(d.marathon.end)}</span></div>
+        <div class="cal-wd"><div>ПН</div><div>ВТ</div><div>СР</div><div>ЧТ</div><div>ПТ</div>
+          <div>СБ</div><div>ВС</div></div>
+        <div class="cal">${cal}</div>
+        <div class="calsum">
+          <span>сдано <b>${done}</b> из ${d.calendar.length}</span>
+          <span>принято <b>${acc.length}</b></span>
+          ${missed?`<span>пропущено <b>${missed}</b></span>`:""}
+          ${left?`<span>впереди <b>${left}</b> дн.</span>`:""}
+        </div>
+        <div class="legend">
+          <span><i class="lg-acc"></i>принято</span>
+          <span><i class="lg-pend"></i>на проверке</span>
+          <span><i class="lg-rej"></i>отклонено</span>
+        </div>
       </div>
     </div>`;
 
@@ -650,12 +766,10 @@ async function renderProgress(){
     : body;
   V.innerHTML=`<div class="view">${inner}</div>`;
   requestAnimationFrame(()=>{
-    const r=document.getElementById("ring");
-    if(r) r.style.strokeDashoffset=(C*(1-prog/100)).toFixed(1);
-    const sp=document.getElementById("s-pts"); if(sp)countUp(sp,d.total_points);
-    const ss=document.getElementById("s-str"); if(ss)countUp(ss,d.current_streak);
-    const sw=document.getElementById("s-steps");
-    if(sw)countUp(sw,steps,1100,nfmt);
+    const set=(id,pct)=>{const r=document.getElementById(id);
+      if(r)r.style.strokeDashoffset=(C*(1-pct/100)).toFixed(1);};
+    set("ring-stage",stagePct); set("ring-streak",streakPct);
+    const sw=document.getElementById("s-steps"); if(sw)countUp(sw,steps,1100,nfmt);
   });
 }
 

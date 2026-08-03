@@ -213,6 +213,9 @@ async def api_me(x_init_data: str | None = Header(default=None),
         "total_points": await db.total_points(tg_id),
         "rank": summary.get("rnk"),
         "participants": summary.get("total"),
+        # Час по таймзоне марафона — для приветствия. Часы клиента не годятся:
+        # у участника западнее Ташкента «вечер» наступил бы не тогда.
+        "hour": datetime.now(config.tz).hour,
         "today_status": status_by_date.get(today),    # для плитки «Сегодня»
         "current_streak": streak.current_len,
         "best_streak": _best_streak(accepted_steps),
