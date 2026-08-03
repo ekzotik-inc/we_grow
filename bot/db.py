@@ -729,6 +729,41 @@ async def recompute_flashmob(day: date) -> dict:
     return {"rows": rows, "new": new, "flashmob": fm}
 
 
+# ---- Отчётность по активностям (челленджи и флешмобы) ----------------------
+
+async def list_challenges(limit: int = 10) -> list[asyncpg.Record]:
+    return await pool().fetch(
+        "SELECT * FROM challenges ORDER BY challenge_date DESC LIMIT $1", limit)
+
+
+async def list_flashmobs(limit: int = 10) -> list[asyncpg.Record]:
+    return await pool().fetch(
+        "SELECT * FROM flashmobs ORDER BY flash_date DESC LIMIT $1", limit)
+
+
+async def day_participation(day: date, team_ids: list[int]) -> list[asyncpg.Record]:
+    """Все, кому активность была доступна (активные участники нужных команд),
+    вместе с их результатом за этот день — или без него, если не сдавали."""
+    return await pool().fetch(
+        """SELECT p.telegram_id, p.full_name, p.team_id, t.name AS team_name,
+                  d.status, d.steps, d.points, d.created_at
+             FROM participants p
+             LEFT JOIN teams t ON t.id = p.team_id
+             LEFT JOIN daily_entries d ON d.participant_id = p.telegram_id
+                                      AND d.entry_date = $1
+            WHERE p.approved_at IS NOT NULL AND p.disqualified_at IS NULL
+              AND p.team_id IS NOT NULL
+              AND (cardinality($2::int[]) = 0 OR p.team_id = ANY($2::int[]))
+            ORDER BY t.name NULLS LAST, p.full_name""",
+        day, team_ids)
+
+
+async def team_bonus_rows(day: date) -> dict[int, int]:
+    rows = await pool().fetch(
+        "SELECT team_id, points FROM team_bonuses WHERE bonus_date=$1", day)
+    return {r["team_id"]: r["points"] for r in rows}
+
+
 # ---- Лидерборд -----------------------------------------------------------
 
 async def team_leaderboard() -> list[asyncpg.Record]:

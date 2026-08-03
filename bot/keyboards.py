@@ -96,6 +96,7 @@ def admin_panel_kb() -> InlineKeyboardMarkup:
     b.button(text="🗑 Отмена результата", callback_data="adm:undo")
     b.button(text="🎲 Тайный челлендж", callback_data="adm:chal")
     b.button(text="🤝 Командный флешмоб", callback_data="adm:flash")
+    b.button(text="📊 Активности и участие", callback_data="adm:acts")
     b.button(text="👥 Участники", callback_data="adm:users")
     b.button(text="🌳 Команды", callback_data="adm:teams")
     b.button(text="🏆 Лидерборд", callback_data="adm:board")
