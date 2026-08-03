@@ -102,6 +102,57 @@
   .lg-acc{background:var(--tq)}.lg-pend{background:var(--gold)}.lg-rej{background:#ff7a7a}
 
   /* Списки участников/команд */
+  /* ---- Лидерборд: SVG-иконки, подиум лиг, шкалы очков ---------------- */
+  .ic{width:20px;height:20px;flex:none;fill:none;stroke:currentColor;stroke-width:1.7;
+    stroke-linecap:round;stroke-linejoin:round;color:var(--tq)}
+  .sec-title.warm .ic{color:var(--gold)}
+  .sec-title.vi .ic{color:var(--vi)}
+  .lsub{font-size:11.5px;color:var(--muted);margin:3px 0 2px;line-height:1.4}
+
+  .podium{display:flex;align-items:flex-end;justify-content:center;gap:8px;margin-top:14px;
+    border-bottom:1px solid rgba(255,255,255,.1)}
+  .pod{flex:1 1 0;min-width:0;display:flex;flex-direction:column;align-items:center;gap:6px}
+  .pod.p1{flex:1.22 1 0}
+  .pod .crown{width:22px;height:22px;color:var(--gold);margin-bottom:-3px}
+  .pod .av{width:50px;height:50px;border-radius:17px;display:grid;place-items:center;
+    font-weight:800;font-size:15px;color:#14121b;background:var(--grad);
+    box-shadow:0 8px 20px rgba(0,209,210,.22)}
+  .pod.p1 .av{width:60px;height:60px;border-radius:21px;font-size:17px;
+    background:var(--grad-warm);box-shadow:0 10px 26px rgba(255,198,92,.3)}
+  .pod .nm{font-size:11px;font-weight:700;text-align:center;line-height:1.3;width:100%;
+    padding:0 2px;
+    min-height:30px;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;
+    -webkit-box-orient:vertical}
+  .pod .pt{font-size:13px;font-weight:900;color:var(--tq)}
+  .pod.p1 .pt{color:var(--gold)}
+  .pod .base{width:100%;height:54px;margin-top:2px;border-radius:14px 14px 0 0;
+    border:1px solid rgba(255,255,255,.09);border-bottom:none;display:grid;place-items:center;
+    font-size:15px;font-weight:900;color:var(--muted);
+    background:linear-gradient(180deg,rgba(255,255,255,.08),rgba(255,255,255,.01));
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.08)}
+  .pod.p1 .base{height:78px;color:var(--gold);border-color:rgba(255,198,92,.38);
+    background:linear-gradient(180deg,rgba(255,255,255,.13),rgba(255,255,255,.02));
+    box-shadow:inset 0 1px 0 rgba(255,198,92,.45)}
+  .pod.p3 .base{height:42px}
+
+  .brow{padding:12px 0;border-bottom:1px solid var(--line)}
+  .brow:last-child{border-bottom:none}
+  .bhead{display:flex;align-items:center;gap:11px}
+  .bhead .nm{flex:1;font-weight:700;font-size:14px;min-width:0;
+    overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .bhead .pts{font-weight:900;font-size:14px;color:var(--tq)}
+  .lbar{height:5px;border-radius:99px;background:rgba(255,255,255,.06);margin:9px 0 0 37px;
+    overflow:hidden}
+  .lbar i{display:block;height:100%;border-radius:99px;background:var(--grad);
+    animation:grow .9s cubic-bezier(.2,.8,.2,1) both}
+  @keyframes grow{from{width:0}}
+  .lchip{width:26px;height:26px;border-radius:9px;flex:none;display:grid;place-items:center;
+    font-size:12px;font-weight:800;background:var(--bg2);color:var(--muted);
+    border:1px solid var(--line)}
+  .lchip.c1{background:var(--grad-warm);color:#2a1e05;border-color:transparent}
+  .lchip.c2{background:linear-gradient(135deg,#dfe5ee,#9aa4b2);color:#20242c;border-color:transparent}
+  .lchip.c3{background:linear-gradient(135deg,#e3a877,#b9764a);color:#2a1b10;border-color:transparent}
+
   .item{display:flex;align-items:center;gap:12px;padding:11px 0;border-bottom:1px solid var(--line)}
   .item:last-child{border-bottom:none}
   .rk{width:28px;height:28px;border-radius:9px;background:var(--bg2);display:grid;place-items:center;
@@ -225,6 +276,24 @@
 </style>
 </head>
 <body>
+<!-- Спрайт иконок лидерборда: рисуем линиями в цвет темы, а не эмодзи —
+     так они одинаково выглядят на iOS и Android и тянутся с палитрой. -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
+  <symbol id="i-trophy" viewBox="0 0 24 24">
+    <path d="M7 4h10v5a5 5 0 0 1-10 0V4Z"/><path d="M7 5H4v2a3 3 0 0 0 3 3"/>
+    <path d="M17 5h3v2a3 3 0 0 1-3 3"/><path d="M12 14v4"/><path d="M8.5 21h7"/></symbol>
+  <symbol id="i-crown" viewBox="0 0 24 24">
+    <path d="M4.2 18.5h15.6"/><path d="M4.2 18.5 2.9 7.6l5.2 3.1L12 4.5l3.9 6.2 5.2-3.1-1.3 10.9Z"/></symbol>
+  <symbol id="i-flower" viewBox="0 0 24 24">
+    <circle cx="12" cy="6.7" r="2.7"/><circle cx="17.2" cy="10.5" r="2.7"/>
+    <circle cx="15.2" cy="16.6" r="2.7"/><circle cx="8.8" cy="16.6" r="2.7"/>
+    <circle cx="6.8" cy="10.5" r="2.7"/><circle cx="12" cy="12" r="1.5"/></symbol>
+  <symbol id="i-leaf" viewBox="0 0 24 24">
+    <path d="M4.6 19.4c-.6-8 4.8-14 15.3-14.8.8 10.4-5.2 15.6-12.4 15.6-1.2 0-2.1-.3-2.9-.8Z"/>
+    <path d="M5.2 19.6C8.4 14.4 12 11.4 16.4 9.6"/></symbol>
+  <symbol id="i-bolt" viewBox="0 0 24 24">
+    <path d="M13.2 2.5 4.8 13.6h6.1l-1.1 7.9 8.4-11.1h-6.1l1.1-7.9Z"/></symbol>
+</svg>
 <div class="wrap">
   <div class="app-head">
     <div class="logo">🪴</div>
@@ -401,18 +470,54 @@ async function renderTeam(){
     countUp(document.getElementById("t-mem"),d.members.length); });
 }
 
+// ---- Лидерборд: заголовок с SVG, подиум лиг и шкалы очков ----------------
+const initials=(n)=>(((n||"").trim().split(/\s+/).slice(0,2).map(w=>w[0]||"").join(""))||"?").toUpperCase();
+const shortName=(n)=>((n||"").trim().split(/\s+/).slice(0,2).join(" ")||"—");
+const secHead=(icon,title,sub,cls="")=>
+  `<div class="sec-title ${cls}"><svg class="ic"><use href="#i-${icon}"/></svg>${title}</div>`+
+  (sub?`<div class="lsub">${sub}</div>`:"");
+
+// Подиум: 2-е место слева, 1-е по центру и выше, 3-е справа.
+function podium(list){
+  const l=list||[];
+  if(!l.length) return emptyRow();
+  return `<div class="podium">`+[1,0,2].filter(i=>l[i]).map(i=>{
+    const p=l[i];
+    return `<div class="pod p${i+1}">`+
+      (i===0?`<svg class="ic crown"><use href="#i-crown"/></svg>`:"")+
+      `<div class="av">${esc(initials(p.name))}</div>
+       <div class="nm">${esc(shortName(p.name))}</div>
+       <div class="pt">${p.points}</div>
+       <div class="base">${i+1}</div></div>`;
+  }).join("")+`</div>`;
+}
+
+// Строки со шкалой: длина полосы — доля от результата лидера.
+function bars(list,people){
+  const l=list||[];
+  if(!l.length) return emptyRow();
+  const max=Math.max(...l.map(x=>x.points),1);
+  return l.map((x,i)=>`<div class="brow">
+    <div class="bhead"><div class="lchip ${i<3?"c"+(i+1):""}">${i+1}</div>
+      <div class="nm">${esc(people?shortName(x.name):(x.name||"—"))}</div>
+      <div class="pts">${x.points}</div></div>
+    <div class="lbar"><i style="width:${Math.max(x.points>0?6:0,Math.round(x.points/max*100))}%"></i></div>
+  </div>`).join("");
+}
+
 async function renderBoard(){
   const my=++renderGen;
   let d; try{ d=await api("/api/leaderboard"); }catch(e){ if(my===renderGen)notice(e); return; }
   if(my!==renderGen) return;
-  const teams=d.teams.map((t,i)=>`<div class="item">${rk(i)}<div class="nm">${esc(t.name)}</div><div class="pts">${t.points}</div></div>`).join("")||emptyRow();
-  const people=(list)=>(list||[]).map((p,i)=>`<div class="item">${rk(i)}<div class="nm">${esc(p.name)}</div><div class="pts">${p.points}</div></div>`).join("")||emptyRow();
-  const top=people(d.top), women=people(d.top_women), men=people(d.top_men);
   V.innerHTML=`<div class="view">
-    <div class="card d1"><div class="sec-title" style="margin-bottom:6px">🏆 Команды</div>${teams}</div>
-    <div class="card d2"><div class="sec-title" style="margin-bottom:6px">👩 Топ-3 среди женщин</div>${women}</div>
-    <div class="card d2"><div class="sec-title" style="margin-bottom:6px">👨 Топ-3 среди мужчин</div>${men}</div>
-    <div class="card d3"><div class="sec-title" style="margin-bottom:6px">👣 Топ-10 участников</div>${top}</div></div>`;
+    <div class="card d1">${secHead("trophy","Команды","Очки собираются из результатов всех участников")}
+      ${bars(d.teams,false)}</div>
+    <div class="card d2">${secHead("flower","Женская лига","Тройка лидеров марафона","warm")}
+      ${podium(d.top_women)}</div>
+    <div class="card d2">${secHead("leaf","Мужская лига","Тройка лидеров марафона","vi")}
+      ${podium(d.top_men)}</div>
+    <div class="card d3">${secHead("bolt","Общий зачёт","Топ-10 участников, все лиги вместе")}
+      ${bars(d.top,true)}</div></div>`;
 }
 
 function stepyBox(html){

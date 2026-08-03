@@ -557,34 +557,53 @@ def weekly_bonus_note(bonus: int) -> str:
         "Стабильность — твоя суперсила 💪 Так держать!")
 
 
-def _board_rows(items, key) -> str:
-    medals = ["🥇", "🥈", "🥉"]
-    out = []
+def short_name(name: str | None) -> str:
+    """«Ахмедов Жасур Улугбек угли» → «Ахмедов Жасур»: в топе отчество только
+    съедает строку."""
+    parts = (name or "").split()
+    return " ".join(parts[:2]) if parts else "—"
+
+
+_MEDALS = ["🥇", "🥈", "🥉"]
+
+
+def _board_block(items, key, unit: str = "") -> str:
+    """Секция лидерборда красивой цитатой: медали, лидер — жирным."""
+    rows = []
     for i, it in enumerate(items):
-        mark = medals[i] if i < 3 else f"{i + 1}."
-        out.append(f"{mark} {escape(it[key] or '—')} — <b>{it['points']}</b>")
-    return "\n".join(out) or "— пока пусто —"
+        mark = pe(_MEDALS[i]) if i < 3 else f"<code>{i + 1}</code>"
+        name = escape(short_name(it[key]) if key == "full_name" else (it[key] or "—"))
+        if i == 0:
+            name = f"<b>{name}</b>"
+        rows.append(f"{mark} {name} — <b>{it['points']}</b>{unit}")
+    body = "\n".join(rows) or "<i>пока пусто — всё впереди</i>"
+    return f"<blockquote>{body}</blockquote>"
 
 
 def render_leaderboard(teams, top=None, header: str = "Лидерборд",
                        top_title: str = "Участники",
-                       women=None, men=None) -> str:
-    """Лидерборд: команды + раздельные топы (женский/мужской).
+                       women=None, men=None, subtitle: str | None = None) -> str:
+    """Лидерборд: команды + две лиги (женская/мужская).
 
     women/men — списки из db.top_by_gender. Если переданы, общий топ (top)
-    не выводится: в чате два коротких топа читаются лучше одного длинного.
+    не выводится: две короткие лиги читаются в чате лучше одного длинного
+    списка.
     """
-    def rows(items):
+    def block(items, unit=""):
         key = "full_name" if items and "full_name" in items[0] else "name"
-        return _board_rows(items, key)
+        return _board_block(items, key, unit)
 
-    text = f"🏆 <b>{escape(header)}</b>\n\n<b>Команды</b>\n{rows(teams)}"
+    head = (f"{pe('👑')} <b>{escape(header.upper())}</b>\n"
+            f"<i>{escape(subtitle or 'Step Together · растём вместе')}</i>\n\n")
+    text = head + f"{pe('🌟')} <b>Команды</b>\n{block(teams)}"
     if women is not None or men is not None:
-        text += (f"\n\n👩 <b>Топ-3 среди женщин</b>\n{rows(women or [])}"
-                 f"\n\n👨 <b>Топ-3 среди мужчин</b>\n{rows(men or [])}")
+        text += (f"\n\n🌸 <b>Женская лига</b>\n{block(women or [])}"
+                 f"\n\n🌿 <b>Мужская лига</b>\n{block(men or [])}")
     elif top is not None:
-        text += f"\n\n<b>{escape(top_title)}</b>\n{rows(top)}"
-    return text
+        text += f"\n\n{pe('👣')} <b>{escape(top_title)}</b>\n{block(top)}"
+    return text + "\n\n" + stepy(
+        "Каждый шаг двигает не только тебя, но и всю команду. "
+        "Разрыв в пару баллов закрывается одной вечерней прогулкой 🌿")
 
 
 # --- Рассылка-инструкция: правильный скриншот -------------------------------
