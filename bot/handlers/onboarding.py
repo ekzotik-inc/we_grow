@@ -4,7 +4,7 @@ from __future__ import annotations
 import random
 
 from aiogram import F, Router
-from aiogram.filters import Command, CommandStart
+from aiogram.filters import Command, CommandObject, CommandStart
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
 from aiogram.types import (
@@ -29,7 +29,8 @@ class Onboarding(StatesGroup):
 
 
 @router.message(CommandStart())
-async def cmd_start(message: Message, state: FSMContext) -> None:
+async def cmd_start(message: Message, state: FSMContext,
+                    command: CommandObject | None = None) -> None:
     await state.clear()
     tg_id = message.from_user.id
     await db.upsert_participant_start(tg_id)
@@ -43,6 +44,13 @@ async def cmd_start(message: Message, state: FSMContext) -> None:
     p = await db.get_participant(tg_id)
     if p and p["team_id"]:
         if p["approved_at"]:
+            # /start steps — deep link кнопки «Сдать» в Mini App: сразу
+            # открываем сдачу шагов, а не главное меню.
+            if command is not None and (command.args or "").strip() == "steps":
+                from bot.handlers.steps import start_steps_flow
+                await send_main_menu(message.bot, tg_id, texts.STEPS_FROM_APP)
+                await start_steps_flow(message, state)
+                return
             # Персональная сводка: ФИО, команда с местом, шаги, баллы, серия.
             summary = await db.participant_summary(tg_id)
             greeting = texts.profile_card(summary) if summary else texts.welcome_back()

@@ -60,8 +60,9 @@ async def _require_approved(message: Message):
     return p
 
 
-@router.message(lambda m: bool(m.text) and m.text == settings.label("steps"))
-async def ask_steps(message: Message, state: FSMContext) -> None:
+async def start_steps_flow(message: Message, state: FSMContext) -> None:
+    """Вход в сдачу шагов. Общий для кнопки меню и deep link из Mini App
+    (кнопка «Сдать» открывает бота ссылкой ?start=steps)."""
     if not await _require_approved(message):
         return
     today = _today()
@@ -84,6 +85,11 @@ async def ask_steps(message: Message, state: FSMContext) -> None:
     # нет записи или отклонена — начинаем отправку
     await message.answer(texts.STEP1_NUMBER)
     await state.set_state(Steps.number)
+
+
+@router.message(lambda m: bool(m.text) and m.text == settings.label("steps"))
+async def ask_steps(message: Message, state: FSMContext) -> None:
+    await start_steps_flow(message, state)
 
 
 @router.message(Steps.number, F.text)

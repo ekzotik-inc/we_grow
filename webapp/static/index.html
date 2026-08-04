@@ -516,6 +516,17 @@ function session(){ try{ return localStorage.getItem("st_session")||""; }catch(e
 function setSession(t){ try{ localStorage.setItem("st_session",t); }catch(e){} }
 function clearSession(){ try{ localStorage.removeItem("st_session"); }catch(e){} }
 function openBot(){ try{ tg?.openTelegramLink?.(BOTLINK); }catch(e){ location.href=BOTLINK; } }
+// «Сдать» → бот + сразу запуск сдачи шагов. Deep link ?start=steps: бот ловит
+// payload и открывает тот же шаг, что кнопка «Шаги за сегодня». Мини-апп
+// закрываем сами — открытие ссылки на ТОТ ЖЕ чат клиент иначе игнорирует, и
+// визуально «ничего не происходит».
+function openSteps(){
+  const url=BOTLINK+"?start=steps";
+  try{ tg?.HapticFeedback?.impactOccurred?.("light"); }catch(e){}
+  try{ tg?.openTelegramLink?.(url); }catch(e){}
+  if(!tg?.openTelegramLink){ location.href=url; return; }
+  setTimeout(()=>{ try{ tg?.close?.(); }catch(e){} },150);
+}
 // Ждём до ~3с, пока initData появится (первый запуск), затем стартуем.
 async function waitInit(ms=3000){
   const step=100; let waited=0;
@@ -588,11 +599,11 @@ function todayStrip(d){
     <div class="tt"><b>Результат на проверке</b><span>${nfmt(t?.steps||0)} шагов ждут подтверждения P&amp;C</span></div></div>`;
   if(st==="rejected") return `<div class="tdy bad"><div class="tic">${ico("cross")}</div>
     <div class="tt"><b>Результат отклонён</b><span>Проверь скриншот и пришли заново</span></div>
-    <button class="go" onclick="openBot()">Сдать</button></div>`;
+    <button class="go" onclick="openSteps()">Сдать</button></div>`;
   if(!t) return "";                     // марафон ещё не идёт
   return `<div class="tdy none"><div class="tic">${ico("steps")}</div>
     <div class="tt"><b>Сегодня ещё не сдан</b><span>Пришли число шагов и скриншот до 23:55</span></div>
-    <button class="go" onclick="openBot()">Сдать</button></div>`;
+    <button class="go" onclick="openSteps()">Сдать</button></div>`;
 }
 
 // Спарклайн шагов по дням марафона: плавная линия + заливка под ней.
