@@ -252,16 +252,9 @@ async def api_leaderboard(x_init_data: str | None = Header(default=None),
     await _auth(x_init_data, x_session)
     teams = await db.team_leaderboard()
     top = await db.top_participants(10)
-    women, men = await db.top_by_gender(3)
-
-    def people(rows):
-        return [{"name": p["full_name"] or "—", "points": p["points"]} for p in rows]
-
     return {
         "teams": [{"name": t["name"], "points": t["points"]} for t in teams],
-        "top": people(top),
-        "top_women": people(women),
-        "top_men": people(men),
+        "top": [{"name": p["full_name"] or "—", "points": p["points"]} for p in top],
     }
 
 

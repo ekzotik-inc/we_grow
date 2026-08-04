@@ -79,9 +79,8 @@ async def monday_leaderboard(bot: Bot) -> None:
     if not _marathon_active():
         return
     teams = await db.team_leaderboard()
-    women, men = await db.top_by_gender(3)
-    text = texts.render_leaderboard(teams[:3], header="Итоги недели",
-                                    women=women, men=men)
+    top = await db.top_participants(10)
+    text = texts.render_leaderboard(teams[:3], top, header="Итоги недели")
     await notify.broadcast_all(bot, text)
 
 

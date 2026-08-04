@@ -847,15 +847,14 @@ async function renderBoard(){
   const my=++renderGen;
   let d; try{ d=await api("/api/leaderboard"); }catch(e){ if(my===renderGen)notice(e); return; }
   if(my!==renderGen) return;
+  const top=d.top||[];
   V.innerHTML=`<div class="view">
     <div class="card d1">${secHead("trophy","Команды","Очки собираются из результатов всех участников")}
       ${bars(d.teams,false)}</div>
-    <div class="card d2">${secHead("flower","Женская лига","Тройка лидеров марафона","warm")}
-      ${podium(d.top_women)}</div>
-    <div class="card d2">${secHead("leaf","Мужская лига","Тройка лидеров марафона","vi")}
-      ${podium(d.top_men)}</div>
-    <div class="card d3">${secHead("bolt","Общий зачёт","Топ-10 участников, все лиги вместе")}
-      ${bars(d.top,true)}</div></div>`;
+    <div class="card d2">${secHead("crown","Тройка лидеров","Первые три места марафона","warm")}
+      ${podium(top.slice(0,3))}</div>
+    <div class="card d3">${secHead("bolt","Топ-10 участников","Все участники марафона в общем зачёте")}
+      ${bars(top,true)}</div></div>`;
 }
 
 function stepyBox(html){

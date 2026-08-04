@@ -584,14 +584,9 @@ def _board_block(items, key, unit: str = "") -> str:
 
 
 def render_leaderboard(teams, top=None, header: str = "Лидерборд",
-                       top_title: str = "Участники",
-                       women=None, men=None, subtitle: str | None = None) -> str:
-    """Лидерборд: команды + две лиги (женская/мужская).
-
-    women/men — списки из db.top_by_gender. Если переданы, общий топ (top)
-    не выводится: две короткие лиги читаются в чате лучше одного длинного
-    списка.
-    """
+                       top_title: str = "Топ-10 участников",
+                       subtitle: str | None = None) -> str:
+    """Лидерборд: команды + общий топ участников."""
     def block(items, unit=""):
         key = "full_name" if items and "full_name" in items[0] else "name"
         return _board_block(items, key, unit)
@@ -599,10 +594,7 @@ def render_leaderboard(teams, top=None, header: str = "Лидерборд",
     head = (f"{pe('👑')} <b>{escape(header.upper())}</b>\n"
             f"<i>{escape(subtitle or 'Step Together · растём вместе')}</i>\n\n")
     text = head + f"{pe('🌟')} <b>Команды</b>\n{block(teams)}"
-    if women is not None or men is not None:
-        text += (f"\n\n🌸 <b>Женская лига</b>\n{block(women or [])}"
-                 f"\n\n🌿 <b>Мужская лига</b>\n{block(men or [])}")
-    elif top is not None:
+    if top is not None:
         text += f"\n\n{pe('👣')} <b>{escape(top_title)}</b>\n{block(top)}"
     return text + "\n\n" + stepy(
         "Каждый шаг двигает не только тебя, но и всю команду. "
