@@ -23,11 +23,18 @@ def _is_admin(tg_id: int) -> bool:
     return settings.is_admin(tg_id)
 
 
+def _is_owner(tg_id: int) -> bool:
+    """Владелец = админ из env ADMIN_IDS. Только ему доступен сброс марафона:
+    доп-админы из /addadmin стереть всю базу не могут."""
+    return tg_id in config.admin_ids
+
+
 @router.message(Command("admin"))
 async def admin_panel(message: Message) -> None:
     if not _is_admin(message.from_user.id):
         return
-    await message.answer(texts.ADMIN_PANEL, reply_markup=keyboards.admin_panel_kb())
+    await message.answer(texts.ADMIN_PANEL,
+                         reply_markup=keyboards.admin_panel_kb(_is_owner(message.from_user.id)))
 
 
 async def _send_export(bot, chat_id: int) -> None:
@@ -66,8 +73,63 @@ async def adm_design(cb: CallbackQuery) -> None:
 async def adm_back(cb: CallbackQuery) -> None:
     if not _is_admin(cb.from_user.id):
         return await cb.answer()
-    await cb.message.edit_text(texts.ADMIN_PANEL, reply_markup=keyboards.admin_panel_kb())
+    await cb.message.edit_text(
+        texts.ADMIN_PANEL,
+        reply_markup=keyboards.admin_panel_kb(_is_owner(cb.from_user.id)))
     await cb.answer()
+
+
+# ---- Сброс марафона: полный перезапуск с нуля ------------------------------
+
+class Wipe(StatesGroup):
+    confirm = State()
+
+
+WIPE_WORD = "СБРОС"
+
+
+@router.callback_query(F.data == "adm:wipe")
+async def wipe_start(cb: CallbackQuery, state: FSMContext) -> None:
+    if not _is_owner(cb.from_user.id):
+        return await cb.answer("Сброс доступен только владельцу бота (ADMIN_IDS).",
+                               show_alert=True)
+    s = await db.marathon_stats()
+    await state.set_state(Wipe.confirm)
+    await cb.message.answer(
+        "🧨 <b>Полный сброс марафона</b>\n\n"
+        "<b>Будет удалено безвозвратно:</b>\n"
+        f"• участники — <b>{s['participants']}</b>\n"
+        f"• результаты по дням — <b>{s['entries']}</b>\n"
+        f"• недельные отчёты и бонусы — <b>{s['weekly']}</b>\n"
+        f"• челленджи — <b>{s['challenges']}</b>, флешмобы — <b>{s['flashmobs']}</b>\n"
+        "• серии, командные очки, история рассылок\n\n"
+        f"<b>Останется:</b> команды ({s['teams']}), настройки, каналы, "
+        "список админов, оформление.\n\n"
+        f"Участникам придётся зарегистрироваться заново через /start.\n\n"
+        f"Если уверены — пришлите слово <code>{WIPE_WORD}</code> "
+        "(ровно так, заглавными). Любой другой текст отменит сброс, "
+        "как и /cancel.")
+    await cb.answer()
+
+
+@router.message(Wipe.confirm, F.text)
+async def wipe_do(message: Message, state: FSMContext) -> None:
+    await state.clear()
+    if not _is_owner(message.from_user.id):
+        return
+    if message.text.strip() != WIPE_WORD:
+        await message.answer("Сброс отменён — слово не совпало. Ничего не удалено.")
+        return
+    s = await db.wipe_marathon()
+    await message.answer(
+        "🧨 <b>Марафон сброшен</b>\n\n"
+        f"Удалено: участников <b>{s['participants']}</b>, результатов "
+        f"<b>{s['entries']}</b>, недельных отчётов <b>{s['weekly']}</b>, "
+        f"челленджей <b>{s['challenges']}</b>, флешмобов <b>{s['flashmobs']}</b>.\n"
+        f"Команды на месте: <b>{s['teams']}</b>.\n\n"
+        f"📅 Даты нового марафона: <b>{texts.marathon_dates()}</b>, "
+        f"таймзона <b>{config.tz_name}</b>.\n"
+        "Можно запускать: участники нажимают /start и регистрируются заново.")
 
 
 @router.callback_query(F.data.startswith("appr:"))

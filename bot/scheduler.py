@@ -12,7 +12,7 @@ from bot.config import config
 
 
 def _marathon_active() -> bool:
-    """Напоминания шлём только в даты марафона (17.07–07.08)."""
+    """Напоминания шлём только в даты марафона (config.marathon_start..end)."""
     today = datetime.now(config.tz).date()
     return config.marathon_start <= today <= config.marathon_end
 

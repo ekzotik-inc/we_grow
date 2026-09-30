@@ -578,7 +578,7 @@ function rk(i){ return `<div class="rk ${i===0?'g1':i===1?'g2':i===2?'g3':''}">$
 let renderGen=0;
 
 // День недели по ISO-дате (0=Пн … 6=Вс) через конгруэнцию Целлера.
-// Именно так, а не через new Date(): у участника западнее Ташкента
+// Именно так, а не через new Date(): у участника западнее Бишкека
 // разбор даты браузером сдвинул бы календарь на день.
 function isoDow(iso){
   let [y,m,d]=String(iso).split("-").map(Number);
@@ -763,7 +763,7 @@ async function renderProgress(){
     </div>`;
 
   // До старта марафона «Прогресс» заблюрен + дисклеймер. Считаем по
-  // СЕРВЕРНЫМ флагам future (таймзона Ташкента), а не по часам клиента.
+  // СЕРВЕРНЫМ флагам future (таймзона Бишкека), а не по часам клиента.
   const notStarted=d.calendar.length>0&&d.calendar.every(c=>c.future);
   const inner=notStarted
     ? `<div class="locked"><div class="blurwrap">${body}</div>
@@ -869,7 +869,20 @@ function acc(icon,title,sub,body,open=false){
     <div class="acc-body">${body}</div></details>`;
 }
 
-function renderRules(){
+// Даты марафона для статичных экранов: кешируем из любого ответа API
+// (в /api/me приходит marathon.start/end), чтобы не зашивать их в текст.
+let MARATHON=null;
+const MONTHS_GEN=["января","февраля","марта","апреля","мая","июня","июля",
+                  "августа","сентября","октября","ноября","декабря"];
+function MARATHON_TEXT(){
+  if(!MARATHON) return "уточняются";
+  const [y1,m1,d1]=MARATHON.start.split("-").map(Number);
+  const [y2,m2,d2]=MARATHON.end.split("-").map(Number);
+  return `${d1} ${MONTHS_GEN[m1-1]} — ${d2} ${MONTHS_GEN[m2-1]} ${y2}`;
+}
+
+async function renderRules(){
+  if(!MARATHON){ try{ MARATHON=(await api("/api/me")).marathon||null; }catch(e){} }
   const r=[
     "Участвовать могут все сотрудники <b>нашей дружной компании</b>.",
     "Регистрация и распределение по командам — прямо в боте.",
@@ -877,7 +890,7 @@ function renderRules(){
     "В команде — от <b>8 до 10</b> человек.",
     "Если команда заполнена, P&C предложит другую.",
     "Присоединяясь, ты обещаешь дойти до финиша 🏁",
-    "Даты: <b>17 июля — 7 августа</b> включительно.",
+    `Даты: <b>${MARATHON_TEXT()}</b> включительно.`,
     "Каждую неделю выходит лидерборд участников и команд.",
     "Шаги присылай <b>каждый день до 23:55</b>: число + скриншот из Google Health.",
     "В <b>воскресенье с 22:00 до 23:55</b> — еженедельный отчёт: скриншот недельной статистики (кнопка «📈 Еженедельный отчёт»).",

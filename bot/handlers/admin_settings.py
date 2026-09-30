@@ -1306,8 +1306,8 @@ async def bc_later(cb: CallbackQuery, state: FSMContext) -> None:
     await state.set_state(BC.wait_when)
     now = datetime.now(config.tz)
     await cb.message.answer(
-        "⏰ Когда отправить? Пришли дату и время (таймзона Ташкент):\n"
-        "<code>ДД.ММ ЧЧ:ММ</code> — например <code>17.07 09:00</code>\n"
+        "⏰ Когда отправить? Пришли дату и время (таймзона Бишкек):\n"
+        "<code>ДД.ММ ЧЧ:ММ</code> — например <code>05.10 09:00</code>\n"
         "или просто <code>ЧЧ:ММ</code> — сегодня.\n\n"
         f"Сейчас: {now.strftime('%d.%m %H:%M')}. /cancel — отмена.")
     await cb.answer()
@@ -1319,7 +1319,7 @@ async def bc_when_save(message: Message, state: FSMContext) -> None:
     now = datetime.now(config.tz)
     m = re.fullmatch(r"(?:(\d{1,2})\.(\d{1,2})(?:\.(\d{4}))?\s+)?(\d{1,2}):(\d{2})", raw)
     if not m:
-        await message.answer("Не понял формат. Пример: <code>17.07 09:00</code> или <code>21:30</code>")
+        await message.answer("Не понял формат. Пример: <code>05.10 09:00</code> или <code>21:30</code>")
         return
     dd, mm, yy, hh, mi = m.groups()
     try:
@@ -1339,7 +1339,7 @@ async def bc_when_save(message: Message, state: FSMContext) -> None:
     await state.clear()
     await message.answer(
         f"⏰ Рассылка #{sb_id} запланирована на <b>{when.strftime('%d.%m.%Y %H:%M')}</b> "
-        f"(Ташкент) ✅\nСписок и отмена: /scheduled")
+        f"(Бишкек) ✅\nСписок и отмена: /scheduled")
 
 
 @router.message(Command("scheduled"))
@@ -1359,7 +1359,7 @@ async def cmd_scheduled(message: Message) -> None:
         when = r["scheduled_at"].astimezone(config.tz).strftime("%d.%m.%Y %H:%M")
         kb = InlineKeyboardMarkup(inline_keyboard=[[
             InlineKeyboardButton(text="🗑 Отменить", callback_data=f"sbdel:{r['id']}")]])
-        await message.answer(f"⏰ <b>#{r['id']}</b> — {when} (Ташкент)\n{escape(preview)}",
+        await message.answer(f"⏰ <b>#{r['id']}</b> — {when} (Бишкек)\n{escape(preview)}",
                              reply_markup=kb)
 
 

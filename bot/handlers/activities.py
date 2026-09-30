@@ -13,7 +13,7 @@ from aiogram.types import CallbackQuery, InlineKeyboardButton
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 
 from backend.scoring import points_for_steps
-from bot import db, settings, texts
+from bot import db, notify, settings, texts
 from bot.config import config
 
 router = Router()
@@ -91,9 +91,111 @@ async def acts_list(cb: CallbackQuery) -> None:
 def _detail_kb(kind: str, day: date) -> InlineKeyboardBuilder:
     b = InlineKeyboardBuilder()
     b.button(text="👥 Поимённо", callback_data=f"act{kind}p:{day.isoformat()}")
+    b.button(text="⏹ Остановить и отменить", callback_data=f"act{kind}x:{day.isoformat()}")
     b.button(text="⬅️ К списку", callback_data="adm:acts")
     b.adjust(1)
     return b
+
+
+def _stop_confirm_kb(kind: str, day: date) -> InlineKeyboardBuilder:
+    b = InlineKeyboardBuilder()
+    b.button(text="⏹ Да, остановить", callback_data=f"act{kind}xy:{day.isoformat()}")
+    b.button(text="Назад", callback_data=f"act{kind}:{day.isoformat()}")
+    b.adjust(1)
+    return b
+
+
+# ---- Остановка активности (в любой день, не только сегодня) ----------------
+
+@router.callback_query(F.data.startswith("actcxy:"))
+async def act_challenge_stop(cb: CallbackQuery) -> None:
+    """Останавливает челлендж: удаляет его и возвращает базовые баллы за день."""
+    if not _is_admin(cb.from_user.id):
+        return await cb.answer()
+    day = date.fromisoformat(cb.data.split(":")[1])
+    ch = await db.challenge_for(day)
+    if ch is None:
+        return await cb.answer("Челлендж уже остановлен.", show_alert=True)
+    await db.delete_challenge(day)
+    changed = await db.recount_day_points(day, None)      # вернуть обычные баллы
+    sent = 0
+    if ch["announced_at"]:                                 # знали о нём — скажем и об отмене
+        ids = await db.team_member_ids(list(ch["team_ids"]))
+        sent = await notify.broadcast(cb.bot, ids, texts.challenge_cancelled(ch))
+    await cb.message.edit_text(
+        f"⏹ <b>Челлендж {day.strftime('%d.%m.%Y')} остановлен</b>\n"
+        f"Баллы за день пересчитаны по обычным правилам: изменено записей "
+        f"<b>{changed}</b>.\n"
+        + (f"Участникам отправлено уведомление: <b>{sent}</b>." if ch["announced_at"]
+           else "Пуш не отправляли — участники о челлендже не знали."),
+        reply_markup=InlineKeyboardBuilder()
+            .button(text="⬅️ К списку", callback_data="adm:acts").as_markup())
+    await cb.answer("Остановлен")
+
+
+@router.callback_query(F.data.startswith("actcx:"))
+async def act_challenge_stop_confirm(cb: CallbackQuery) -> None:
+    if not _is_admin(cb.from_user.id):
+        return await cb.answer()
+    day = date.fromisoformat(cb.data.split(":")[1])
+    ch = await db.challenge_for(day)
+    if ch is None:
+        return await cb.answer("Челлендж не найден.", show_alert=True)
+    note = ("\n\nУчастникам уйдёт уведомление об отмене — пуш о челлендже они уже получили."
+            if ch["announced_at"] else "")
+    await cb.message.edit_text(
+        f"⏹ Остановить челлендж за <b>{day.strftime('%d.%m.%Y')}</b>?\n"
+        f"Условие: {texts.challenge_rule(ch)}\n\n"
+        "Множитель перестанет действовать, а уже начисленные за этот день "
+        "удвоенные баллы вернутся к обычным." + note,
+        reply_markup=_stop_confirm_kb("c", day).as_markup())
+    await cb.answer()
+
+
+@router.callback_query(F.data.startswith("actfxy:"))
+async def act_flashmob_stop(cb: CallbackQuery) -> None:
+    """Останавливает флешмоб: удаляет его и снимает начисленные командные очки."""
+    if not _is_admin(cb.from_user.id):
+        return await cb.answer()
+    day = date.fromisoformat(cb.data.split(":")[1])
+    fm = await db.flashmob_for(day)
+    if fm is None:
+        return await cb.answer("Флешмоб уже остановлен.", show_alert=True)
+    bonuses = await db.team_bonus_rows(day)
+    await db.delete_flashmob(day)                          # снимает и team_bonuses
+    sent = 0
+    if fm["announced_at"]:
+        ids = await db.team_member_ids(list(fm["team_ids"]))
+        sent = await notify.broadcast(cb.bot, ids, texts.flashmob_cancelled(fm))
+    await cb.message.edit_text(
+        f"⏹ <b>Флешмоб {day.strftime('%d.%m.%Y')} остановлен</b>\n"
+        f"Снято командных очков: <b>{sum(bonuses.values())}</b> "
+        f"(команд: {len(bonuses)}).\n"
+        + (f"Участникам отправлено уведомление: <b>{sent}</b>." if fm["announced_at"]
+           else "Пуш не отправляли — команды о флешмобе не знали."),
+        reply_markup=InlineKeyboardBuilder()
+            .button(text="⬅️ К списку", callback_data="adm:acts").as_markup())
+    await cb.answer("Остановлен")
+
+
+@router.callback_query(F.data.startswith("actfx:"))
+async def act_flashmob_stop_confirm(cb: CallbackQuery) -> None:
+    if not _is_admin(cb.from_user.id):
+        return await cb.answer()
+    day = date.fromisoformat(cb.data.split(":")[1])
+    fm = await db.flashmob_for(day)
+    if fm is None:
+        return await cb.answer("Флешмоб не найден.", show_alert=True)
+    bonuses = await db.team_bonus_rows(day)
+    note = ("\n\nУчастникам уйдёт уведомление об отмене — пуш о флешмобе они уже получили."
+            if fm["announced_at"] else "")
+    await cb.message.edit_text(
+        f"⏹ Остановить флешмоб за <b>{day.strftime('%d.%m.%Y')}</b>?\n"
+        f"Условие: {texts.flashmob_rule(fm)}\n\n"
+        f"Начисленные командные очки будут сняты: <b>{sum(bonuses.values())}</b> "
+        f"у {len(bonuses)} команд(ы)." + note,
+        reply_markup=_stop_confirm_kb("f", day).as_markup())
+    await cb.answer()
 
 
 # ---- Челлендж: статистика --------------------------------------------------

@@ -315,6 +315,41 @@ async def all_active_ids() -> list[int]:
     return [r["telegram_id"] for r in rows]
 
 
+# ---- Полный сброс марафона (перезапуск с нуля) ----------------------------
+
+_WIPE_TABLES = ("team_bonuses", "daily_entries", "weekly_summaries", "streaks",
+                "challenges", "flashmobs", "scheduled_broadcasts", "broadcasts",
+                "participants")
+
+
+async def marathon_stats() -> dict:
+    """Сколько данных сейчас в базе — для экрана подтверждения сброса."""
+    row = await pool().fetchrow(
+        """SELECT (SELECT count(*) FROM participants)         AS participants,
+                  (SELECT count(*) FROM daily_entries)        AS entries,
+                  (SELECT count(*) FROM weekly_summaries)     AS weekly,
+                  (SELECT count(*) FROM challenges)           AS challenges,
+                  (SELECT count(*) FROM flashmobs)            AS flashmobs,
+                  (SELECT count(*) FROM teams)                AS teams""")
+    return dict(row)
+
+
+async def wipe_marathon() -> dict:
+    """Стирает участников и ВСЕ их данные, а также активности и историю
+    рассылок — одной транзакцией. Команды, настройки, каналы и список
+    админов остаются: перезапуск не должен ломать конфигурацию бота.
+
+    Порядок удаления учитывает внешние ключи: broadcasts и
+    scheduled_broadcasts ссылаются на participants, поэтому идут раньше.
+    """
+    before = await marathon_stats()
+    async with pool().acquire() as conn:
+        async with conn.transaction():
+            for table in _WIPE_TABLES:
+                await conn.execute(f"DELETE FROM {table}")
+    return before
+
+
 # ---- Команды -------------------------------------------------------------
 
 async def teams_with_capacity() -> list[asyncpg.Record]:

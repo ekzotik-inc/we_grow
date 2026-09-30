@@ -280,5 +280,5 @@ async def flash_delete(cb: CallbackQuery) -> None:
         return await cb.answer("Флешмоба на сегодня нет.", show_alert=True)
     await cb.message.edit_text(
         "🗑 <b>Флешмоб удалён</b>\nНачисленные за сегодня командные очки сняты.",
-        reply_markup=keyboards.admin_panel_kb())
+        reply_markup=keyboards.admin_panel_kb(cb.from_user.id in config.admin_ids))
     await cb.answer("Удалён")

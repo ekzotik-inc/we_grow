@@ -21,13 +21,13 @@ class Config:
     bot_token: str = os.getenv("BOT_TOKEN", "")
     database_url: str = os.getenv("DATABASE_URL", "postgresql://wegrow:wegrow@localhost:5432/wegrow")
     admin_ids: frozenset[int] = field(default_factory=lambda: frozenset(_admin_ids()))
-    tz_name: str = os.getenv("TZ", "Asia/Tashkent")  # Узбекистан (UTC+5, без перехода)
+    tz_name: str = os.getenv("TZ", "Asia/Bishkek")  # Кыргызстан (UTC+6, без перехода)
     webapp_url: str = os.getenv("WEBAPP_URL", "").strip()
     # Прямой контакт сотрудника P&C для обратной связи.
     feedback_url: str = os.getenv("FEEDBACK_URL", "https://t.me/DaryaPMI").strip()
     # Старт марафона: до этой даты бот не принимает шаги, а «Прогресс» заблюрен.
-    marathon_start: date = date.fromisoformat(os.getenv("MARATHON_START", "2026-07-17"))
-    marathon_end: date = date.fromisoformat(os.getenv("MARATHON_END", "2026-08-07"))
+    marathon_start: date = date.fromisoformat(os.getenv("MARATHON_START", "2026-10-05"))
+    marathon_end: date = date.fromisoformat(os.getenv("MARATHON_END", "2026-10-26"))
 
     @property
     def tz(self) -> ZoneInfo:

@@ -255,5 +255,5 @@ async def chal_delete(cb: CallbackQuery) -> None:
     await cb.message.edit_text(
         "🗑 <b>Челлендж удалён</b>\n"
         f"Баллы за сегодня вернулись к обычным. Пересчитано записей: <b>{changed}</b>.",
-        reply_markup=keyboards.admin_panel_kb())
+        reply_markup=keyboards.admin_panel_kb(cb.from_user.id in config.admin_ids))
     await cb.answer("Удалён")
