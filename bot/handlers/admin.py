@@ -246,6 +246,42 @@ async def emojiid_capture(message: Message, state: FSMContext) -> None:
     )
 
 
+@router.message(Command("health"))
+async def health(message: Message) -> None:
+    """Живая самодиагностика: что за конфигурация реально работает.
+    Нужна, когда «бот молчит» — если ответ пришёл, процесс жив, и видно,
+    с какой таймзоной, датами и настройками он поднялся."""
+    if not _is_admin(message.from_user.id):
+        return
+    now = datetime.now(config.tz)
+    today = now.date()
+    phase = ("идёт" if config.marathon_start <= today <= config.marathon_end
+             else "ещё не начался" if today < config.marathon_start else "завершён")
+    from bot.handlers.steps import DEADLINE, _day_closed
+    s = await db.marathon_stats()
+    join = settings.channel_id("join")
+    review = settings.channel_id("review")
+    await message.answer(
+        "🩺 <b>Состояние бота</b>\n\n"
+        f"🕒 Сейчас: <b>{now.strftime('%d.%m.%Y %H:%M')}</b> "
+        f"(<code>{config.tz_name}</code>)\n"
+        f"📅 Марафон: <b>{config.marathon_start.strftime('%d.%m')}–"
+        f"{config.marathon_end.strftime('%d.%m.%Y')}</b> — {phase}\n"
+        f"⏰ Приём шагов сегодня: <b>"
+        + ("закрыт до старта" if phase == "ещё не начался" else
+           "закрыт — марафон завершён" if phase == "завершён" else
+           "закрыт (после дедлайна)" if _day_closed() else
+           f"открыт до {DEADLINE[0]}:{DEADLINE[1]:02d}")
+        + "</b>\n\n"
+        f"👥 Участников: <b>{s['participants']}</b> · результатов: "
+        f"<b>{s['entries']}</b> · команд: <b>{s['teams']}</b>\n"
+        f"🎲 Челленджей: <b>{s['challenges']}</b> · флешмобов: <b>{s['flashmobs']}</b>\n"
+        f"👑 Админов: <b>{len(settings.admin_ids())}</b>\n"
+        f"📢 Канал заявок: <b>{join or 'не задан'}</b> · проверки: "
+        f"<b>{review or 'не задан'}</b>\n"
+        f"🔗 Mini App: <b>{settings.webapp_url() or 'не задан'}</b>")
+
+
 @router.message(Command("cancel"))
 async def cancel(message: Message, state: FSMContext) -> None:
     await state.clear()

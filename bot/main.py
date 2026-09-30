@@ -4,8 +4,11 @@ from __future__ import annotations
 import asyncio
 import logging
 
+from datetime import datetime
+
 from aiogram import Bot, Dispatcher
 from aiogram.client.default import DefaultBotProperties
+from aiogram.exceptions import TelegramConflictError
 
 from bot import commands, db, settings
 from bot.config import config
@@ -55,6 +58,14 @@ async def main() -> None:
     filled = await db.backfill_genders()
     log.info("БД подключена, схема применена, настройки загружены "
              "(пол определён у %s новых участников)", filled)
+    # Печатаем живую конфигурацию: по этой строке в логах Render сразу видно,
+    # с какой таймзоной и датами реально работает бот.
+    today = datetime.now(config.tz).date()
+    log.info("Конфигурация: TZ=%s, сегодня=%s, марафон %s — %s (%s), админов=%s",
+             config.tz_name, today, config.marathon_start, config.marathon_end,
+             "идёт" if config.marathon_start <= today <= config.marathon_end
+             else ("ещё не начался" if today < config.marathon_start else "завершён"),
+             len(settings.admin_ids()))
 
     # HTML по умолчанию — нужно для премиум-эмодзи (<tg-emoji>) и <b>.
     bot = Bot(config.bot_token, default=DefaultBotProperties(parse_mode="HTML"))
@@ -78,13 +89,18 @@ async def main() -> None:
     dp.callback_query.middleware(block_mw)
 
     # Постоянная кнопка меню открывает Mini App (если задан URL в настройках/env).
+    # Всё, что ниже до polling, — необязательное оформление: оборачиваем, чтобы
+    # сбой Telegram не помешал боту начать принимать сообщения.
     webapp_url = settings.webapp_url()
     if webapp_url:
-        from aiogram.types import MenuButtonWebApp, WebAppInfo
-        await bot.set_chat_menu_button(
-            menu_button=MenuButtonWebApp(text="Открыть", web_app=WebAppInfo(url=webapp_url))
-        )
-        log.info("Кнопка меню Mini App: %s", webapp_url)
+        try:
+            from aiogram.types import MenuButtonWebApp, WebAppInfo
+            await bot.set_chat_menu_button(
+                menu_button=MenuButtonWebApp(text="Открыть", web_app=WebAppInfo(url=webapp_url))
+            )
+            log.info("Кнопка меню Mini App: %s", webapp_url)
+        except Exception as e:  # noqa: BLE001
+            log.warning("не удалось поставить кнопку меню Mini App: %s", e)
 
     await commands.setup_all(bot)
     log.info("Команды меню настроены (админов: %s)", len(settings.admin_ids()))
@@ -94,9 +110,19 @@ async def main() -> None:
     log.info("Планировщик запущен")
 
     try:
-        await bot.delete_webhook(drop_pending_updates=True)
-        log.info("Старт polling")
+        try:
+            await bot.delete_webhook(drop_pending_updates=True)
+        except Exception as e:  # noqa: BLE001
+            log.warning("delete_webhook не прошёл (%s) — продолжаем", e)
+        me = await bot.get_me()
+        log.info("Старт polling: @%s (id %s)", me.username, me.id)
         await dp.start_polling(bot)
+    except TelegramConflictError:
+        # Telegram отдаёт getUpdates только одному процессу. Обычно это второй
+        # запущенный экземпляр (локальный запуск или зависший старый деплой).
+        log.error("КОНФЛИКТ: бота уже опрашивает другой процесс. "
+                  "Остановите лишний экземпляр — этот молчит, пока их двое.")
+        raise
     finally:
         scheduler.shutdown(wait=False)
         await db.close()

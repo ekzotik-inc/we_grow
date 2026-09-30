@@ -26,6 +26,7 @@ ADMIN_EXTRA = [
     ("admin", "Админ-панель P&C"),
     ("leaderboard", "Лидерборд"),
     ("stats", "Вовлечённость за день"),
+    ("health", "Состояние бота и конфигурация"),
     ("broadcast", "Рассылка участникам"),
     ("instruction", "Рассылка инструкции по скриншотам"),
     ("inactive", "Предупреждение о неактивности"),
@@ -63,7 +64,15 @@ async def apply_for(bot: Bot, tg_id: int) -> bool:
 
 
 async def setup_all(bot: Bot) -> None:
-    """Стартовая настройка: общий scope + персональный каждому админу."""
-    await bot.set_my_commands(_cmds(USER_COMMANDS), scope=BotCommandScopeDefault())
+    """Стартовая настройка: общий scope + персональный каждому админу.
+
+    Ни одна ошибка здесь не должна мешать боту подняться: меню команд —
+    косметика, а вызов идёт ДО старта polling. Раньше сбой Telegram (429,
+    5xx, обрыв сети) на этом месте валил процесс, и бот молчал до тех пор,
+    пока перезапуск не попадал в удачный момент."""
+    try:
+        await bot.set_my_commands(_cmds(USER_COMMANDS), scope=BotCommandScopeDefault())
+    except Exception as e:  # noqa: BLE001
+        log.warning("не удалось поставить общее меню команд: %s", e)
     for admin_id in sorted(settings.admin_ids()):
         await apply_for(bot, admin_id)
