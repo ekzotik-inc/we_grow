@@ -103,7 +103,11 @@ Telegram-бот **Step Together** (@wegrowmarathon_bot) — корпоратив
   `extra_admins` в settings). Права проверяются через `settings.is_admin`,
   а рассылки «всем админам» — через `settings.admin_ids()` (env + доп).
   НЕ использовать `config.admin_ids` для уведомлений: доп-админы их не
-  получат. Меню команд ставит `bot/commands.py` — на старте, при /addadmin,
+  получат. **Доступ к командам**: участникам в меню — только /start, /help,
+  /rules (+ работают /feedback, /app, /cancel); ВСЕ остальные команды, включая
+  /leaderboard и /reset (стирает регистрацию), отвечают только админам —
+  каждый хендлер проверяет `_is_admin`/`settings.is_admin`, админ-колбэки
+  тоже. Админам меню — USER_COMMANDS + ADMIN_EXTRA. Меню команд ставит `bot/commands.py` — на старте, при /addadmin,
   /deladmin и при /start админа (Telegram не даёт задать scope чата, пока
   пользователь не начал диалог с ботом).
 - **«👑 Админы» в админ-панели** (`admin.py`, колбэки `adm:admins/adadd/

@@ -120,6 +120,10 @@ async def menu_progress(message: Message) -> None:
 
 @router.message(Command("reset"))
 async def cmd_reset(message: Message, state: FSMContext) -> None:
+    # Сброс регистрации стирает результаты — только для P&C (тестирование).
+    # Участнику, который ошибся в анкете, помогает P&C через админку.
+    if not settings.is_admin(message.from_user.id):
+        return
     await state.clear()
     if await db.get_participant(message.from_user.id) is None:
         await message.answer(texts.RESET_NOTHING)
@@ -140,6 +144,8 @@ async def reset_no(cb: CallbackQuery) -> None:
 
 @router.callback_query(F.data == "reset_yes")
 async def reset_yes(cb: CallbackQuery, state: FSMContext) -> None:
+    if not settings.is_admin(cb.from_user.id):
+        return await cb.answer()
     await state.clear()
     await db.reset_participant(cb.from_user.id)
     await cb.message.edit_reply_markup(reply_markup=None)

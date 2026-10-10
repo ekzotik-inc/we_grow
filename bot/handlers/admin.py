@@ -663,6 +663,9 @@ async def delete_user_cmd(message: Message) -> None:
 
 @router.message(Command("leaderboard"))
 async def leaderboard(message: Message) -> None:
+    # Участники смотрят рейтинг в Mini App; команда — для P&C.
+    if not _is_admin(message.from_user.id):
+        return
     teams = await db.team_leaderboard()
     top = await db.top_participants(10)
     await message.answer(texts.render_leaderboard(teams, top))

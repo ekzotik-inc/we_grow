@@ -1104,6 +1104,8 @@ async def manual_pick_person(cb: CallbackQuery) -> None:
 
 @router.callback_query(F.data.startswith("manbusy:"))
 async def manual_busy_day(cb: CallbackQuery) -> None:
+    if not _is_admin(cb.from_user.id):
+        return await cb.answer()
     status = cb.data.split(":")[1]
     ru = {"accepted": "уже принят", "pending": "на проверке",
           "rejected": "отклонён"}.get(status, status)
@@ -1264,6 +1266,8 @@ async def bc_text(message: Message, state: FSMContext) -> None:
 
 @router.callback_query(F.data == "bc:media")
 async def bc_media(cb: CallbackQuery, state: FSMContext) -> None:
+    if not _is_admin(cb.from_user.id):
+        return await cb.answer()
     await state.set_state(BC.wait_media)
     await cb.message.answer("Пришли фото / гиф / видео для рассылки.")
     await cb.answer()
@@ -1286,12 +1290,16 @@ async def bc_media_save(message: Message, state: FSMContext) -> None:
 
 @router.callback_query(F.data == "bc:buttons")
 async def bc_buttons(cb: CallbackQuery) -> None:
+    if not _is_admin(cb.from_user.id):
+        return await cb.answer()
     await cb.message.answer("Кнопки под сообщением:", reply_markup=keyboards.bc_buttons_kb())
     await cb.answer()
 
 
 @router.callback_query(F.data == "bc:btn_custom")
 async def bc_btn_custom(cb: CallbackQuery, state: FSMContext) -> None:
+    if not _is_admin(cb.from_user.id):
+        return await cb.answer()
     await state.set_state(BC.wait_button)
     await cb.message.answer("Пришли кнопку в формате: <code>Текст | https://ссылка</code>")
     await cb.answer()
@@ -1317,6 +1325,8 @@ async def bc_btn_save(message: Message, state: FSMContext) -> None:
 
 @router.callback_query(F.data == "bc:btn_app")
 async def bc_btn_app(cb: CallbackQuery, state: FSMContext) -> None:
+    if not _is_admin(cb.from_user.id):
+        return await cb.answer()
     data = await state.get_data()
     draft = data.get("bc", {})
     draft.setdefault("buttons", []).append({"text": "📊 Открыть приложение", "app": True})
@@ -1328,6 +1338,8 @@ async def bc_btn_app(cb: CallbackQuery, state: FSMContext) -> None:
 
 @router.callback_query(F.data == "bc:btn_clear")
 async def bc_btn_clear(cb: CallbackQuery, state: FSMContext) -> None:
+    if not _is_admin(cb.from_user.id):
+        return await cb.answer()
     data = await state.get_data()
     draft = data.get("bc", {})
     draft["buttons"] = []
@@ -1338,6 +1350,8 @@ async def bc_btn_clear(cb: CallbackQuery, state: FSMContext) -> None:
 
 @router.callback_query(F.data == "bc:back")
 async def bc_back(cb: CallbackQuery, state: FSMContext) -> None:
+    if not _is_admin(cb.from_user.id):
+        return await cb.answer()
     await _show_builder(cb.message, state)
     await cb.answer()
 
@@ -1365,6 +1379,8 @@ def _build_text(draft: dict) -> str:
 
 @router.callback_query(F.data == "bc:preview")
 async def bc_preview(cb: CallbackQuery, state: FSMContext) -> None:
+    if not _is_admin(cb.from_user.id):
+        return await cb.answer()
     data = await state.get_data()
     draft = data.get("bc", {})
     await cb.message.answer("👁 Предпросмотр:")
@@ -1375,6 +1391,8 @@ async def bc_preview(cb: CallbackQuery, state: FSMContext) -> None:
 
 @router.callback_query(F.data == "bc:cancel")
 async def bc_cancel(cb: CallbackQuery, state: FSMContext) -> None:
+    if not _is_admin(cb.from_user.id):
+        return await cb.answer()
     await state.clear()
     await cb.message.answer("Рассылка отменена ✖️")
     await cb.answer()
