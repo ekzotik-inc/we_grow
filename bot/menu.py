@@ -9,6 +9,18 @@ from bot import keyboards, settings
 async def send_main_menu(bot: Bot, chat_id: int, greeting: str) -> None:
     media = settings.menu_media()
     kb = keyboards.main_kb()
+    if media and media.get("asset") and not media.get("file_id"):
+        # Фирменная картинка из assets: грузим файлом один раз, дальше — file_id.
+        from aiogram.types import FSInputFile
+        from bot.brand import ASSETS
+        try:
+            msg = await bot.send_photo(chat_id, FSInputFile(ASSETS / media["asset"]),
+                                       caption=greeting, reply_markup=kb)
+            if getattr(msg, "photo", None):
+                await settings.set_menu_media("photo", msg.photo[-1].file_id)
+            return
+        except Exception:  # noqa: BLE001
+            media = None
     if media:
         kind, file_id = media.get("type"), media.get("file_id")
         try:

@@ -528,6 +528,28 @@ async def daily_preview(cb: CallbackQuery) -> None:
                     show_alert=not ok)
 
 
+@router.callback_query(F.data == "adm:brandmenu")
+async def brand_menu(cb: CallbackQuery) -> None:
+    if not _is_admin(cb.from_user.id):
+        return await cb.answer()
+    from bot import brand
+    from bot.menu import send_main_menu
+    await brand.use_default_menu()
+    await cb.answer("Готово — так теперь выглядит главное меню")
+    await send_main_menu(cb.bot, cb.from_user.id, "🪴 Фирменная картинка WE GROW установлена.")
+
+
+@router.callback_query(F.data == "adm:brandava")
+async def brand_avatar(cb: CallbackQuery) -> None:
+    if not _is_admin(cb.from_user.id):
+        return await cb.answer()
+    from bot import brand
+    ok = await brand.set_avatar(cb.bot)
+    await cb.answer("Аватар бота обновлён ✅" if ok else
+                    "Telegram не принял аватар — можно поставить через @BotFather → /setuserpic",
+                    show_alert=True)
+
+
 def _parse_id_arg(text: str) -> int | None:
     parts = (text or "").split()
     if len(parts) == 2 and parts[1].lstrip("-").isdigit():

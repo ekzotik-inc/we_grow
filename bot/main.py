@@ -126,6 +126,12 @@ async def main() -> None:
         except Exception as e:  # noqa: BLE001
             log.warning("не удалось поставить кнопку меню Mini App: %s", e)
 
+    try:
+        from bot import brand
+        await brand.apply_once(bot)
+    except Exception as e:  # noqa: BLE001
+        log.warning("оформление WE GROW не применилось: %s", e)
+
     await commands.setup_all(bot)
     log.info("Команды меню настроены (админов: %s)", len(settings.admin_ids()))
 
