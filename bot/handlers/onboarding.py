@@ -68,12 +68,13 @@ async def cmd_start(message: Message, state: FSMContext,
 
 
 async def show_home(bot, tg_id: int) -> None:
-    """Главное меню: персональная карточка + inline-кнопки."""
+    """Главное меню: персональная карточка + inline-кнопки. Старую нижнюю
+    клавиатуру снимаем каждый раз: её мог вернуть устаревший экземпляр бота."""
     summary = await db.participant_summary(tg_id)
     today = datetime.now(config.tz).date()
     greeting = (texts.profile_card(summary, await db.get_entry(tg_id, today), today)
                 if summary else texts.welcome_back())
-    await send_main_menu(bot, tg_id, greeting)
+    await send_main_menu(bot, tg_id, greeting, force_drop=True)
 
 
 def _as_user(cb: CallbackQuery) -> Message:

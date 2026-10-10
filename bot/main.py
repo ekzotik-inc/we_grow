@@ -85,6 +85,8 @@ async def main() -> None:
     # Печатаем живую конфигурацию: по этой строке в логах Render сразу видно,
     # с какой таймзоной и датами реально работает бот.
     today = datetime.now(config.tz).date()
+    from bot.instance import describe
+    log.info("Экземпляр: %s", describe())
     log.info("Конфигурация: TZ=%s, сегодня=%s, марафон %s — %s (%s), админов=%s",
              config.tz_name, today, config.marathon_start, config.marathon_end,
              "идёт" if config.marathon_start <= today <= config.marathon_end
@@ -96,6 +98,11 @@ async def main() -> None:
     # Анимированные эмодзи из набора — во всех исходящих HTML-сообщениях.
     from bot.premium_emoji import EmojiMiddleware
     bot.session.middleware(EmojiMiddleware())
+    # Второй запущенный экземпляр бота (старый сервис в Render с тем же
+    # токеном) — Telegram отдаёт апдейты то одному, то другому: бот «отвечает
+    # через раз» и показывает старые кнопки. Сообщаем админам прямо в Telegram.
+    from bot.instance import ConflictWatch
+    bot.session.middleware(ConflictWatch())
     dp = Dispatcher()
     # Онбординг первым: его команды (/start, /reset, /help, /rules, /feedback)
     # и кнопки меню должны срабатывать ВСЕГДА — даже когда пользователь застрял

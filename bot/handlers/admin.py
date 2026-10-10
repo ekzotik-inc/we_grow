@@ -299,7 +299,8 @@ async def health(message: Message) -> None:
         f"📢 Канал заявок: <b>{join or 'не задан'}</b> · проверки: "
         f"<b>{review or 'не задан'}</b>\n"
         f"🔗 Mini App: <b>{settings.webapp_url() or 'не задан'}</b>\n"
-        + _emoji_status_line())
+        + _emoji_status_line() + "\n"
+        f"🖥 Экземпляр: <code>{escape(__import__('bot.instance', fromlist=['x']).describe())}</code>")
 
 
 def _emoji_status_line() -> str:

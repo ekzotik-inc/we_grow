@@ -14,8 +14,8 @@ from bot import keyboards, settings
 _KB_REMOVED: set[int] = set()
 
 
-async def _drop_reply_keyboard(bot: Bot, chat_id: int) -> None:
-    if chat_id in _KB_REMOVED:
+async def _drop_reply_keyboard(bot: Bot, chat_id: int, force: bool = False) -> None:
+    if chat_id in _KB_REMOVED and not force:
         return
     from aiogram.types import ReplyKeyboardRemove
     try:
@@ -26,8 +26,9 @@ async def _drop_reply_keyboard(bot: Bot, chat_id: int) -> None:
     _KB_REMOVED.add(chat_id)
 
 
-async def send_main_menu(bot: Bot, chat_id: int, greeting: str) -> None:
-    await _drop_reply_keyboard(bot, chat_id)
+async def send_main_menu(bot: Bot, chat_id: int, greeting: str,
+                         force_drop: bool = False) -> None:
+    await _drop_reply_keyboard(bot, chat_id, force_drop)
     media = settings.menu_media()
     # Кнопку «Админ-панель» видят только админы (env + назначенные в боте).
     kb = keyboards.main_kb(admin=settings.is_admin(chat_id))
