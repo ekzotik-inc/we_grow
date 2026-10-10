@@ -3,7 +3,8 @@
 Render передаёт в окружение имя сервиса и коммит (RENDER_SERVICE_NAME,
 RENDER_GIT_COMMIT). Если тот же токен опрашивает ещё один процесс (старый
 сервис в Render, локальный запуск), Telegram отвечает на getUpdates
-ошибкой Conflict — ConflictWatch ловит её и раз в час пишет админам.
+ошибкой Conflict — ConflictWatch ловит её и раз в час пишет админам, но
+только если конфликт устойчивый (не перекрытие версий при деплое).
 """
 from __future__ import annotations
 
@@ -19,8 +20,18 @@ from aiogram.exceptions import TelegramConflictError
 log = logging.getLogger(__name__)
 
 STARTED = datetime.now()
+_STARTED_TS = time.time()
 _ALERT_EVERY = 3600
-_last_alert = 0.0
+# При деплое Render сначала поднимает новую версию и только потом гасит
+# старую — пару минут работают обе, и Telegram отвечает Conflict. Это не
+# повод для тревоги: пишем админам, только если конфликт не связан со
+# стартом (первые 5 минут игнорируем) и держится непрерывно дольше 2 минут.
+_GRACE_AFTER_START = 300
+_PERSIST = 120
+_RESET_GAP = 90
+_last_alert = float("-inf")
+_first_conflict = 0.0
+_last_conflict = 0.0
 
 
 def describe() -> str:
@@ -31,12 +42,20 @@ def describe() -> str:
 
 class ConflictWatch(BaseRequestMiddleware):
     async def __call__(self, make_request, bot, method):
-        global _last_alert
+        global _last_alert, _first_conflict, _last_conflict
         try:
             return await make_request(bot, method)
         except TelegramConflictError:
-            if type(method).__name__ == "GetUpdates" and time.time() - _last_alert > _ALERT_EVERY:
-                _last_alert = time.time()
+            now = time.time()
+            if type(method).__name__ != "GetUpdates":
+                raise
+            if now - _last_conflict > _RESET_GAP:      # новая серия конфликтов
+                _first_conflict = now
+            _last_conflict = now
+            persistent = (now - _STARTED_TS > _GRACE_AFTER_START
+                          and now - _first_conflict >= _PERSIST)
+            if persistent and now - _last_alert > _ALERT_EVERY:
+                _last_alert = now
                 log.error("КОНФЛИКТ: бот запущен где-то ещё (%s)", describe())
                 from bot import settings
                 text = ("⚠️ <b>Запущен второй экземпляр бота</b>\n\n"
