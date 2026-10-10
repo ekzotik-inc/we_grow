@@ -1,4 +1,9 @@
-"""Показ главного меню: опциональное медиа (фото/гиф/видео) + reply-клавиатура."""
+"""Показ главного меню: опциональное медиа (фото/гиф/видео) + inline-кнопки.
+
+Раньше меню было постоянной нижней (reply) клавиатурой, но премиум-иконки
+там не анимируются. Теперь кнопки — под карточкой, а старую нижнюю
+клавиатуру убираем один раз на чат (служебное сообщение с ReplyKeyboardRemove
+сразу удаляется)."""
 from __future__ import annotations
 
 from aiogram import Bot
@@ -6,7 +11,23 @@ from aiogram import Bot
 from bot import keyboards, settings
 
 
+_KB_REMOVED: set[int] = set()
+
+
+async def _drop_reply_keyboard(bot: Bot, chat_id: int) -> None:
+    if chat_id in _KB_REMOVED:
+        return
+    from aiogram.types import ReplyKeyboardRemove
+    try:
+        msg = await bot.send_message(chat_id, "🏠", reply_markup=ReplyKeyboardRemove())
+        await bot.delete_message(chat_id, msg.message_id)
+    except Exception:  # noqa: BLE001 — косметика
+        pass
+    _KB_REMOVED.add(chat_id)
+
+
 async def send_main_menu(bot: Bot, chat_id: int, greeting: str) -> None:
+    await _drop_reply_keyboard(bot, chat_id)
     media = settings.menu_media()
     kb = keyboards.main_kb()
     if media and media.get("asset") and not media.get("file_id"):

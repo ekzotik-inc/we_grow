@@ -50,18 +50,40 @@ def _mbtn(name: str) -> KeyboardButton:
     return KeyboardButton(text=settings.label(name), icon_custom_emoji_id=icon, web_app=web_app)
 
 
-def main_kb() -> ReplyKeyboardMarkup:
-    """Главное reply-меню участника. Подписи и иконки кнопок — из настроек
-    (меняются через /admin). Админ-функции — по команде /admin."""
-    return ReplyKeyboardMarkup(
-        keyboard=[
-            [_mbtn("steps")],
-            [_mbtn("weekly")],
-            [_mbtn("rules"), _mbtn("help")],
-            [_mbtn("feedback")],
-        ],
-        resize_keyboard=True,
-    )
+def _ibtn(name: str, callback: str | None = None, **kw) -> InlineKeyboardButton:
+    """Кнопка главного меню: подпись из настроек + премиум-иконка
+    (icon_custom_emoji_id). В inline-кнопках анимированные иконки работают —
+    поэтому главное меню переехало под карточку, а не в нижнюю клавиатуру."""
+    icon = settings.icon(name) if premium_emoji.ENABLED else None
+    text = settings.label(name)
+    if icon:
+        # иконка уже есть — убираем ведущее эмодзи из подписи, чтобы не дублировать
+        m = premium_emoji._EMOJI_RE.match(text) if premium_emoji._EMOJI_RE else None
+        if m and text[m.end():].strip():
+            text = text[m.end():].strip()
+    return InlineKeyboardButton(text=text, callback_data=callback,
+                                icon_custom_emoji_id=icon, **kw)
+
+
+def main_kb() -> InlineKeyboardMarkup:
+    """Главное меню участника — inline-кнопки под карточкой.
+    Подписи и иконки — из настроек (меняются через /admin → Оформление)."""
+    rows = [
+        [_ibtn("steps", "menu:steps")],
+        [_ibtn("weekly", "menu:weekly")],
+        [_ibtn("rules", "menu:rules"), _ibtn("help", "menu:help")],
+    ]
+    url = settings.webapp_url()
+    if url:
+        rows.append([_ibtn("app", web_app=WebAppInfo(url=url))])
+    rows.append([_ibtn("feedback", url=config.feedback_url)])
+    return InlineKeyboardMarkup(inline_keyboard=rows)
+
+
+def home_kb() -> InlineKeyboardMarkup:
+    """Кнопка «назад в главное меню» под правилами, помощью и т.п."""
+    return InlineKeyboardMarkup(inline_keyboard=[[
+        InlineKeyboardButton(text="🏠 Главное меню", callback_data="menu:home")]])
 
 
 def feedback_kb() -> InlineKeyboardMarkup:

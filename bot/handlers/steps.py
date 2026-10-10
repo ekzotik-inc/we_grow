@@ -133,7 +133,7 @@ async def on_screenshot(message: Message, state: FSMContext) -> None:
         existing = await db.get_entry(tg_id, _today())
         await message.answer(texts.ALREADY_ACCEPTED.format(steps=existing["steps"]))
         return
-    await message.answer(texts.STEP3_WAIT.format(steps=steps))
+    await message.answer(texts.STEP3_WAIT.format(steps=steps), reply_markup=keyboards.home_kb())
 
     # Уведомляем P&C: скриншот + карточка + кнопки модерации.
     from bot import notify
@@ -219,7 +219,8 @@ async def on_weekly_shot(message: Message, state: FSMContext) -> None:
     await state.clear()
     # Отчёт подтверждает неделю: заработанный по дням бонус идёт в баллы.
     ch = await db.recompute_weekly_bonus_change(tg_id, monday)
-    await message.answer(texts.weekly_saved(ch.new, ch.earned, updated=already))
+    await message.answer(texts.weekly_saved(ch.new, ch.earned, updated=already),
+                         reply_markup=keyboards.home_kb())
 
     # Копия — P&C (информационно, без модерации).
     from bot import notify

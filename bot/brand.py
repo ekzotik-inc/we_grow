@@ -44,7 +44,7 @@ async def set_avatar(bot: Bot) -> bool:
 # Иконки кнопок главного меню — эмодзи из текущего набора премиум-эмодзи
 # (premium_emoji.current_map: подтверждённые Telegram ID).
 MENU_ICON_CHARS = {"steps": "👣", "weekly": "📈", "progress": "📊", "board": "🏆",
-                   "rules": "📖", "help": "💡", "feedback": "💬"}
+                   "rules": "📖", "help": "💡", "feedback": "💬", "app": "🌱"}
 
 
 async def use_default_icons() -> int:
@@ -66,9 +66,9 @@ async def apply_once(bot: Bot) -> None:
         await use_default_menu()
         await settings.set("brand_menu_v1", "1")
         log.info("Картинка главного меню WE GROW установлена")
-    if not settings.get("brand_icons_v3"):
+    if not settings.get("brand_icons_v4"):
         await use_default_icons()
-        await settings.set("brand_icons_v3", "1")
+        await settings.set("brand_icons_v4", "1")
         log.info("Иконки кнопок меню обновлены на набор Animated Emoji")
     if not settings.get("brand_avatar_v1") and await set_avatar(bot):
         await settings.set("brand_avatar_v1", "1")

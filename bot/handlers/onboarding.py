@@ -52,12 +52,7 @@ async def cmd_start(message: Message, state: FSMContext,
                 await send_main_menu(message.bot, tg_id, texts.STEPS_FROM_APP)
                 await start_steps_flow(message, state)
                 return
-            # Персональная сводка: ФИО, команда с местом, шаги, баллы, серия.
-            summary = await db.participant_summary(tg_id)
-            today = datetime.now(config.tz).date()
-            greeting = (texts.profile_card(summary, await db.get_entry(tg_id, today), today)
-                        if summary else texts.welcome_back())
-            await send_main_menu(message.bot, tg_id, greeting)
+            await show_home(message.bot, tg_id)
         else:
             await message.answer(texts.NOT_APPROVED_YET, reply_markup=ReplyKeyboardRemove())
         return
@@ -67,10 +62,64 @@ async def cmd_start(message: Message, state: FSMContext,
                          reply_markup=keyboards.consent_kb())
 
 
+async def show_home(bot, tg_id: int) -> None:
+    """Главное меню: персональная карточка + inline-кнопки."""
+    summary = await db.participant_summary(tg_id)
+    today = datetime.now(config.tz).date()
+    greeting = (texts.profile_card(summary, await db.get_entry(tg_id, today), today)
+                if summary else texts.welcome_back())
+    await send_main_menu(bot, tg_id, greeting)
+
+
+def _as_user(cb: CallbackQuery) -> Message:
+    """Сообщение «от имени участника» для сценариев, написанных под Message:
+    у cb.message автор — бот, а им нужен from_user нажавшего."""
+    return cb.message.model_copy(update={"from_user": cb.from_user}).as_(cb.bot)
+
+
+@router.callback_query(F.data == "menu:home")
+async def menu_home(cb: CallbackQuery, state: FSMContext) -> None:
+    await state.clear()
+    await cb.answer()
+    await show_home(cb.bot, cb.from_user.id)
+
+
+@router.callback_query(F.data == "menu:steps")
+async def menu_steps(cb: CallbackQuery, state: FSMContext) -> None:
+    await cb.answer()
+    from bot.handlers.steps import start_steps_flow
+    await state.clear()
+    await start_steps_flow(_as_user(cb), state)
+
+
+@router.callback_query(F.data == "menu:weekly")
+async def menu_weekly(cb: CallbackQuery, state: FSMContext) -> None:
+    await cb.answer()
+    from bot.handlers.steps import ask_weekly
+    await state.clear()
+    await ask_weekly(_as_user(cb), state)
+
+
+@router.callback_query(F.data == "menu:rules")
+async def menu_rules(cb: CallbackQuery) -> None:
+    await cb.answer()
+    await cb.message.answer(texts.RULES, disable_web_page_preview=True,
+                            reply_markup=keyboards.home_kb())
+
+
+@router.callback_query(F.data == "menu:help")
+async def menu_help(cb: CallbackQuery) -> None:
+    await cb.answer()
+    kb = keyboards.feedback_kb()
+    kb.inline_keyboard.append(keyboards.home_kb().inline_keyboard[0])
+    await cb.message.answer(texts.HELP, disable_web_page_preview=True, reply_markup=kb)
+
+
 @router.message(Command("rules"))
 @router.message(lambda m: bool(m.text) and m.text == settings.label("rules"))
 async def cmd_rules(message: Message) -> None:
-    await message.answer(texts.RULES, disable_web_page_preview=True)
+    await message.answer(texts.RULES, disable_web_page_preview=True,
+                         reply_markup=keyboards.home_kb())
 
 
 @router.message(Command("help"))
