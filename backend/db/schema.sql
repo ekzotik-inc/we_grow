@@ -90,6 +90,9 @@ ALTER TABLE weekly_summaries ADD COLUMN IF NOT EXISTS reported_at timestamptz;
 -- Бонус за серию, ЗАРАБОТАННЫЙ по принятым дням. В баллы (bonus_points) он
 -- попадает только при недельном отчёте за эту неделю (reported_at).
 ALTER TABLE weekly_summaries ADD COLUMN IF NOT EXISTS earned_bonus int NOT NULL DEFAULT 0;
+-- Как подтверждена неделя: 'photo' — скриншот участника, 'admin' — P&C засчитал
+-- вручную (технический сбой). NULL у старых записей со скриншотом = photo.
+ALTER TABLE weekly_summaries ADD COLUMN IF NOT EXISTS report_source text;
 
 CREATE TABLE IF NOT EXISTS broadcasts (
     id            bigserial PRIMARY KEY,

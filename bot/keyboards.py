@@ -386,11 +386,12 @@ def user_card_kb(p) -> InlineKeyboardMarkup:
             b.button(text="❌ Отклонить", callback_data=f"rej:{tg}")
         b.button(text="⛔ Дисквалифицировать", callback_data=f"usrdq:{tg}")
     b.button(text=f"⚧ Пол: {_GENDER_BTN[p['gender']]}", callback_data=f"usrsex:{tg}")
+    b.button(text="📈 Недельные отчёты", callback_data=f"usrwk:{tg}")
     b.button(text="🔀 Перевести в команду", callback_data=f"usrmv:{tg}")
     b.button(text="🧹 Очистить результаты", callback_data=f"usrclr:{tg}")
     b.button(text="🗑 Удалить", callback_data=f"usrdel:{tg}")
     b.button(text="⬅️ К списку", callback_data="usrpg:0")
-    b.adjust(2, 1, 1, 1, 1, 1)
+    b.adjust(2, 1, 1, 1, 1, 1, 1)
     return b.as_markup()
 
 

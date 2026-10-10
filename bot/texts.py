@@ -704,6 +704,20 @@ def bonus_earned_note(earned: int, old_earned: int = 0) -> str:
         "пришли недельный отчёт — кнопка «📈 Еженедельный отчёт».")
 
 
+def weekly_manual_note(monday, on: bool, bonus: int) -> str:
+    """Пуш участнику: P&C засчитал(снял) недельный отчёт вручную."""
+    from datetime import timedelta
+    span = f"{monday.strftime('%d.%m')}–{(monday + timedelta(days=6)).strftime('%d.%m')}"
+    if on:
+        tail = (f" Бонус за серию <b>+{bonus}</b> засчитан 🔥" if bonus else
+                " Бонуса за серию на этой неделе нет — нужно 5 дней подряд по 10 000+.")
+        return "📈 <b>Недельный отчёт засчитан</b>\n" + stepy(
+            f"Сотрудник P&amp;C засчитал твой отчёт за неделю <b>{span}</b>.{tail}")
+    return "📈 <b>Зачёт недельного отчёта снят</b>\n" + stepy(
+        f"Сотрудник P&amp;C снял ручной зачёт отчёта за неделю <b>{span}</b> — бонус за "
+        "серию этой недели не учитывается. Вопросы — в «Обратную связь».")
+
+
 def bonus_notice(ch) -> str | None:
     """Какой пуш отправить после пересчёта бонуса (db.BonusChange) или None."""
     if ch.new > ch.old:

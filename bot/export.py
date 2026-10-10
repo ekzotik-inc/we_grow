@@ -100,7 +100,9 @@ async def build_workbook() -> tuple[bytes, str]:
             "Бонус засчитан", "Отчёт прислан", "Фото"],
            [[w["week_start"].strftime("%d.%m.%Y"), w["full_name"], w["team_name"] or "",
              w["computed_total"], w["earned_bonus"], w["bonus_points"], _fmt(w["reported_at"]),
-             "открыть" if w["screenshot_file_id"] else "не прислан"]
+             "открыть" if w["screenshot_file_id"] else
+             ("засчитан P&C" if w["report_source"] == "admin" and w["reported_at"]
+              else "не прислан")]
             for w in weekly])
     for row_i, w in enumerate(weekly, start=2):
         if w["screenshot_file_id"]:

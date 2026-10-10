@@ -12,6 +12,7 @@ from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
 from aiogram.fsm.storage.base import StorageKey
+from aiogram.utils.keyboard import InlineKeyboardBuilder
 from aiogram.types import (
     CallbackQuery,
     InlineKeyboardButton,
@@ -370,6 +371,76 @@ async def user_card(cb: CallbackQuery) -> None:
     except Exception:  # noqa: BLE001
         await cb.message.answer(text, reply_markup=kb)
     await cb.answer()
+
+
+# ---- Недельные отчёты участника: ручной зачёт при техническом сбое --------
+
+def _marathon_mondays() -> list[date]:
+    today = datetime.now(config.tz).date()
+    last = min(today, config.marathon_end)
+    m = config.marathon_start - timedelta(days=config.marathon_start.weekday())
+    out = []
+    while m <= last:
+        out.append(m)
+        m += timedelta(days=7)
+    return out
+
+
+async def _weeks_view(cb: CallbackQuery, tg_id: int) -> None:
+    p = await db.user_detail(tg_id)
+    rows = await db.weekly_rows(tg_id)
+    lines = [f"📈 <b>Недельные отчёты</b> · {escape(p['full_name'] if p else str(tg_id))}\n"]
+    b = InlineKeyboardBuilder()
+    for m in _marathon_mondays():
+        r = rows.get(m)
+        span = f"{m.strftime('%d.%m')}–{(m + timedelta(days=6)).strftime('%d.%m')}"
+        earned = r["earned_bonus"] if r else 0
+        if r and r["reported_at"]:
+            how = "✍️ засчитан P&amp;C" if r["report_source"] == "admin" else "✅ скриншот"
+            lines.append(f"{span}: {how} · бонус <b>+{r['bonus_points']}</b>")
+            if r["report_source"] == "admin":
+                b.button(text=f"↩️ Снять зачёт {m.strftime('%d.%m')}",
+                         callback_data=f"usrwkno:{tg_id}:{m.isoformat()}")
+        else:
+            lines.append(f"{span}: ❌ отчёта нет · заработано <b>+{earned}</b>")
+            b.button(text=f"✅ Засчитать отчёт {m.strftime('%d.%m')}",
+                     callback_data=f"usrwkok:{tg_id}:{m.isoformat()}")
+    if len(lines) == 1:
+        lines.append("Недель марафона пока нет.")
+    lines.append("\nРучной зачёт — только при подтверждённом техническом сбое: "
+                 "заработанный по дням бонус сразу пойдёт в баллы.")
+    b.button(text="⬅️ К участнику", callback_data=f"usr:{tg_id}")
+    b.adjust(1)
+    try:
+        await cb.message.edit_text("\n".join(lines), reply_markup=b.as_markup())
+    except Exception:  # noqa: BLE001
+        await cb.message.answer("\n".join(lines), reply_markup=b.as_markup())
+
+
+@router.callback_query(F.data.startswith("usrwk:"))
+async def user_weeks(cb: CallbackQuery) -> None:
+    if not _is_admin(cb.from_user.id):
+        return await cb.answer()
+    await _weeks_view(cb, int(cb.data.split(":")[1]))
+    await cb.answer()
+
+
+@router.callback_query(F.data.startswith("usrwkok:") | F.data.startswith("usrwkno:"))
+async def user_week_set(cb: CallbackQuery) -> None:
+    if not _is_admin(cb.from_user.id):
+        return await cb.answer()
+    kind, raw_tg, raw_day = cb.data.split(":")
+    tg_id, monday, on = int(raw_tg), date.fromisoformat(raw_day), kind == "usrwkok"
+    if not await db.set_weekly_report_manual(tg_id, monday, on):
+        await _weeks_view(cb, tg_id)
+        return await cb.answer("Статус уже изменился — обновил список.", show_alert=True)
+    ch = await db.recompute_weekly_bonus_change(tg_id, monday)
+    try:
+        await cb.bot.send_message(tg_id, texts.weekly_manual_note(monday, on, ch.new))
+    except Exception:  # noqa: BLE001 — участник заблокировал бота
+        pass
+    await _weeks_view(cb, tg_id)
+    await cb.answer(f"Засчитано, бонус +{ch.new}" if on else "Зачёт снят")
 
 
 async def _refresh_card(cb: CallbackQuery, tg_id: int) -> None:

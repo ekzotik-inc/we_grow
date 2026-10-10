@@ -1207,14 +1207,40 @@ async def save_weekly_report(tg_id: int, monday: date, file_id: str) -> int:
               reconciled, screenshot_file_id, reported_at)
            VALUES ($1,$2,0,0,false,$3,now())
            ON CONFLICT (participant_id, week_start) DO UPDATE
-             SET screenshot_file_id=$3, reported_at=now()
+             SET screenshot_file_id=$3, reported_at=now(), report_source='photo'
            RETURNING id""",
         tg_id, monday, file_id))
 
 
+async def set_weekly_report_manual(tg_id: int, monday: date, on: bool) -> bool:
+    """P&C засчитывает недельный отчёт вручную (технический сбой) или снимает
+    такой зачёт. Отчёт со скриншотом участника снять нельзя. True — изменено."""
+    if on:
+        res = await pool().execute(
+            """INSERT INTO weekly_summaries
+                 (participant_id, week_start, reported_total, computed_total,
+                  reconciled, reported_at, report_source)
+               VALUES ($1,$2,0,0,false,now(),'admin')
+               ON CONFLICT (participant_id, week_start) DO UPDATE
+                 SET reported_at=now(), report_source='admin'
+                 WHERE weekly_summaries.reported_at IS NULL""", tg_id, monday)
+    else:
+        res = await pool().execute(
+            """UPDATE weekly_summaries SET reported_at=NULL, report_source=NULL
+                WHERE participant_id=$1 AND week_start=$2 AND report_source='admin'""",
+            tg_id, monday)
+    return not res.endswith(" 0")
+
+
+async def weekly_rows(tg_id: int) -> dict[date, asyncpg.Record]:
+    rows = await pool().fetch(
+        "SELECT * FROM weekly_summaries WHERE participant_id=$1", tg_id)
+    return {r["week_start"]: r for r in rows}
+
+
 async def has_weekly_report(tg_id: int, monday: date) -> bool:
     return bool(await pool().fetchval(
-        """SELECT screenshot_file_id IS NOT NULL FROM weekly_summaries
+        """SELECT reported_at IS NOT NULL FROM weekly_summaries
             WHERE participant_id=$1 AND week_start=$2""", tg_id, monday))
 
 
@@ -1226,7 +1252,7 @@ async def ids_without_weekly_report(monday: date) -> list[int]:
               AND NOT EXISTS (SELECT 1 FROM weekly_summaries w
                                WHERE w.participant_id=p.telegram_id
                                  AND w.week_start=$1
-                                 AND w.screenshot_file_id IS NOT NULL)""", monday)
+                                 AND w.reported_at IS NOT NULL)""", monday)
     return [r["telegram_id"] for r in rows]
 
 
@@ -1238,7 +1264,7 @@ async def weekly_summary_by_id(ws_id: int) -> asyncpg.Record | None:
 async def export_weekly_reports() -> list[asyncpg.Record]:
     return await pool().fetch(
         """SELECT w.id, w.week_start, w.reported_at, w.computed_total,
-                  w.bonus_points, w.earned_bonus, w.screenshot_file_id,
+                  w.bonus_points, w.earned_bonus, w.screenshot_file_id, w.report_source,
                   p.full_name, t.name AS team_name
              FROM weekly_summaries w
              JOIN participants p ON p.telegram_id=w.participant_id
