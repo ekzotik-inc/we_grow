@@ -57,6 +57,11 @@ async def cmd_start(message: Message, state: FSMContext,
             await message.answer(texts.NOT_APPROVED_YET, reply_markup=ReplyKeyboardRemove())
         return
 
+    if settings.is_admin(tg_id):
+        # Админ без анкеты участника: сразу даём панель, регистрация — по желанию.
+        from bot.handlers.admin import _is_owner
+        await message.answer(texts.ADMIN_PANEL,
+                             reply_markup=keyboards.admin_panel_kb(_is_owner(tg_id)))
     await message.answer(texts.WELCOME)
     await message.answer(texts.RULES, disable_web_page_preview=True,
                          reply_markup=keyboards.consent_kb())

@@ -65,9 +65,10 @@ def _ibtn(name: str, callback: str | None = None, **kw) -> InlineKeyboardButton:
                                 icon_custom_emoji_id=icon, **kw)
 
 
-def main_kb() -> InlineKeyboardMarkup:
+def main_kb(admin: bool = False) -> InlineKeyboardMarkup:
     """Главное меню участника — inline-кнопки под карточкой.
-    Подписи и иконки — из настроек (меняются через /admin → Оформление)."""
+    Подписи и иконки — из настроек (меняются через /admin → Оформление).
+    admin=True — внизу кнопка «Админ-панель» (видна только админам)."""
     rows = [
         [_ibtn("steps", "menu:steps")],
         [_ibtn("weekly", "menu:weekly")],
@@ -77,6 +78,8 @@ def main_kb() -> InlineKeyboardMarkup:
     if url:
         rows.append([_ibtn("app", web_app=WebAppInfo(url=url))])
     rows.append([_ibtn("feedback", url=config.feedback_url)])
+    if admin:
+        rows.append([InlineKeyboardButton(text="🛠 Админ-панель", callback_data="menu:admin")])
     return InlineKeyboardMarkup(inline_keyboard=rows)
 
 
@@ -132,6 +135,7 @@ def admin_panel_kb(owner: bool = False) -> InlineKeyboardMarkup:
     b.adjust(2)
     if owner:
         b.row(InlineKeyboardButton(text="🧨 Сброс марафона", callback_data="adm:wipe"))
+    b.row(InlineKeyboardButton(text="🏠 Главное меню", callback_data="menu:home"))
     return b.as_markup()
 
 

@@ -29,7 +29,8 @@ async def _drop_reply_keyboard(bot: Bot, chat_id: int) -> None:
 async def send_main_menu(bot: Bot, chat_id: int, greeting: str) -> None:
     await _drop_reply_keyboard(bot, chat_id)
     media = settings.menu_media()
-    kb = keyboards.main_kb()
+    # Кнопку «Админ-панель» видят только админы (env + назначенные в боте).
+    kb = keyboards.main_kb(admin=settings.is_admin(chat_id))
     if media and media.get("asset") and not media.get("file_id"):
         # Фирменная картинка из assets: грузим файлом один раз, дальше — file_id.
         from aiogram.types import FSInputFile

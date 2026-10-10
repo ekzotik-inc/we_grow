@@ -39,6 +39,17 @@ async def admin_panel(message: Message) -> None:
                          reply_markup=keyboards.admin_panel_kb(_is_owner(message.from_user.id)))
 
 
+@router.callback_query(F.data == "menu:admin")
+async def admin_panel_from_menu(cb: CallbackQuery) -> None:
+    """Кнопка «🛠 Админ-панель» в главном меню (показывается только админам;
+    права всё равно проверяем — кнопка могла остаться у снятого админа)."""
+    if not _is_admin(cb.from_user.id):
+        return await cb.answer("Админ-панель доступна только P&C.", show_alert=True)
+    await cb.answer()
+    await cb.message.answer(texts.ADMIN_PANEL,
+                            reply_markup=keyboards.admin_panel_kb(_is_owner(cb.from_user.id)))
+
+
 async def _send_export(bot, chat_id: int) -> None:
     from aiogram.types import BufferedInputFile
     from bot.export import build_workbook
