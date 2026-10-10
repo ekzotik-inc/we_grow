@@ -128,6 +128,19 @@ async def load_pack(bot, name: str) -> dict:
     return {"name": sset.name, "title": sset.title, "map": mapping}
 
 
+async def pack_name_by_emoji_id(bot, custom_emoji_id: str) -> str | None:
+    """Имя набора по любому премиум-эмодзи из него."""
+    stickers = await bot.get_custom_emoji_stickers(custom_emoji_ids=[custom_emoji_id])
+    return stickers[0].set_name if stickers else None
+
+
+async def check_ids(bot, ids: list[str]) -> dict[str, str | None]:
+    """{id: имя набора или None, если Telegram не считает ID премиум-эмодзи}."""
+    found = {st.custom_emoji_id: (st.set_name or "?")
+             for st in await bot.get_custom_emoji_stickers(custom_emoji_ids=ids)}
+    return {i: found.get(i) for i in ids}
+
+
 def apply_pack(pack: dict) -> None:
     set_map(pack["map"])
     STATUS.update(source=f"набор «{pack.get('title') or pack['name']}»",
@@ -169,6 +182,32 @@ def enrich(text: str) -> str:
     return "".join(parts)
 
 
+_LEAD_RE_CACHE: dict = {}
+
+
+def _iconize_inline(markup) -> None:
+    """Inline-кнопки не умеют премиум-эмодзи в тексте, но с Bot API 9.4 у них
+    есть icon_custom_emoji_id. Если подпись начинается с эмодзи из набора —
+    переносим его в иконку (callback_data и url не меняются). Reply-кнопки
+    не трогаем: их текст приходит обратно в бот и сверяется с подписями."""
+    rows = getattr(markup, "inline_keyboard", None)
+    if not rows or _EMOJI_RE is None:
+        return
+    for row in rows:
+        for btn in row:
+            text = getattr(btn, "text", "") or ""
+            if getattr(btn, "icon_custom_emoji_id", None) or not text:
+                continue
+            m = _EMOJI_RE.match(text)
+            if not m:
+                continue
+            rest = text[m.end():].lstrip()
+            if not rest:          # кнопка из одного эмодзи — оставляем как есть
+                continue
+            btn.icon_custom_emoji_id = _IDS[m.group(1)]
+            btn.text = rest
+
+
 class EmojiMiddleware(BaseRequestMiddleware):
     """Подменяет эмодзи в тексте/подписи исходящих HTML-сообщений бота.
 
@@ -177,7 +216,8 @@ class EmojiMiddleware(BaseRequestMiddleware):
 
     _METHODS = {"SendMessage", "EditMessageText", "SendPhoto", "SendAnimation",
                 "SendVideo", "SendDocument", "SendAudio", "SendVoice",
-                "EditMessageCaption", "SendMediaGroup", "CopyMessage"}
+                "EditMessageCaption", "SendMediaGroup", "CopyMessage",
+                "EditMessageReplyMarkup"}
 
     @staticmethod
     def _is_html(mode, bot) -> bool:
@@ -193,6 +233,14 @@ class EmojiMiddleware(BaseRequestMiddleware):
                     value = getattr(method, field, None)
                     if isinstance(value, str) and value:
                         setattr(method, field, enrich(value))
+            # Иконки кнопок — только в личных чатах (chat_id > 0): в каналах
+            # проверки/заявок премиум-эмодзи могут быть недоступны боту, а
+            # ошибка на кнопке сорвала бы отправку карточки модерации. И только
+            # если набор проверен Telegram (validate/apply_pack): битый ID в
+            # иконке ломает отправку сообщения целиком.
+            chat_id = getattr(method, "chat_id", None)
+            if isinstance(chat_id, int) and chat_id > 0 and STATUS.get("checked"):
+                _iconize_inline(getattr(method, "reply_markup", None))
             for item in getattr(method, "media", None) or []:   # альбомы
                 cap = getattr(item, "caption", None)
                 if isinstance(cap, str) and cap and self._is_html(

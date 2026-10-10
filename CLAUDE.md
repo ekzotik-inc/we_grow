@@ -226,8 +226,18 @@ Telegram-бот **Step Together** (@wegrowmarathon_bot) — корпоратив
   (getCustomEmojiStickers) и оставляет только подтверждённые ID — ID обычных
   анимированных стикеров Telegram в тексте молча не показывает. Статус — в
   `/health` и логе старта. Иконки кнопок меню — `brand.use_default_icons`
-  из текущей карты (флаг `brand_icons_v3`). Работает при
-  `PREMIUM_EMOJI=true` и Premium у владельца. `texts.num` — системные кейкапы.
+  из текущей карты (флаг `brand_icons_v3`). `texts.num` — системные кейкапы.
+  **Условия Telegram** (Bot API 9.4, habr 994622): боту достаточно, чтобы у
+  ВЛАДЕЛЬЦА бота был Telegram Premium (Fragment-юзернейм больше не нужен);
+  работает в личке, группах и супергруппах. Плюс env `PREMIUM_EMOJI=true`.
+  ID должен быть именно кастомным эмодзи (getCustomEmojiStickers его
+  находит) — ID обычных анимированных эмодзи Telegram молча рисует простыми.
+  `icon_custom_emoji_id` есть у KeyboardButton и InlineKeyboardButton (там же
+  `style`: danger/success/primary). Middleware переносит ведущее эмодзи
+  inline-кнопки в иконку — только в личных чатах и только после проверки
+  набора (битый ID ломает отправку). Диагностика — **`/emojitest`** (что
+  включено, какие ID Telegram признаёт, тестовые строки); подключить набор —
+  `/emojipack` и прислать любое эмодзи из него (или ссылку addemoji).
 - **Порядок роутеров** в `bot/main.py`: `onboarding` ПЕРВЫМ (команды должны
   выходить из любых FSM-состояний), затем admin, admin_settings, steps.
 - **Скриншоты**: принимаются и фото, и файлы-изображения; file_id документов

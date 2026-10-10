@@ -302,8 +302,47 @@ def _emoji_status_line() -> str:
     return f"✨ Премиум-эмодзи: {escape(st['source'])} · {chk} · набор: {escape(sets)}"
 
 
+class EmojiPack(StatesGroup):
+    waiting = State()
+
+
+@router.message(Command("emojitest"))
+async def emoji_test(message: Message) -> None:
+    """Диагностика премиум-эмодзи прямо в Telegram: что включено, какие ID
+    Telegram признаёт, и тестовые строки — видно, что реально отрисовалось."""
+    if not _is_admin(message.from_user.id):
+        return
+    from bot import premium_emoji as pm
+    m = pm.current_map()
+    file_map = pm._load_file()
+    fb = pm._load_fallback()
+    probe = {"Stepy 🪴": pm.STEPY_ID}
+    if file_map.get("✅"):
+        probe["Файл emoji_ids.json ✅"] = file_map["✅"]
+    if fb.get("✅"):
+        probe["Прежний набор ✅"] = fb["✅"]
+    if m.get("🔥"):
+        probe["Сейчас в работе 🔥"] = m["🔥"]
+    try:
+        res = await pm.check_ids(message.bot, list(dict.fromkeys(probe.values())))
+    except Exception as e:  # noqa: BLE001
+        res = {}
+        await message.answer(f"getCustomEmojiStickers: <code>{escape(str(e))}</code>")
+    lines = ["🧪 <b>Тест премиум-эмодзи</b>\n", _emoji_status_line(), ""]
+    for label, cid in probe.items():
+        ch = label.split()[-1]
+        verdict = (f"✅ премиум-эмодзи, набор <code>{escape(res[cid])}</code>"
+                   if res.get(cid) else "❌ Telegram не признаёт ID")
+        lines.append(f'<tg-emoji emoji-id="{cid}">{ch}</tg-emoji> {escape(label)} — {verdict}')
+    lines.append(
+        "\nЕсли значки слева выглядят как обычные эмодзи, хотя Telegram их "
+        "признаёт, — у владельца бота нет Telegram Premium (это обязательное "
+        "условие). Подключить набор: /emojipack и прислать любое эмодзи из него.")
+    await message.answer("\n".join(lines))
+
+
 @router.message(Command("emojipack"))
-async def emoji_pack(message: Message) -> None:
+async def emoji_pack(message: Message, state: FSMContext) -> None:
     """/emojipack t.me/addemoji/NAME — подключить набор премиум-эмодзи."""
     if not _is_admin(message.from_user.id):
         return
@@ -311,14 +350,46 @@ async def emoji_pack(message: Message) -> None:
     from bot import premium_emoji as pm
     parts = (message.text or "").split(maxsplit=1)
     if len(parts) < 2:
+        await state.set_state(EmojiPack.waiting)
         await message.answer(
             "✨ <b>Набор премиум-эмодзи</b>\n\n" + _emoji_status_line() + "\n\n"
-            "Подключить набор: <code>/emojipack https://t.me/addemoji/ИМЯ</code>\n"
-            "Ссылку можно взять в Telegram: открой набор эмодзи → «Поделиться». "
-            "Эмодзи Stepy 🪴 не меняется.")
+            "Пришли сюда <b>любое премиум-эмодзи из нужного набора</b> — я сам найду "
+            "набор и подключу его целиком. Или ссылку "
+            "<code>https://t.me/addemoji/ИМЯ</code>.\n"
+            "Эмодзи Stepy 🪴 не меняется. /cancel — отмена.")
         return
+    await _apply_pack_source(message, parts[1])
+
+
+@router.message(EmojiPack.waiting)
+async def emoji_pack_capture(message: Message, state: FSMContext) -> None:
+    if not _is_admin(message.from_user.id):
+        return
+    await state.clear()
+    ents = message.entities or message.caption_entities or []
+    cid = next((e.custom_emoji_id for e in ents if e.type == "custom_emoji"), None)
+    if cid is None and message.sticker and message.sticker.custom_emoji_id:
+        cid = message.sticker.custom_emoji_id
+    if cid:
+        from bot import premium_emoji as pm
+        name = await pm.pack_name_by_emoji_id(message.bot, cid)
+        if not name:
+            await message.answer("❌ Telegram не нашёл набор этого эмодзи.")
+            return
+        await _apply_pack_source(message, name)
+    elif message.text and "addemoji" in message.text:
+        await _apply_pack_source(message, message.text.strip())
+    else:
+        await message.answer("Не вижу премиум-эмодзи в сообщении — пришли эмодзи из "
+                             "набора (нужен Telegram Premium) или ссылку t.me/addemoji/…. "
+                             "Начать заново: /emojipack")
+
+
+async def _apply_pack_source(message: Message, source: str) -> None:
+    from bot import brand
+    from bot import premium_emoji as pm
     try:
-        pack = await pm.load_pack(message.bot, parts[1])
+        pack = await pm.load_pack(message.bot, source)
     except Exception as e:  # noqa: BLE001
         await message.answer(f"❌ Не удалось загрузить набор: {escape(str(e))}")
         return
