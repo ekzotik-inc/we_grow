@@ -33,7 +33,7 @@ async def cmd_start(message: Message, state: FSMContext,
                     command: CommandObject | None = None) -> None:
     await state.clear()
     tg_id = message.from_user.id
-    await db.upsert_participant_start(tg_id)
+    await db.upsert_participant_start(tg_id, message.from_user.username)
     # Админов помечаем ролью (env + доп-админы из настроек) и сразу ставим им
     # расширенное меню команд: до /start Telegram не даёт настроить scope чата.
     if settings.is_admin(tg_id):

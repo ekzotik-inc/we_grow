@@ -61,13 +61,24 @@ async def get_participant(tg_id: int) -> asyncpg.Record | None:
     return await pool().fetchrow("SELECT * FROM participants WHERE telegram_id=$1", tg_id)
 
 
-async def upsert_participant_start(tg_id: int) -> None:
-    """Гарантирует запись участника при /start (без анкеты)."""
+async def upsert_participant_start(tg_id: int, username: str | None = None) -> None:
+    """Гарантирует запись участника при /start (без анкеты). Username
+    запоминаем сразу — по нему админа можно найти в «👑 Админы», даже если
+    он не проходил регистрацию."""
     await pool().execute(
-        """INSERT INTO participants (telegram_id, full_name)
-           VALUES ($1, '') ON CONFLICT (telegram_id) DO NOTHING""",
-        tg_id,
+        """INSERT INTO participants (telegram_id, full_name, username)
+           VALUES ($1, '', $2) ON CONFLICT (telegram_id)
+           DO UPDATE SET username = COALESCE(EXCLUDED.username, participants.username)""",
+        tg_id, username,
     )
+
+
+async def people_by_ids(ids) -> dict[int, asyncpg.Record]:
+    """ФИО и username по списку Telegram ID (для экрана админов)."""
+    rows = await pool().fetch(
+        "SELECT telegram_id, full_name, username FROM participants "
+        "WHERE telegram_id = ANY($1::bigint[])", list(ids))
+    return {r["telegram_id"]: r for r in rows}
 
 
 async def reset_participant(tg_id: int) -> None:
@@ -282,21 +293,26 @@ async def move_to_team(tg_id: int, team_id: int) -> None:
     await pool().execute("UPDATE participants SET team_id=$2 WHERE telegram_id=$1", tg_id, team_id)
 
 
-async def find_participants(query: str, limit: int = 10) -> list[asyncpg.Record]:
-    """Поиск участника по ID или части ФИО/username для перевода в команду."""
+async def find_participants(query: str, limit: int = 10,
+                            with_unregistered: bool = False) -> list[asyncpg.Record]:
+    """Поиск участника по ID или части ФИО/@username.
+
+    with_unregistered=True — ещё и те, кто только нажал /start без анкеты
+    (нужно для назначения админов); остальные сценарии ищут по анкетам."""
     if query.isdigit():
         rows = await pool().fetch(
-            """SELECT p.telegram_id, p.full_name, t.name AS team_name
+            """SELECT p.telegram_id, p.full_name, p.username, t.name AS team_name
                  FROM participants p LEFT JOIN teams t ON t.id=p.team_id
                 WHERE p.telegram_id=$1""", int(query))
         if rows:
             return rows
-    pat = f"%{query}%"
+    pat = f"%{query.lstrip('@')}%"
     return await pool().fetch(
-        """SELECT p.telegram_id, p.full_name, t.name AS team_name
+        """SELECT p.telegram_id, p.full_name, p.username, t.name AS team_name
              FROM participants p LEFT JOIN teams t ON t.id=p.team_id
-            WHERE p.full_name ILIKE $1 OR p.username ILIKE $1
-            ORDER BY p.full_name LIMIT $2""", pat, limit)
+            WHERE (p.full_name ILIKE $1 OR p.username ILIKE $1)
+              AND (p.full_name <> '' OR $3)
+            ORDER BY p.full_name LIMIT $2""", pat, limit, with_unregistered)
 
 
 async def set_approved(tg_id: int) -> None:

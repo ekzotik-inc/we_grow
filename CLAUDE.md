@@ -84,6 +84,14 @@ Telegram-бот **Step Together** (@wegrowmarathon_bot) — корпоратив
   получат. Меню команд ставит `bot/commands.py` — на старте, при /addadmin,
   /deladmin и при /start админа (Telegram не даёт задать scope чата, пока
   пользователь не начал диалог с ботом).
+- **«👑 Админы» в админ-панели** (`admin.py`, колбэки `adm:admins/adadd/
+  adpick/ad/adset`): список админов, добавление поиском по ФИО / @username /
+  ID среди всех, кто нажал /start (`find_participants(...,
+  with_unregistered=True)`; username пишется уже при /start), снятие и роль.
+  Роли: 🛡 админ и 👑 владелец. Владельцы = env `ADMIN_IDS` + `extra_owners`
+  в settings (`settings.is_owner/owner_ids`); только владелец назначает и
+  снимает владельцев и видит «🧨 Сброс марафона». Env-владельцев из бота не
+  снять, себя снять нельзя. Render для смены админов больше не нужен.
 - **Ручной ввод результата** (админ-панель → «✍️ Ручной ввод»): поиск
   участника → календарь дней марафона → число шагов → подтверждение.
   Скриншот не нужен, запись создаётся сразу `accepted` с `source='admin'`,
@@ -143,7 +151,7 @@ Telegram-бот **Step Together** (@wegrowmarathon_bot) — корпоратив
   отправляется уведомление об отмене (`texts.challenge_cancelled` /
   `flashmob_cancelled`).
 - **Сброс марафона** (`/admin` → «🧨 Сброс марафона», только для владельцев
-  из env `ADMIN_IDS`, доп-админам кнопка не показывается и колбэк закрыт):
+  (env `ADMIN_IDS` + назначенные в «👑 Админы»), доп-админам кнопка не показывается и колбэк закрыт):
   экран со счётчиками → подтверждение словом `СБРОС` заглавными →
   `db.wipe_marathon()` одной транзакцией чистит participants, daily_entries,
   weekly_summaries, streaks, team_bonuses, challenges, flashmobs, broadcasts,

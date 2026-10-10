@@ -122,6 +122,36 @@ async def add_admin(tg_id: int) -> None:
 
 
 async def remove_admin(tg_id: int) -> None:
-    """Убирает доп-админа. Базовых (из env ADMIN_IDS) убрать нельзя."""
+    """Убирает доп-админа (и его права владельца). Базовых (из env
+    ADMIN_IDS) убрать нельзя."""
     ids = extra_admin_ids() - {tg_id}
     await set("extra_admins", ",".join(str(i) for i in sorted(ids)) or None)
+    await remove_owner(tg_id)
+
+
+# Владельцы — админы с правом на необратимые действия (сброс марафона) и на
+# управление другими владельцами. Базовые — env ADMIN_IDS, дополнительные
+# назначаются кнопкой в «👑 Админы» и хранятся в settings (extra_owners).
+
+def extra_owner_ids() -> set[int]:
+    raw = _cache.get("extra_owners") or ""
+    return {int(x.strip()) for x in raw.split(",") if x.strip().lstrip("-").isdigit()}
+
+
+def owner_ids() -> set[int]:
+    return {*config.admin_ids} | (extra_owner_ids() & extra_admin_ids())
+
+
+def is_owner(tg_id: int) -> bool:
+    return tg_id in owner_ids()
+
+
+async def add_owner(tg_id: int) -> None:
+    await add_admin(tg_id)
+    ids = extra_owner_ids() | {tg_id}
+    await set("extra_owners", ",".join(str(i) for i in sorted(ids)))
+
+
+async def remove_owner(tg_id: int) -> None:
+    ids = extra_owner_ids() - {tg_id}
+    await set("extra_owners", ",".join(str(i) for i in sorted(ids)) or None)

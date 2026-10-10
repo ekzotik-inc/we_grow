@@ -4,13 +4,14 @@ from __future__ import annotations
 
 import json
 from datetime import datetime, timezone
-from html import escape
+from html import escape, unescape
 
 from aiogram import F, Router
 from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
 from aiogram.types import CallbackQuery, Message, ReplyKeyboardRemove
+from aiogram.utils.keyboard import InlineKeyboardBuilder
 
 from bot import db, keyboards, notify, settings, texts
 from bot.config import config
@@ -24,9 +25,10 @@ def _is_admin(tg_id: int) -> bool:
 
 
 def _is_owner(tg_id: int) -> bool:
-    """Владелец = админ из env ADMIN_IDS. Только ему доступен сброс марафона:
-    доп-админы из /addadmin стереть всю базу не могут."""
-    return tg_id in config.admin_ids
+    """Владелец = админ из env ADMIN_IDS или назначенный владельцем в
+    «👑 Админы». Только владельцу доступен сброс марафона и управление
+    владельцами: обычные админы стереть всю базу не могут."""
+    return settings.is_owner(tg_id)
 
 
 @router.message(Command("admin"))
@@ -91,7 +93,7 @@ WIPE_WORD = "СБРОС"
 @router.callback_query(F.data == "adm:wipe")
 async def wipe_start(cb: CallbackQuery, state: FSMContext) -> None:
     if not _is_owner(cb.from_user.id):
-        return await cb.answer("Сброс доступен только владельцу бота (ADMIN_IDS).",
+        return await cb.answer("Сброс доступен только владельцу бота.",
                                show_alert=True)
     s = await db.marathon_stats()
     await state.set_state(Wipe.confirm)
@@ -318,6 +320,170 @@ async def disqualify(message: Message) -> None:
     await notify_admins(message.bot, f"⛔ {name} дисквалифицирован администратором.")
 
 
+# ---- 👑 Админы: управление прямо из админ-панели ---------------------------
+# Без Render: человек нажимает /start в боте, админ находит его поиском по
+# ФИО / @username / ID и назначает. Владельцы из env ADMIN_IDS неснимаемы.
+
+class AdminMgmt(StatesGroup):
+    search = State()
+
+
+def _who(tid: int, r) -> str:
+    if r is not None and (r["full_name"] or "").strip():
+        name = escape(r["full_name"])
+        return name + (f" (@{escape(r['username'])})" if r["username"] else "")
+    if r is not None and r["username"]:
+        return "@" + escape(r["username"])
+    return f"ID {tid}"
+
+
+async def _admins_view(viewer: int):
+    ids = sorted(settings.admin_ids())
+    people = await db.people_by_ids(ids)
+    owners = settings.owner_ids()
+    lines = ["👑 <b>Администраторы</b>\n"]
+    b = InlineKeyboardBuilder()
+    for tid in ids:
+        role = "👑 владелец" if tid in owners else "🛡 админ"
+        fixed = " · <i>из настроек сервера</i>" if tid in config.admin_ids else ""
+        lines.append(f"• {_who(tid, people.get(tid))} — {role}{fixed}")
+        if tid not in config.admin_ids:
+            b.button(text=f"{'👑' if tid in owners else '🛡'} "
+                          f"{unescape(_who(tid, people.get(tid)).split(' (@')[0])[:28]}",
+                     callback_data=f"adm:ad:{tid}")
+    lines.append(
+        "\n<b>Как добавить:</b> человек нажимает /start в боте, затем «➕ Добавить "
+        "админа» и поиск по ФИО, @username или Telegram ID.\n"
+        "🛡 <b>Админ</b> — модерация, ручной ввод, рассылки, отчёты.\n"
+        "👑 <b>Владелец</b> — всё то же + сброс марафона и назначение владельцев.")
+    b.button(text="➕ Добавить админа", callback_data="adm:adadd")
+    b.button(text="⬅️ Назад", callback_data="adm:back")
+    b.adjust(1)
+    return "\n".join(lines), b.as_markup()
+
+
+@router.callback_query(F.data == "adm:admins")
+async def admins_list(cb: CallbackQuery, state: FSMContext) -> None:
+    if not _is_admin(cb.from_user.id):
+        return await cb.answer()
+    await state.clear()
+    text, kb = await _admins_view(cb.from_user.id)
+    await cb.message.edit_text(text, reply_markup=kb)
+    await cb.answer()
+
+
+@router.callback_query(F.data == "adm:adadd")
+async def admins_add(cb: CallbackQuery, state: FSMContext) -> None:
+    if not _is_admin(cb.from_user.id):
+        return await cb.answer()
+    await state.set_state(AdminMgmt.search)
+    await cb.message.answer(
+        "🔎 Напишите <b>часть ФИО</b>, <b>@username</b> или <b>Telegram ID</b> "
+        "будущего админа.\n\nВажно: он должен хотя бы раз нажать /start в боте. "
+        "/cancel — отмена.")
+    await cb.answer()
+
+
+@router.message(AdminMgmt.search, F.text)
+async def admins_search(message: Message, state: FSMContext) -> None:
+    if not _is_admin(message.from_user.id):
+        return
+    q = message.text.strip()
+    rows = await db.find_participants(q, limit=10, with_unregistered=True) if q else []
+    if not rows:
+        return await message.answer(
+            "Никого не нашёл 🤷 Проверьте, что человек нажал /start в боте, и "
+            "пришлите другой запрос. /cancel — отмена.")
+    await state.clear()
+    admins = settings.admin_ids()
+    b = InlineKeyboardBuilder()
+    for r in rows:
+        mark = "✅ " if r["telegram_id"] in admins else ""
+        b.button(text=unescape(mark + _who(r["telegram_id"], r))[:60],
+                 callback_data=f"adm:adpick:{r['telegram_id']}")
+    b.button(text="⬅️ К списку админов", callback_data="adm:admins")
+    b.adjust(1)
+    await message.answer("Кого назначить администратором? (✅ — уже админ)",
+                         reply_markup=b.as_markup())
+
+
+async def _admin_card(cb: CallbackQuery, tid: int) -> None:
+    people = await db.people_by_ids([tid])
+    who = _who(tid, people.get(tid))
+    viewer_owner = _is_owner(cb.from_user.id)
+    b = InlineKeyboardBuilder()
+    if not settings.is_admin(tid):
+        text = f"👤 {who}\n\nСейчас не администратор."
+        b.button(text="🛡 Сделать админом", callback_data=f"adm:adset:{tid}:a")
+        if viewer_owner:
+            b.button(text="👑 Сделать владельцем", callback_data=f"adm:adset:{tid}:o")
+    elif tid in config.admin_ids:
+        text = (f"👤 {who}\n\n👑 Владелец из настроек сервера (ADMIN_IDS) — "
+                "его права меняются только там.")
+    else:
+        owner = settings.is_owner(tid)
+        text = f"👤 {who}\n\nРоль: {'👑 владелец' if owner else '🛡 админ'}."
+        if viewer_owner:
+            if owner:
+                b.button(text="🛡 Оставить только админом", callback_data=f"adm:adset:{tid}:a")
+            else:
+                b.button(text="👑 Сделать владельцем", callback_data=f"adm:adset:{tid}:o")
+        if tid != cb.from_user.id and (viewer_owner or not owner):
+            b.button(text="🚫 Снять с админов", callback_data=f"adm:adset:{tid}:x")
+    b.button(text="⬅️ К списку админов", callback_data="adm:admins")
+    b.adjust(1)
+    await cb.message.edit_text(text, reply_markup=b.as_markup())
+
+
+@router.callback_query(F.data.startswith("adm:adpick:") | F.data.startswith("adm:ad:"))
+async def admins_card(cb: CallbackQuery) -> None:
+    if not _is_admin(cb.from_user.id):
+        return await cb.answer()
+    await _admin_card(cb, int(cb.data.rsplit(":", 1)[1]))
+    await cb.answer()
+
+
+@router.callback_query(F.data.startswith("adm:adset:"))
+async def admins_set(cb: CallbackQuery) -> None:
+    if not _is_admin(cb.from_user.id):
+        return await cb.answer()
+    _, _, tid_s, action = cb.data.split(":")
+    tid = int(tid_s)
+    viewer_owner = _is_owner(cb.from_user.id)
+    if tid in config.admin_ids:
+        return await cb.answer("Этот владелец задан в настройках сервера.", show_alert=True)
+    # Владельцами распоряжаются только владельцы; себя снять нельзя — чтобы
+    # случайно не остаться без доступа.
+    if (action == "o" or settings.is_owner(tid)) and not viewer_owner:
+        return await cb.answer("Это может сделать только владелец.", show_alert=True)
+    if action == "x" and tid == cb.from_user.id:
+        return await cb.answer("Себя снять нельзя — попросите другого админа.",
+                               show_alert=True)
+    was_admin = settings.is_admin(tid)
+    from bot import commands
+    if action == "x":
+        await settings.remove_admin(tid)
+        await db.set_role(tid, "participant")
+        await commands.apply_for(cb.bot, tid)
+        await cb.answer("Снят с админов")
+        await notify.broadcast(cb.bot, [tid], "ℹ️ Вы больше не администратор марафона.")
+    else:
+        if action == "o":
+            await settings.add_owner(tid)
+        else:
+            await settings.add_admin(tid)
+            await settings.remove_owner(tid)
+        await db.set_role(tid, "admin")
+        await commands.apply_for(cb.bot, tid)
+        await cb.answer("Готово")
+        if not was_admin:
+            await notify.broadcast(cb.bot, [tid], (
+                "👑 Вас назначили администратором марафона Step Together.\n"
+                "Админ-панель — команда /admin."))
+    text, kb = await _admins_view(cb.from_user.id)
+    await cb.message.edit_text(text, reply_markup=kb)
+
+
 def _parse_id_arg(text: str) -> int | None:
     parts = (text or "").split()
     if len(parts) == 2 and parts[1].lstrip("-").isdigit():
@@ -357,6 +523,9 @@ async def del_admin_cmd(message: Message) -> None:
     if tid in config.admin_ids:
         await message.answer("Этот админ задан через ADMIN_IDS (env) — его можно убрать "
                              "только там. Доп-админов снимаю без проблем.")
+        return
+    if settings.is_owner(tid) and not _is_owner(message.from_user.id):
+        await message.answer("Владельца может снять только владелец.")
         return
     await settings.remove_admin(tid)
     await db.set_role(tid, "participant")
