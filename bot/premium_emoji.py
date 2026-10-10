@@ -103,7 +103,7 @@ async def validate(bot) -> dict:
         elif fallback.get(k) in ok:
             result[k] = fallback[k]
     set_map(result)
-    STATUS.update(checked=True, valid=len(_IDS) - 1, total=len(primary) - 1,
+    STATUS.update(checked=True, valid=len(_IDS) - 1, total=len({*primary, *fallback}) - 1,
                   sets=sorted(sets), stepy_ok=STEPY_ID in ok,
                   primary_ok=sum(1 for v in primary.values() if v in ok) - (STEPY_ID in ok))
     return STATUS

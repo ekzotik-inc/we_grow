@@ -21,7 +21,11 @@ class Config:
     bot_token: str = os.getenv("BOT_TOKEN", "")
     database_url: str = os.getenv("DATABASE_URL", "postgresql://wegrow:wegrow@localhost:5432/wegrow")
     admin_ids: frozenset[int] = field(default_factory=lambda: frozenset(_admin_ids()))
-    tz_name: str = os.getenv("TZ", "Asia/Bishkek")  # Кыргызстан (UTC+6, без перехода)
+    # Таймзона марафона — отдельная переменная MARATHON_TZ, по умолчанию
+    # Кыргызстан (UTC+6). Системную TZ больше не читаем: в Render у сервисов
+    # осталась TZ=Asia/Tashkent от прошлого марафона, и она тихо сдвигала
+    # дедлайны, напоминания и картинки дня на час.
+    tz_name: str = os.getenv("MARATHON_TZ", "").strip() or "Asia/Bishkek"
     webapp_url: str = os.getenv("WEBAPP_URL", "").strip()
     # Прямой контакт сотрудника P&C для обратной связи.
     feedback_url: str = os.getenv("FEEDBACK_URL", "https://t.me/aidanazhanyshbekova").strip()

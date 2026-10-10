@@ -24,7 +24,7 @@ services:
         sync: false
       - key: ADMIN_IDS        # ваш Telegram ID (узнать: напишите @userinfobot)
         sync: false
-      - key: TZ
+      - key: MARATHON_TZ
         value: Asia/Bishkek
       - key: WEBAPP_URL       # адрес wegrow-webapp (см. ниже), напр. https://wegrow-webapp.onrender.com
         sync: false
@@ -45,5 +45,5 @@ services:
         sync: false
       - key: BOT_TOKEN        # тот же токен — нужен для проверки initData
         sync: false
-      - key: TZ
+      - key: MARATHON_TZ
         value: Asia/Bishkek
