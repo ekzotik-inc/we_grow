@@ -13,7 +13,7 @@ Telegram-бот **Step Together** (@wegrowmarathon_bot) — корпоратив
 `<blockquote>` через `texts.stepy()`. Админ-сообщения (P&C) — без Stepy,
 деловым тоном.
 
-- **Марафон: 5 — 26 октября 2026**, таймзона `Asia/Bishkek` (Кыргызстан,
+- **Марафон: 12 октября — 1 ноября 2026**, таймзона `Asia/Bishkek` (Кыргызстан,
   UTC+6). Даты и TZ — только через env (`MARATHON_START`, `MARATHON_END`,
   `TZ`), дефолты в `bot/config.py`. В текстах даты НЕ зашиты: бот берёт их
   из `texts.marathon_dates()`, Mini App — из `marathon` в `/api/me`.
