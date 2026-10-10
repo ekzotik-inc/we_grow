@@ -326,6 +326,22 @@ async def api_weekly_screenshot(ws_id: int, sig: str):
     return await _serve_screenshot(row["screenshot_file_id"])
 
 
+@app.post("/api/timing")
+async def api_timing(request: Request):
+    """Замеры открытия Mini App с телефона (мс от старта страницы). Медленные
+    (> 2 с до показа) пишем в лог — так видно, где теряется время:
+    init (ожидание данных Telegram), api_start→api_done (сеть + сервер)."""
+    try:
+        data = await request.json()
+        m = {k: int(v) for k, v in (data.get("m") or {}).items()}
+    except Exception:  # noqa: BLE001
+        return {"ok": False}
+    if m.get("shown", 0) > 2000:
+        _log.warning("медленное открытие Mini App (%s %s): %s",
+                     str(data.get("p"))[:20], str(data.get("v"))[:10], m)
+    return {"ok": True}
+
+
 @app.get("/health")
 async def health():
     # Бот пингует /health каждые 10 минут — заодно держим пул БД «тёплым».

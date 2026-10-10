@@ -473,7 +473,7 @@
     <div class="logo">🪴</div>
     <div><h1>Step Together</h1><p id="head-sub">марафон шагов со Stepy</p></div>
   </div>
-  <div id="view"><div class="spin"></div></div>
+  <div id="view"><div class="spin"></div><div class="muted" id="load-hint" style="text-align:center;font-size:13px;margin-top:-6px"></div></div>
 </div>
 
 <nav class="nav" id="nav">
@@ -542,8 +542,35 @@ const FEEDBACK="https://t.me/aidanazhanyshbekova";
 function openPC(){ try{ tg?.openTelegramLink?.(FEEDBACK); }catch(e){ location.href=FEEDBACK; } }
 function openExt(u){ try{ if(tg?.openLink){ tg.openLink(u); return false; } }catch(e){} window.open(u,"_blank"); return false; }
 
+// Замеры открытия (мс от старта страницы) — уходят на сервер, медленные
+// открытия видны в логах Render: так понятно, где теряется время.
+const T0=performance.now(); const MARKS={};
+function mark(k){ if(!(k in MARKS)) MARKS[k]=Math.round(performance.now()-T0); }
+function sendTiming(){
+  try{
+    mark("shown");
+    const body=JSON.stringify({m:MARKS, p:tg?.platform||"web", v:tg?.version||""});
+    if(navigator.sendBeacon) navigator.sendBeacon("/api/timing", new Blob([body],{type:"application/json"}));
+    else fetch("/api/timing",{method:"POST",headers:{"Content-Type":"application/json"},body});
+  }catch(e){}
+}
+function hint(t){ const h=document.getElementById("load-hint"); if(h) h.textContent=t; }
+
+// fetch с таймаутом: на мобильной сети запрос мог «повиснуть» и спиннер
+// крутился бесконечно. Через 8 с прерываем и повторяем один раз.
+async function fetchT(path, opts={}, ms=8000){
+  const ctl=new AbortController(); const t=setTimeout(()=>ctl.abort(), ms);
+  try{ return await fetch(path,{...opts, signal:ctl.signal}); } finally{ clearTimeout(t); }
+}
 async function api(path){
-  const r = await fetch(path, {headers:{"X-Init-Data": getInit(), "X-Session": session()}});
+  const opts={headers:{"X-Init-Data": getInit(), "X-Session": session()}};
+  const slow=setTimeout(()=>hint("Подключаемся к серверу…"), 1500);
+  mark("api_start");
+  let r;
+  try{ r=await fetchT(path, opts); }
+  catch(e){ hint("Сеть медленная — пробуем ещё раз…"); mark("retry"); r=await fetchT(path, opts, 15000); }
+  finally{ clearTimeout(slow); }
+  mark("api_done");
   if(r.status===401){ clearSession(); meCacheClear(); renderLogin(); throw new Error("HTTP 401"); }
   if(!r.ok){ let d=""; try{ d=(await r.json()).detail||""; }catch(_){}
     throw new Error("HTTP "+r.status+(d?": "+d:"")); }
@@ -660,13 +687,13 @@ function meCacheClear(){ try{ localStorage.removeItem(ME_KEY()); }catch(e){} }
 async function renderProgress(){
   const my=++renderGen;
   const cached=meCacheGet();
-  if(cached && cached.registered) drawProgress(cached);
-  let d; try{ d=await api("/api/me"); }catch(e){ if(my===renderGen && !(cached&&cached.registered))notice(e); return; }
+  if(cached){ drawProgress(cached); mark("cache"); }
+  let d; try{ d=await api("/api/me"); }catch(e){ if(my===renderGen && !cached)notice(e); return; }
   if(my!==renderGen) return;
   const same=cached && JSON.stringify(cached)===JSON.stringify(d);
   meCacheSet(d);
-  if(same) return;              // ничего не изменилось — не перерисовываем
-  drawProgress(d);
+  if(!same) drawProgress(d);     // ничего не изменилось — не перерисовываем
+  if(!window.__timingSent){ window.__timingSent=1; sendTiming(); }
 }
 
 function drawProgress(d){
@@ -1131,8 +1158,10 @@ try{ tg?.onEvent?.("viewportChanged",fitNavPadding); }catch(e){}
 // Загрузка: если есть Telegram-авторизация или сохранённая сессия — сразу к
 // прогрессу; иначе показываем вход по номеру телефона.
 async function boot(){
+  mark("boot");
   if(!window.Telegram?.WebApp && session()){ show("progress"); return; }
   await waitInit();
+  mark("init");
   if(getInit() || session()){ show("progress"); }
   else { renderLogin(); }
 }
