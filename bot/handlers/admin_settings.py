@@ -522,9 +522,9 @@ async def team_add_save(message: Message, state: FSMContext) -> None:
     name = message.text.strip()
     if not name:
         return await message.answer("Пустое название. Попробуй ещё раз через «🌳 Команды».")
-    await db.create_team(name, 10)
+    await db.create_team(name)
     header, kb = await _teams_view()
-    await message.answer(f"Команда <b>{escape(name)}</b> добавлена ✅ (вместимость 10)")
+    await message.answer(f"Команда <b>{escape(name)}</b> добавлена ✅ (вместимость {db.TEAM_SIZE})")
     await message.answer(header, reply_markup=kb)
 
 
@@ -573,7 +573,7 @@ async def team_cap_start(cb: CallbackQuery, state: FSMContext) -> None:
         return await cb.answer()
     await state.set_state(TeamAdmin.capacity)
     await state.update_data(team_id=int(cb.data.split(":")[1]))
-    await cb.message.answer("Новая вместимость команды? Пришли число (например 10). /cancel — отмена.")
+    await cb.message.answer("Новая вместимость команды? Пришли число (по правилам — 5). /cancel — отмена.")
     await cb.answer()
 
 

@@ -20,8 +20,8 @@ BONUS_7_DAYS = 4
 def points_for_steps(steps: int) -> int:
     """Базовые баллы за день по шкале (правило 9), без недельного бонуса.
 
-    5 000–9 999 = 1, 10 000–14 999 = 2, 15 000–30 000 = 3.
-    Выше 30 000 — те же 3 балла, но день помечается на проверку (needs_review).
+    5 000–9 999 = 1, 10 000–14 999 = 2, 15 000–19 999 = 3, 20 000+ = 4.
+    Выше 30 000 — те же 4 балла, но день помечается на проверку (needs_review).
     """
     if steps < MIN_COUNTED_STEPS:
         return 0
@@ -29,7 +29,9 @@ def points_for_steps(steps: int) -> int:
         return 1
     if steps < 15_000:
         return 2
-    return 3
+    if steps < 20_000:
+        return 3
+    return 4
 
 
 def needs_review(steps: int) -> bool:

@@ -49,10 +49,34 @@ async def _on_error(event) -> bool:
     return True
 
 
+async def _one_time_migrations() -> None:
+    """Разовые правки данных под обновлённые правила WE GROW. Каждая
+    помечается флагом в settings и при следующих стартах не повторяется."""
+    if not settings.get("migr_scale_20k"):
+        # Шкала дополнена ступенью 20 000+ → 4 балла: пересчитываем уже
+        # принятые дни (с учётом челленджей), затем серии/бонусы не меняются —
+        # они зависят от шагов, а не от баллов.
+        changed = await db.rescore_accepted_entries()
+        await settings.set("migr_scale_20k", "1")
+        log.info("Миграция шкалы 20 000+ → 4: пересчитано записей: %s", changed)
+    if not settings.get("migr_team_size_5"):
+        # Команда — ровно 5 человек: стандартная вместимость 10 → 5.
+        # Вручную заданные вместимости (не 10) не трогаем.
+        n = await db.pool().execute(
+            "UPDATE teams SET capacity=$1 WHERE capacity=10", db.TEAM_SIZE)
+        await settings.set("migr_team_size_5", "1")
+        over = [t for t in await db.teams_with_capacity() if t["taken"] > t["capacity"]]
+        log.info("Миграция размера команды → %s: %s", db.TEAM_SIZE, n)
+        for t in over:
+            log.warning("Команда «%s» переполнена: %s/%s — состав правит P&C",
+                        t["name"], t["taken"], t["capacity"])
+
+
 async def main() -> None:
     config.validate()
     await _connect_db_retry()
     await settings.load()
+    await _one_time_migrations()
     # Пол по ФИО — для раздельных топов. Трогает только тех, у кого он пуст,
     # поэтому ручные правки админов переживают перезапуск.
     filled = await db.backfill_genders()

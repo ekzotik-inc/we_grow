@@ -261,6 +261,10 @@ async def health(message: Message) -> None:
     s = await db.marathon_stats()
     join = settings.channel_id("join")
     review = settings.channel_id("review")
+    teams = await db.teams_with_capacity()
+    fill = " · ".join(
+        f"{escape(t['name'])} {t['taken']}/{t['capacity']}"
+        + (" ⚠️" if t["taken"] > t["capacity"] else "") for t in teams) or "—"
     await message.answer(
         "🩺 <b>Состояние бота</b>\n\n"
         f"🕒 Сейчас: <b>{now.strftime('%d.%m.%Y %H:%M')}</b> "
@@ -275,6 +279,7 @@ async def health(message: Message) -> None:
         + "</b>\n\n"
         f"👥 Участников: <b>{s['participants']}</b> · результатов: "
         f"<b>{s['entries']}</b> · команд: <b>{s['teams']}</b>\n"
+        f"🌳 Состав команд: {fill}\n"
         f"🎲 Челленджей: <b>{s['challenges']}</b> · флешмобов: <b>{s['flashmobs']}</b>\n"
         f"👑 Админов: <b>{len(settings.admin_ids())}</b>\n"
         f"📢 Канал заявок: <b>{join or 'не задан'}</b> · проверки: "

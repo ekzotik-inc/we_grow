@@ -10,8 +10,10 @@ SET search_path TO wegrow;
 CREATE TABLE IF NOT EXISTS teams (
     id       serial PRIMARY KEY,
     name     text NOT NULL UNIQUE,
-    capacity int  NOT NULL DEFAULT 10
+    capacity int  NOT NULL DEFAULT 5
 );
+-- WE GROW: команда — ровно 5 человек (раньше 8–10).
+ALTER TABLE teams ALTER COLUMN capacity SET DEFAULT 5;
 
 CREATE TABLE IF NOT EXISTS participants (
     telegram_id     bigint PRIMARY KEY,
@@ -161,8 +163,8 @@ CREATE TABLE IF NOT EXISTS settings (
 
 -- Стартовые команды (тема «растения»).
 INSERT INTO teams (name, capacity) VALUES
-    ('Бамбук', 10),
-    ('Секвойи', 10),
-    ('Баобабы', 10),
-    ('Эвкалипты', 10)
+    ('Бамбук', 5),
+    ('Секвойи', 5),
+    ('Баобабы', 5),
+    ('Эвкалипты', 5)
 ON CONFLICT (name) DO NOTHING;

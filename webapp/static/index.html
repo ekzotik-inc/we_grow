@@ -560,11 +560,13 @@ const MONTHS=["января","февраля","марта","апреля","ма�
 function fmtDM(iso){ const p=String(iso).split("-"); return p[2]+"."+p[1]; }
 function fmtFull(iso){ const [y,m,dd]=String(iso).split("-"); return parseInt(dd,10)+" "+MONTHS[parseInt(m,10)-1]+" "+y; }
 
+// Баллы: целые как есть, средний балл команды — с одной цифрой после запятой.
+const fmtPts=(x)=>{ const n=Number(x)||0; return Number.isInteger(n)?String(n):n.toFixed(1).replace(".",","); };
 function countUp(el,to,dur=900,fmt){
   const start=performance.now(), from=0;
   (function tick(t){
     const p=Math.min(1,(t-start)/dur), e=1-Math.pow(1-p,3);
-    const v=Math.round(from+(to-from)*e);
+    const raw=from+(to-from)*e, v=Number.isInteger(to)?Math.round(raw):Math.round(raw*10)/10;
     el.textContent=fmt?fmt(v):v;
     if(p<1)requestAnimationFrame(tick);
   })(start);
@@ -798,13 +800,16 @@ async function renderTeam(){
     </div>
     <div class="stats">
       <div class="tile card d1" style="margin:0"><div class="ti">${ico("sparkle")}</div>
-        <div class="n tq" id="t-pts">0</div><div class="l">Баллов команды</div></div>
+        <div class="n tq" id="t-pts">0</div><div class="l">Средний балл</div></div>
       <div class="tile card d2" style="margin:0"><div class="ti">${ico("users")}</div>
         <div class="n" id="t-mem">0</div><div class="l">Участников</div></div>
+      <div class="tile card d3" style="margin:0"><div class="ti">${ico("flame")}</div>
+        <div class="n" id="t-full">0</div><div class="l">Дней всей командой 10K+</div></div>
     </div>
     <div class="card d3">${secHead("users","Вклад участников","Длина полосы — доля от лучшего результата в команде")}${rows}</div></div>`;
-  requestAnimationFrame(()=>{ countUp(document.getElementById("t-pts"),d.total_points);
-    countUp(document.getElementById("t-mem"),d.members.length); });
+  requestAnimationFrame(()=>{ countUp(document.getElementById("t-pts"),Number(d.total_points)||0,900,fmtPts);
+    countUp(document.getElementById("t-mem"),d.members.length);
+    countUp(document.getElementById("t-full"),d.full_days||0); });
 }
 
 // ---- Лидерборд: заголовок с SVG, подиум лиг и шкалы очков ----------------
@@ -825,7 +830,7 @@ function podium(list){
       (i===0?`<svg class="ic crown"><use href="#i-crown"/></svg>`:"")+
       `<div class="av">${esc(initials(p.name))}</div>
        <div class="nm">${esc(shortName(p.name))}</div>
-       <div class="pt">${p.points}</div>
+       <div class="pt">${fmtPts(p.points)}</div>
        <div class="base">${i+1}</div></div>`;
   }).join("")+`</div>`;
 }
@@ -838,7 +843,7 @@ function bars(list,people){
   return l.map((x,i)=>`<div class="brow">
     <div class="bhead"><div class="lchip ${i<3?"c"+(i+1):""}">${i+1}</div>
       <div class="nm">${esc(people?shortName(x.name):(x.name||"—"))}</div>
-      <div class="pts">${x.points}</div></div>
+      <div class="pts">${fmtPts(x.points)}</div></div>
     <div class="lbar"><i style="width:${Math.max(x.points>0?6:0,Math.round(x.points/max*100))}%"></i></div>
   </div>`).join("");
 }
@@ -849,7 +854,7 @@ async function renderBoard(){
   if(my!==renderGen) return;
   const top=d.top||[];
   V.innerHTML=`<div class="view">
-    <div class="card d1">${secHead("trophy","Команды","Очки собираются из результатов всех участников")}
+    <div class="card d1">${secHead("trophy","Команды","Средний балл участников команды · при равенстве — дни, когда вся команда прошла 10 000+")}
       ${bars(d.teams,false)}</div>
     <div class="card d2">${secHead("crown","Тройка лидеров","Первые три места марафона","warm")}
       ${podium(top.slice(0,3))}</div>
@@ -887,7 +892,7 @@ async function renderRules(){
     "Участвовать могут все сотрудники <b>нашей дружной компании</b>.",
     "Регистрация и распределение по командам — прямо в боте.",
     `Шаги считает приложение <b>Google Health</b> (бывший Fitbit): <a class="link" href="${FIT_A}" onclick="return openExt(FIT_A)">Android</a> · <a class="link" href="${FIT_I}" onclick="return openExt(FIT_I)">iOS</a>.`,
-    "В команде — от <b>8 до 10</b> человек.",
+    "В команде — ровно <b>5 человек</b> из <b>разных функций</b>. P&C может скорректировать состав, если функции повторяются.",
     "Если команда заполнена, P&C предложит другую.",
     "Присоединяясь, ты обещаешь дойти до финиша 🏁",
     `Даты: <b>${MARATHON_TEXT()}</b> включительно.`,
@@ -895,7 +900,8 @@ async function renderRules(){
     "Шаги присылай <b>каждый день до 23:55</b>: число + скриншот из Google Health.",
     "В <b>воскресенье с 22:00 до 23:55</b> — еженедельный отчёт: скриншот недельной статистики (кнопка «📈 Еженедельный отчёт»).",
     "P&C может запросить дополнительный скрин для проверки.",
-    "Нарушение правил — дисквалификация, результаты не в зачёт.",
+    "Результаты, присланные после дедлайна или без даты на скриншоте, не учитываются.",
+    "Подделка данных — дисквалификация: баллы исключаются из личного и командного зачёта.",
   ];
   const rn=i=>i<8?i+1:i+3;  // пункты 9–10 (баллы/бонус) — отдельными секциями
   const items=r.map((t,i)=>`<div class="rule"><div class="rnum">${rn(i)}</div><p>${t}</p></div>`).join("");
@@ -927,18 +933,28 @@ async function renderRules(){
         <div class="st"><div>Не успел до 23:55 — день пропущен, а серия обнулится. Старайся не пропускать 🙌</div></div>
       </div>`)}
 
-    ${acc(ico("target"),"Баллы за день","от 1 до 3 баллов",`
+    ${acc(ico("target"),"Баллы за день","от 1 до 4 баллов",`
       <p class="muted" style="margin:4px 0">Считаются шаги за текущий день. Меньше 5 000 — 0 баллов.</p>
       <div class="scoregrid"><div class="k">5 000 – 9 999</div><div class="v">1 балл</div>
         <div class="k">10 000 – 14 999</div><div class="v">2 балла</div>
-        <div class="k">15 000 – 30 000</div><div class="v">3 балла</div></div>`)}
+        <div class="k">15 000 – 19 999</div><div class="v">3 балла</div>
+        <div class="k">20 000 и более</div><div class="v">4 балла</div></div>`)}
 
     ${acc(ico("flame"),"Бонус за серию","+2 или +4 балла в неделю",`
       <p class="muted" style="margin:4px 0">Серия — дни подряд по 10 000+ шагов. Пропуск или меньше 10 000 обнуляет серию.</p>
       <div class="scoregrid"><div class="k">5 дней подряд 10 000+</div><div class="v">+2 балла</div>
-        <div class="k">7 дней подряд 10 000+</div><div class="v">+4 балла</div></div>`)}
+        <div class="k">7 дней подряд 10 000+</div><div class="v">+4 балла</div></div>
+      <p class="muted" style="margin:8px 0 0">Бонусы не суммируются: за неделю с серией 7 дней — +4, а не +6. Неделя — календарная, пн–вс.</p>`)}
 
-    ${acc(ico("list"),"Все правила","полный список из 12 пунктов",`${items}
+    ${acc(ico("users"),"Командный зачёт","средний балл участников",`
+      <p class="muted" style="margin:4px 0;line-height:1.5">Твой личный результат — сумма дневных баллов и бонусов за серию.
+        Результат команды — <b style="color:var(--text)">среднее</b> личных баллов её участников: так один человек не «вытягивает» всю команду.</p>
+      <div class="howto">
+        <div class="st"><div>При равенстве выше команда, у которой больше дней, когда <b>все</b> участники прошли 10 000+.</div></div>
+        <div class="st"><div>Если равенство сохраняется — у кого больше шагов суммарно.</div></div>
+      </div>`)}
+
+    ${acc(ico("list"),"Все правила",`полный список из ${r.length} пунктов`,`${items}
       <div class="note" style="margin-top:12px">⚠️ <b>Важно:</b> на скриншоте должны быть видны <b>дата</b> и <b>число шагов</b>, а результат засчитывается только после проверки P&C.</div>`)}
 
     <div class="card d3" style="text-align:center">
@@ -975,8 +991,9 @@ function renderFAQ(){
     [ico("steps"),"Как сдать шаги?","Жми «Шаги за сегодня», пришли <b>число</b>, затем <b>скриншот</b> из Google Health. Успей до <b>23:55</b>."],
     [ico("calendar"),"Что за еженедельный отчёт?","Каждое <b>воскресенье с 22:00 до 23:55</b> жми кнопку «📈 Еженедельный отчёт» в боте и пришли <b>скриншот недельной статистики</b> из Google Health. Это закрепляет серию и бонус за неделю. В другое время кнопка закрыта — бот напомнит."],
     [ico("hourglass"),"Почему баллы не начислились сразу?","Каждый результат проверяет P&C. В календаре день сначала <b>⏳ на проверке</b>, после подтверждения становится зелёным — и капают баллы."],
-    [ico("target"),"Сколько баллов за день?","5 000–9 999 → <b>1</b>, 10 000–14 999 → <b>2</b>, 15 000–30 000 → <b>3</b>. Меньше 5 000 — 0 баллов."],
-    [ico("flame"),"Что за серия и бонус?","Серия — дни <b>подряд</b> по 10 000+ шагов. 5 дней → <b>+2</b>, 7 дней → <b>+4</b> (по итогам недели). Пропуск обнуляет серию."],
+    [ico("target"),"Сколько баллов за день?","5 000–9 999 → <b>1</b>, 10 000–14 999 → <b>2</b>, 15 000–19 999 → <b>3</b>, 20 000+ → <b>4</b>. Меньше 5 000 — 0 баллов."],
+    [ico("users"),"Как считается команда?","По <b>среднему</b> личных баллов участников (в команде 5 человек). При равенстве — по числу дней, когда вся команда прошла 10 000+, затем по сумме шагов."],
+    [ico("flame"),"Что за серия и бонус?","Серия — дни <b>подряд</b> по 10 000+ шагов. 5 дней → <b>+2</b>, 7 дней → <b>+4</b> (по итогам недели, бонусы не суммируются). Пропуск обнуляет серию."],
     [ico("camera"),"Какой скриншот подойдёт?","Только из приложения Google Health: страница «Шаги» с фильтром <b>«Все источники»</b>, где видны <b>дата</b> и <b>число шагов</b> за сегодня. Скриншоты из других приложений не принимаются. Для недельного отчёта — экран со статистикой за неделю."],
     [ico("trophy"),"Где прогресс и лидерборд?","В приложении: табы «Прогресс» и «Лидерборд» — там растение, календарь и рейтинг команд."],
     [ico("cross"),"Результат отклонили — что делать?","Проверь данные и пришли заново кнопкой «Шаги за сегодня». Не помогло — напиши в обратную связь."],

@@ -352,6 +352,8 @@ async def wipe_marathon() -> dict:
 
 # ---- Команды -------------------------------------------------------------
 
+TEAM_SIZE = 5   # WE GROW: команда — ровно 5 человек
+
 async def teams_with_capacity() -> list[asyncpg.Record]:
     """Команды со счётчиком занятых мест."""
     return await pool().fetch(
@@ -367,7 +369,7 @@ async def open_teams() -> list[asyncpg.Record]:
     return [t for t in await teams_with_capacity() if t["taken"] < t["capacity"]]
 
 
-async def create_team(name: str, capacity: int = 10) -> None:
+async def create_team(name: str, capacity: int = TEAM_SIZE) -> None:
     await pool().execute(
         "INSERT INTO teams (name, capacity) VALUES ($1,$2) ON CONFLICT (name) DO NOTHING",
         name, capacity)
@@ -826,22 +828,89 @@ async def team_bonus_rows(day: date) -> dict[int, int]:
 
 # ---- Лидерборд -----------------------------------------------------------
 
-async def team_leaderboard() -> list[asyncpg.Record]:
-    # Дневные баллы и недельные бонусы считаем отдельными подзапросами,
-    # чтобы join'ы не размножали строки.
-    return await pool().fetch(
-        """SELECT t.name,
-                  COALESCE((SELECT sum(d.points) FROM daily_entries d
-                              JOIN participants p ON p.telegram_id=d.participant_id
-                             WHERE p.team_id=t.id AND p.approved_at IS NOT NULL
-                               AND p.disqualified_at IS NULL AND d.status='accepted'),0)
-                + COALESCE((SELECT sum(w.bonus_points) FROM weekly_summaries w
-                              JOIN participants p ON p.telegram_id=w.participant_id
-                             WHERE p.team_id=t.id AND p.disqualified_at IS NULL),0)
-                + COALESCE((SELECT sum(b.points) FROM team_bonuses b
-                             WHERE b.team_id=t.id),0) AS points
-             FROM teams t ORDER BY points DESC, t.name"""
+async def team_leaderboard() -> list[dict]:
+    """Командный зачёт WE GROW: СРЕДНЕЕ личных сырых баллов активных
+    участников команды (дневные баллы + недельные бонусы) плюс командные
+    очки флешмобов. Среднее не даёт одному участнику «вытянуть» команду.
+
+    Активный участник — подтверждён и не дисквалифицирован: баллы
+    дисквалифицированного исключаются и из командного зачёта.
+    При равенстве выше команда, у которой больше дней, когда ВСЕ её
+    активные участники прошли 10 000+ (принятые результаты), затем —
+    у которой больше суммарных шагов."""
+    rows = await pool().fetch(
+        """WITH m AS (
+               SELECT p.telegram_id, p.team_id,
+                      COALESCE((SELECT sum(d.points) FROM daily_entries d
+                                 WHERE d.participant_id=p.telegram_id
+                                   AND d.status='accepted'),0)
+                    + COALESCE((SELECT sum(w.bonus_points) FROM weekly_summaries w
+                                 WHERE w.participant_id=p.telegram_id),0) AS pts,
+                      COALESCE((SELECT sum(d.steps) FROM daily_entries d
+                                 WHERE d.participant_id=p.telegram_id
+                                   AND d.status='accepted'),0) AS steps
+                 FROM participants p
+                WHERE p.approved_at IS NOT NULL AND p.disqualified_at IS NULL
+                  AND p.team_id IS NOT NULL),
+           agg AS (
+               SELECT team_id, count(*) AS members, avg(pts) AS avg_pts,
+                      sum(steps) AS steps
+                 FROM m GROUP BY team_id),
+           qd AS (
+               SELECT m.team_id, d.entry_date, count(DISTINCT m.telegram_id) AS n
+                 FROM daily_entries d JOIN m ON m.telegram_id=d.participant_id
+                WHERE d.status='accepted' AND d.steps >= 10000
+                GROUP BY m.team_id, d.entry_date),
+           fd AS (
+               SELECT qd.team_id, count(*) AS full_days
+                 FROM qd JOIN agg ON agg.team_id=qd.team_id
+                WHERE qd.n >= agg.members
+                GROUP BY qd.team_id)
+           SELECT t.id, t.name, COALESCE(agg.members,0) AS members,
+                  round(COALESCE(agg.avg_pts,0)
+                        + COALESCE((SELECT sum(b.points) FROM team_bonuses b
+                                     WHERE b.team_id=t.id),0), 1) AS points,
+                  COALESCE(fd.full_days,0) AS full_days,
+                  COALESCE(agg.steps,0) AS steps
+             FROM teams t
+             LEFT JOIN agg ON agg.team_id=t.id
+             LEFT JOIN fd ON fd.team_id=t.id
+            ORDER BY points DESC, full_days DESC, steps DESC, t.name"""
     )
+    out = []
+    for r in rows:
+        d = dict(r)
+        pts = float(d["points"])
+        d["points"] = int(pts) if pts.is_integer() else pts
+        d["steps"] = int(d["steps"])
+        out.append(d)
+    return out
+
+
+async def rescore_accepted_entries() -> int:
+    """Пересчитывает баллы ВСЕХ принятых результатов по текущей шкале
+    (backend.scoring) с учётом челленджей дня. Нужен один раз после смены
+    шкалы; дисквалифицированных тоже трогает — при восстановлении их баллы
+    должны быть по той же шкале. Возвращает число изменённых записей."""
+    from backend.scoring import points_for_steps
+    rows = await pool().fetch(
+        """SELECT d.id, d.entry_date, d.steps, d.points, d.created_at, p.team_id
+             FROM daily_entries d
+             JOIN participants p ON p.telegram_id=d.participant_id
+            WHERE d.status='accepted'""")
+    challenges: dict = {}
+    changed = 0
+    for r in rows:
+        day = r["entry_date"]
+        if day not in challenges:
+            challenges[day] = await challenge_for(day)
+        ch = challenges[day]
+        mult = ch["multiplier"] if challenge_applies(ch, r["team_id"], r["created_at"]) else 1
+        new = points_for_steps(r["steps"]) * mult
+        if new != r["points"]:
+            await pool().execute("UPDATE daily_entries SET points=$2 WHERE id=$1", r["id"], new)
+            changed += 1
+    return changed
 
 
 async def top_participants_by_gender(gender: str, limit: int = 3) -> list[asyncpg.Record]:

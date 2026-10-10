@@ -236,12 +236,15 @@ async def api_team(x_init_data: str | None = Header(default=None),
     members = await db.team_members(card["team_id"])
     board = await db.team_leaderboard()
     rank = next((i for i, t in enumerate(board, 1) if t["name"] == card["team_name"]), None)
+    mine = board[rank - 1] if rank else {}
     return {
         "registered": True,
         "team_name": card["team_name"],
         "rank": rank,
         "teams_count": len(board),
-        "total_points": sum(m["points"] for m in members),
+        # Командный результат WE GROW — среднее личных баллов (+ очки флешмобов).
+        "total_points": mine.get("points", 0),
+        "full_days": mine.get("full_days", 0),
         "members": [{"name": m["full_name"] or "—", "points": m["points"]} for m in members],
     }
 

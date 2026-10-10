@@ -16,8 +16,10 @@ def test_points_scale():
     assert points_for_steps(10_000) == 2
     assert points_for_steps(14_999) == 2
     assert points_for_steps(15_000) == 3
-    assert points_for_steps(30_000) == 3
-    assert points_for_steps(45_000) == 3
+    assert points_for_steps(19_999) == 3
+    assert points_for_steps(20_000) == 4
+    assert points_for_steps(30_000) == 4
+    assert points_for_steps(45_000) == 4
 
 
 def test_review_flag():
