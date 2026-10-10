@@ -779,6 +779,17 @@ async def _mark_caption(cb: CallbackQuery, suffix: str) -> None:
         pass
 
 
+async def _bonus_sync(bot, tg_id: int, day) -> int:
+    """Пересчёт недельного бонуса + поздравление, если бонус вырос."""
+    old, new = await db.recompute_weekly_bonus_change(tg_id, day)
+    if new > old:
+        try:
+            await bot.send_message(tg_id, texts.weekly_bonus_note(new, old))
+        except Exception:  # noqa: BLE001 — участник заблокировал бота
+            pass
+    return new
+
+
 @router.callback_query(F.data.startswith("mod_ok:"))
 async def mod_accept(cb: CallbackQuery) -> None:
     if not _is_admin(cb.from_user.id):
@@ -804,13 +815,14 @@ async def mod_accept(cb: CallbackQuery) -> None:
     pts = points_for_steps(e["steps"]) * mult
     await db.set_entry_status(e["id"], "accepted", pts)
     st = await db.recompute_streak(e["participant_id"])
-    await db.recompute_weekly_bonus(e["participant_id"], e["entry_date"])
-    await _flashmob_sync(cb.bot, e["entry_date"])
     try:
         await cb.bot.send_message(e["participant_id"],
                                   texts.accepted_note(e["steps"], pts, st.current_len, mult))
     except Exception:  # noqa: BLE001
         pass
+    # После «принято» — поздравление с бонусом, если этот день его дал.
+    await _bonus_sync(cb.bot, e["participant_id"], e["entry_date"])
+    await _flashmob_sync(cb.bot, e["entry_date"])
     x = f" ×{mult} 🎲" if mult > 1 else ""
     await _mark_caption(cb, f"\n\n✅ Принято, +{pts}{x} ({escape(cb.from_user.first_name)})")
     await cb.answer("Принято ✅")
@@ -1099,7 +1111,7 @@ async def manual_commit(cb: CallbackQuery) -> None:
                                    "вручную зачесть нельзя.")
         return await cb.answer("Не зачтено: день уже занят.", show_alert=True)
     st = await db.recompute_streak(tg_id)
-    bonus = await db.recompute_weekly_bonus(tg_id, day)
+    bonus = await _bonus_sync(cb.bot, tg_id, day)
     await _flashmob_sync(cb.bot, day)
     total = await db.total_points(tg_id)
     delivered = True

@@ -646,10 +646,20 @@ def profile_card(s: dict, today_entry=None, today=None) -> str:
     )
 
 
-def weekly_bonus_note(bonus: int) -> str:
-    medal = pe("🥇") if bonus >= 4 else pe("🥈")
-    return f"{medal} <b>Бонус за серию: +{bonus} балла!</b>\n" + stepy(
-        "Стабильность — твоя суперсила 💪 Так держать!")
+def weekly_bonus_note(bonus: int, old: int = 0) -> str:
+    """Поздравление с недельным бонусом: +2 за 5 дней подряд, +4 за 7.
+    old>0 — бонус вырос с +2 до +4 (не суммируются: итог за неделю +4)."""
+    medal = "🥇" if bonus >= 4 else "🥈"
+    if old:
+        head = f"{medal} <b>Бонус за серию вырос до +{bonus} баллов!</b>"
+        tip = ("7 дней подряд по 10 000+ — максимум недели 🔥 Бонусы не суммируются: "
+               f"за эту неделю у тебя +{bonus}, а не +{bonus + old}.")
+    else:
+        head = f"{medal} <b>Бонус за серию: +{bonus} балла!</b>"
+        tip = ("5 дней подряд по 10 000+ — стабильность твоя суперсила 💪 "
+               "Дотяни до 7 дней в этой неделе — и бонус станет +4."
+               if bonus < 4 else "Неделя без пропусков — так держать 🔥")
+    return head + "\n" + stepy(tip)
 
 
 def short_name(name: str | None) -> str:

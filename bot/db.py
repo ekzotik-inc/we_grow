@@ -232,6 +232,7 @@ async def streak_at_risk(day: date, min_len: int = 3) -> list[asyncpg.Record]:
         """SELECT s.participant_id, s.current_len
              FROM streaks s JOIN participants p ON p.telegram_id=s.participant_id
             WHERE s.current_len >= $2 AND p.approved_at IS NOT NULL
+              AND s.last_qualifying_date >= $1::date - 1   -- серия ещё жива
               AND p.disqualified_at IS NULL
               AND NOT EXISTS (SELECT 1 FROM daily_entries d
                                WHERE d.participant_id=s.participant_id AND d.entry_date=$1)""",
@@ -420,6 +421,27 @@ async def get_entry(tg_id: int, day: date) -> asyncpg.Record | None:
     )
 
 
+async def live_streak_len(tg_id: int, today: date) -> int:
+    """Серия «на сегодня»: streaks.current_len хранит длину последнего отрезка
+    принятых 10 000+, но не знает, что потом был пропуск. Серия жива, если
+    последний такой день — сегодня или вчера; если вчерашний результат ещё на
+    проверке — даём ему шанс (позавчера + вчера pending)."""
+    row = await pool().fetchrow(
+        "SELECT current_len, last_qualifying_date FROM streaks WHERE participant_id=$1", tg_id)
+    if row is None or not row["current_len"] or row["last_qualifying_date"] is None:
+        return 0
+    last = row["last_qualifying_date"]
+    if last >= today - timedelta(days=1):
+        return row["current_len"]
+    if last == today - timedelta(days=2):
+        pending = await pool().fetchval(
+            "SELECT 1 FROM daily_entries WHERE participant_id=$1 AND entry_date=$2 "
+            "AND status='pending' AND steps >= 10000", tg_id, today - timedelta(days=1))
+        if pending:
+            return row["current_len"]
+    return 0
+
+
 async def get_streak(tg_id: int) -> StreakState:
     row = await pool().fetchrow("SELECT * FROM streaks WHERE participant_id=$1", tg_id)
     if row is None:
@@ -430,7 +452,8 @@ async def get_streak(tg_id: int) -> StreakState:
 async def save_submission(tg_id: int, day: date, steps: int, screenshot_file_id: str,
                           screenshot_unique_id: str | None = None) -> int:
     """Участник отправил результат на модерацию: статус pending, points=0.
-    Повторная отправка того же дня перезаписывает (например, после отклонения)."""
+    Повторная отправка того же дня перезаписывает (например, после отклонения).
+    Возвращает 0, если день уже принят и перезаписывать нельзя."""
     return int(await pool().fetchval(
         """INSERT INTO daily_entries
              (participant_id, entry_date, steps, points, status, source,
@@ -440,8 +463,11 @@ async def save_submission(tg_id: int, day: date, steps: int, screenshot_file_id:
              SET steps=$3, points=0, status='pending',
                  screenshot_file_id=$4, screenshot_unique_id=$5,
                  reviewed_at=NULL, created_at=now()
+           -- Принятый день не перезаписываем: пока участник искал скриншот,
+           -- админ мог зачесть день вручную — баллы, серия и бонус уже учтены.
+           WHERE daily_entries.status <> 'accepted'
            RETURNING id""",
-        tg_id, day, steps, screenshot_file_id, screenshot_unique_id))
+        tg_id, day, steps, screenshot_file_id, screenshot_unique_id) or 0)
 
 
 async def add_admin_entry(tg_id: int, day: date, steps: int, points: int) -> int | None:
@@ -558,12 +584,22 @@ async def recompute_weekly_bonus(tg_id: int, day: date) -> int:
     """Пересчитывает недельный бонус за неделю, к которой относится day.
     Вызывается при каждой модерации — чтобы бонус всегда отражал ПРИНЯТЫЕ дни,
     а не зависел от момента воскресного расчёта."""
+    return (await recompute_weekly_bonus_change(tg_id, day))[1]
+
+
+async def recompute_weekly_bonus_change(tg_id: int, day: date) -> tuple[int, int]:
+    """То же, но возвращает (было, стало) — чтобы поздравить участника ровно
+    в момент, когда бонус вырос (+2 после 5-го дня, +4 после 7-го), а не ждать
+    воскресного расчёта, к которому воскресные результаты ещё не проверены."""
     from backend.scoring import weekly_streak_bonus
     monday = day - timedelta(days=day.weekday())
+    old = int(await pool().fetchval(
+        "SELECT COALESCE((SELECT bonus_points FROM weekly_summaries "
+        "WHERE participant_id=$1 AND week_start=$2), 0)", tg_id, monday))
     steps = await week_steps(tg_id, monday)
     bonus = weekly_streak_bonus(steps)
     await award_weekly_bonus(tg_id, monday, bonus, sum(steps))
-    return bonus
+    return old, bonus
 
 
 async def week_steps(tg_id: int, monday: date) -> list[int]:
@@ -1026,6 +1062,7 @@ async def participant_summary(tg_id: int) -> dict | None:
     if row is None:
         return None
     out = dict(row)
+    out["streak"] = await live_streak_len(tg_id, datetime.now(config.tz).date())
     # место команды — по командному лидерборду
     board = await team_leaderboard()
     out["team_rank"] = next(

@@ -128,6 +128,11 @@ async def on_screenshot(message: Message, state: FSMContext) -> None:
         return
     tg_id = message.from_user.id
     entry_id = await db.save_submission(tg_id, _today(), steps, file_id, unique_id)
+    if not entry_id:
+        await state.clear()
+        existing = await db.get_entry(tg_id, _today())
+        await message.answer(texts.ALREADY_ACCEPTED.format(steps=existing["steps"]))
+        return
     await message.answer(texts.STEP3_WAIT.format(steps=steps))
 
     # Уведомляем P&C: скриншот + карточка + кнопки модерации.

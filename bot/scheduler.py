@@ -6,7 +6,6 @@ from datetime import datetime, timedelta, timezone
 from aiogram import Bot
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 
-from backend.scoring import weekly_streak_bonus
 from bot import db, notify, settings, texts
 from bot.config import config
 
@@ -61,17 +60,18 @@ async def weekly_report_last_call(bot: Bot) -> None:
 
 
 async def award_weekly_bonuses(bot: Bot) -> None:
-    """Вс 23:55 — начисляем недельный бонус за серию по данным недели (правило 10)."""
+    """Вс 23:55 — страховочный пересчёт недельного бонуса за серию.
+
+    Основной пересчёт и поздравление идут при каждой модерации
+    (admin_settings._bonus_sync). Здесь поздравляем только тех, у кого бонус
+    вырос с прошлого пересчёта — без повторных пушей."""
     if not _marathon_active():
         return
     today = datetime.now(config.tz).date()
-    monday = today - timedelta(days=today.weekday())  # воскресенье → понедельник этой недели
     for tg_id in await db.all_active_ids():
-        steps = await db.week_steps(tg_id, monday)
-        bonus = weekly_streak_bonus(steps)
-        await db.award_weekly_bonus(tg_id, monday, bonus, sum(steps))
-        if bonus:
-            await notify.broadcast(bot, [tg_id], texts.weekly_bonus_note(bonus))
+        old, new = await db.recompute_weekly_bonus_change(tg_id, today)
+        if new > old:
+            await notify.broadcast(bot, [tg_id], texts.weekly_bonus_note(new, old))
 
 
 async def monday_leaderboard(bot: Bot) -> None:

@@ -217,7 +217,7 @@ async def api_me(x_init_data: str | None = Header(default=None),
         # у участника западнее Бишкека «вечер» наступил бы не тогда.
         "hour": datetime.now(config.tz).hour,
         "today_status": status_by_date.get(today),    # для плитки «Сегодня»
-        "current_streak": streak.current_len,
+        "current_streak": await db.live_streak_len(tg_id, today),
         "best_streak": _best_streak(accepted_steps),
         "calendar": calendar,
         "marathon": {"start": MARATHON_START.isoformat(), "end": MARATHON_END.isoformat()},
