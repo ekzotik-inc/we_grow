@@ -535,8 +535,10 @@ async def brand_menu(cb: CallbackQuery) -> None:
     from bot import brand
     from bot.menu import send_main_menu
     await brand.use_default_menu()
+    await brand.use_default_icons()
     await cb.answer("Готово — так теперь выглядит главное меню")
-    await send_main_menu(cb.bot, cb.from_user.id, "🪴 Фирменная картинка WE GROW установлена.")
+    await send_main_menu(cb.bot, cb.from_user.id,
+                         "🪴 Фирменная картинка и иконки кнопок WE GROW установлены.")
 
 
 @router.callback_query(F.data == "adm:brandava")

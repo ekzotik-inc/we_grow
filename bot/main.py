@@ -93,6 +93,9 @@ async def main() -> None:
 
     # HTML по умолчанию — нужно для премиум-эмодзи (<tg-emoji>) и <b>.
     bot = Bot(config.bot_token, default=DefaultBotProperties(parse_mode="HTML"))
+    # Анимированные эмодзи из набора — во всех исходящих HTML-сообщениях.
+    from bot.premium_emoji import EmojiMiddleware
+    bot.session.middleware(EmojiMiddleware())
     dp = Dispatcher()
     # Онбординг первым: его команды (/start, /reset, /help, /rules, /feedback)
     # и кнопки меню должны срабатывать ВСЕГДА — даже когда пользователь застрял

@@ -41,12 +41,33 @@ async def set_avatar(bot: Bot) -> bool:
         return False
 
 
+# Иконки кнопок главного меню из набора Animated Emoji (icon_custom_emoji_id).
+MENU_ICONS = {
+    "steps": "5188501157072347830",   # 👣,
+    "weekly": "5373001317042101552",   # 📈,
+    "progress": "5431577498364158238",   # 📊,
+    "board": "5409008750893734809",   # 🏆,
+    "rules": "5226512880362332956",   # 📖,
+    "help": "5472146462362048818",   # 💡,
+    "feedback": "5465300082628763143",   # 💬
+}
+
+
+async def use_default_icons() -> None:
+    for name, cid in MENU_ICONS.items():
+        await settings.set(f"icon_{name}", cid)
+
+
 async def apply_once(bot: Bot) -> None:
     """Разово на старте: фирменная картинка меню и аватар."""
     if not settings.get("brand_menu_v1"):
         await use_default_menu()
         await settings.set("brand_menu_v1", "1")
         log.info("Картинка главного меню WE GROW установлена")
+    if not settings.get("brand_icons_v2"):
+        await use_default_icons()
+        await settings.set("brand_icons_v2", "1")
+        log.info("Иконки кнопок меню обновлены на набор Animated Emoji")
     if not settings.get("brand_avatar_v1") and await set_avatar(bot):
         await settings.set("brand_avatar_v1", "1")
         log.info("Аватар бота WE GROW установлен")

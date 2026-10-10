@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import random
+from datetime import datetime
 
 from aiogram import F, Router
 from aiogram.filters import Command, CommandObject, CommandStart
@@ -53,7 +54,9 @@ async def cmd_start(message: Message, state: FSMContext,
                 return
             # Персональная сводка: ФИО, команда с местом, шаги, баллы, серия.
             summary = await db.participant_summary(tg_id)
-            greeting = texts.profile_card(summary) if summary else texts.welcome_back()
+            today = datetime.now(config.tz).date()
+            greeting = (texts.profile_card(summary, await db.get_entry(tg_id, today), today)
+                        if summary else texts.welcome_back())
             await send_main_menu(message.bot, tg_id, greeting)
         else:
             await message.answer(texts.NOT_APPROVED_YET, reply_markup=ReplyKeyboardRemove())

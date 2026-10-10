@@ -151,7 +151,7 @@ def design_panel_kb() -> InlineKeyboardMarkup:
     b.button(text="✏️ Кнопки меню", callback_data="adm:labels")
     b.button(text="🎨 Иконки кнопок", callback_data="adm:icons")
     b.button(text="🔗 Ссылка приложения", callback_data="adm:appurl")
-    b.button(text="🪴 Фирменная картинка меню", callback_data="adm:brandmenu")
+    b.button(text="🪴 Фирменное меню: картинка + иконки", callback_data="adm:brandmenu")
     b.button(text="👤 Поставить аватар бота", callback_data="adm:brandava")
     b.button(text="⬅️ Назад", callback_data="adm:back")
     b.adjust(1)
