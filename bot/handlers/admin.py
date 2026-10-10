@@ -287,7 +287,49 @@ async def health(message: Message) -> None:
         f"👑 Админов: <b>{len(settings.admin_ids())}</b>\n"
         f"📢 Канал заявок: <b>{join or 'не задан'}</b> · проверки: "
         f"<b>{review or 'не задан'}</b>\n"
-        f"🔗 Mini App: <b>{settings.webapp_url() or 'не задан'}</b>")
+        f"🔗 Mini App: <b>{settings.webapp_url() or 'не задан'}</b>\n"
+        + _emoji_status_line())
+
+
+def _emoji_status_line() -> str:
+    from bot import premium_emoji as pm
+    st = pm.STATUS
+    if not pm.ENABLED:
+        return "✨ Премиум-эмодзи: <b>выключены</b> (env PREMIUM_EMOJI=true)"
+    sets = ", ".join(st["sets"]) or "—"
+    chk = (f"подтверждено <b>{st['valid']}</b> из {st['total']}" if st["checked"]
+           else "не проверены")
+    return f"✨ Премиум-эмодзи: {escape(st['source'])} · {chk} · набор: {escape(sets)}"
+
+
+@router.message(Command("emojipack"))
+async def emoji_pack(message: Message) -> None:
+    """/emojipack t.me/addemoji/NAME — подключить набор премиум-эмодзи."""
+    if not _is_admin(message.from_user.id):
+        return
+    from bot import brand
+    from bot import premium_emoji as pm
+    parts = (message.text or "").split(maxsplit=1)
+    if len(parts) < 2:
+        await message.answer(
+            "✨ <b>Набор премиум-эмодзи</b>\n\n" + _emoji_status_line() + "\n\n"
+            "Подключить набор: <code>/emojipack https://t.me/addemoji/ИМЯ</code>\n"
+            "Ссылку можно взять в Telegram: открой набор эмодзи → «Поделиться». "
+            "Эмодзи Stepy 🪴 не меняется.")
+        return
+    try:
+        pack = await pm.load_pack(message.bot, parts[1])
+    except Exception as e:  # noqa: BLE001
+        await message.answer(f"❌ Не удалось загрузить набор: {escape(str(e))}")
+        return
+    pm.apply_pack(pack)
+    await settings.set("emoji_pack", json.dumps(pack, ensure_ascii=False))
+    icons = await brand.use_default_icons()
+    await message.answer(
+        f"✅ Подключён набор <b>{escape(pack['title'] or pack['name'])}</b>: "
+        f"{len(pack['map'])} эмодзи. Иконок кнопок меню: {icons}/7 "
+        "(обновятся при следующем /start).\n\n"
+        "Проверка: ✅ 🔥 ⭐ 🏆 👣 📈 💡 💬 🎉 🪴")
 
 
 @router.message(Command("cancel"))

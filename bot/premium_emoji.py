@@ -27,30 +27,121 @@ ENABLED = os.getenv("PREMIUM_EMOJI", "").strip().lower() in {"1", "true", "yes",
 # Telegram принимает не больше 100 кастомных эмодзи в одном сообщении.
 _MAX_PER_MESSAGE = 90
 
+STEPY_ID = "5305729158385533791"   # маскот Stepy 🪴 — всегда свой ID
+
 _IDS: dict[str, str] = {}
-if _IDS_PATH.exists():
+_EMOJI_RE: re.Pattern | None = None
+# Итог проверки набора через Telegram (getCustomEmojiStickers) — для /health.
+STATUS: dict = {"source": "файл bot/emoji_ids.json", "checked": False,
+                "valid": 0, "total": 0, "sets": []}
+
+
+def _load_file() -> dict[str, str]:
+    if not _IDS_PATH.exists():
+        return {}
     try:
         raw = json.loads(_IDS_PATH.read_text(encoding="utf-8"))
-        # оставляем только непустые ID
-        _IDS = {k: str(v) for k, v in raw.items()
-                if not k.startswith("_") and isinstance(v, (str, int)) and str(v).strip()}
     except json.JSONDecodeError:
-        _IDS = {}
+        return {}
+    return {k: str(v) for k, v in raw.items()
+            if not k.startswith("_") and isinstance(v, (str, int)) and str(v).strip()}
 
-# Длинные последовательности (ZWJ, флаги, с FE0F) — первыми, чтобы «👨‍💻» не
-# распалось на «👨» + «💻». Необязательный FE0F после эмодзи съедаем вместе с ним.
-_EMOJI_RE = (re.compile("(" + "|".join(re.escape(k) for k in sorted(_IDS, key=len, reverse=True))
-                        + ")️?") if _IDS else None)
+
+def set_map(mapping: dict[str, str]) -> None:
+    """Подменяет рабочую карту «эмодзи → ID» (Stepy всегда свой)."""
+    global _IDS, _EMOJI_RE
+    m = {k: v for k, v in mapping.items() if k and v}
+    m["🪴"] = STEPY_ID
+    _IDS = m
+    # Длинные последовательности (ZWJ, флаги, с FE0F) — первыми, чтобы «👨‍💻»
+    # не распалось на «👨» + «💻». Необязательный FE0F съедаем вместе с эмодзи.
+    _EMOJI_RE = (re.compile("(" + "|".join(re.escape(k) for k in sorted(m, key=len, reverse=True))
+                            + ")\ufe0f?") if m else None)
+
+
+def current_map() -> dict[str, str]:
+    return dict(_IDS)
+
+
+def _load_fallback() -> dict[str, str]:
+    """Прежний рабочий набор (iOS Icons) — запасные ID на случай, если ID из
+    основного файла Telegram не подтвердит."""
+    try:
+        raw = json.loads(_IDS_PATH.read_text(encoding="utf-8")).get("_fallback") or {}
+    except (OSError, json.JSONDecodeError, AttributeError):
+        return {}
+    return {k: str(v) for k, v in raw.items() if str(v).strip()}
+
+
+set_map(_load_file())
+
 # Сегменты, внутри которых менять нельзя: готовые tg-emoji, теги, code/pre.
 _SKIP_RE = re.compile(r"(<tg-emoji\b.*?</tg-emoji>|<code\b.*?</code>|<pre\b.*?</pre>|<[^>]*>)",
                       re.S)
 
 
+async def validate(bot) -> dict:
+    """Спрашивает у Telegram, какие ID — настоящие премиум-эмодзи, и оставляет
+    только их. ID обычных анимированных стикеров Telegram в тексте не
+    показывает (молча рисует обычный эмодзи) — такие отбрасываем; для них
+    берём запасной ID из прежнего набора, если он есть и подтверждён."""
+    primary = dict(_IDS)
+    fallback = _load_fallback()
+    ids = sorted({*primary.values(), *fallback.values()})
+    ok: set[str] = set()
+    sets: set[str] = set()
+    for i in range(0, len(ids), 200):
+        for st in await bot.get_custom_emoji_stickers(custom_emoji_ids=ids[i:i + 200]):
+            if st.custom_emoji_id:
+                ok.add(st.custom_emoji_id)
+                if st.set_name:
+                    sets.add(st.set_name)
+    result = {}
+    for k in {*primary, *fallback}:
+        if primary.get(k) in ok:
+            result[k] = primary[k]
+        elif fallback.get(k) in ok:
+            result[k] = fallback[k]
+    set_map(result)
+    STATUS.update(checked=True, valid=len(_IDS) - 1, total=len(primary) - 1,
+                  sets=sorted(sets), stepy_ok=STEPY_ID in ok,
+                  primary_ok=sum(1 for v in primary.values() if v in ok) - (STEPY_ID in ok))
+    return STATUS
+
+
+async def load_pack(bot, name: str) -> dict:
+    """Загружает набор премиум-эмодзи по имени/ссылке (t.me/addemoji/NAME):
+    карта «эмодзи → ID» строится из самого набора, без файлов и редеплоя."""
+    name = name.strip().rstrip("/").rsplit("/", 1)[-1]
+    sset = await bot.get_sticker_set(name=name)
+    if sset.sticker_type != "custom_emoji":
+        raise ValueError("это набор стикеров, а не премиум-эмодзи (нужна ссылка "
+                         "t.me/addemoji/…)")
+    mapping: dict[str, str] = {}
+    for st in sset.stickers:
+        if not (st.emoji and st.custom_emoji_id):
+            continue
+        mapping.setdefault(st.emoji, st.custom_emoji_id)
+        mapping.setdefault(st.emoji.replace("\ufe0f", ""), st.custom_emoji_id)
+    if not mapping:
+        raise ValueError("в наборе нет эмодзи")
+    return {"name": sset.name, "title": sset.title, "map": mapping}
+
+
+def apply_pack(pack: dict) -> None:
+    set_map(pack["map"])
+    STATUS.update(source=f"набор «{pack.get('title') or pack['name']}»",
+                  checked=True, valid=len(_IDS) - 1, total=len(_IDS) - 1,
+                  sets=[pack["name"]])
+
+
 def pe(emoji: str) -> str:
-    """Премиум-версия эмодзи (HTML-тег) или обычный эмодзи как фолбэк."""
-    cid = _IDS.get(emoji) or _IDS.get(emoji.replace("️", ""))
-    if ENABLED and cid:
-        return f'<tg-emoji emoji-id="{cid}">{emoji}</tg-emoji>'
+    """Stepy 🪴 — сразу премиум-тегом (его ID постоянный). Остальные эмодзи
+    возвращаются как есть: их подставит EmojiMiddleware в момент отправки,
+    уже по проверенной Telegram карте (многие тексты собираются при импорте,
+    до проверки набора, — «запекать» в них ID нельзя)."""
+    if ENABLED and emoji.replace("\ufe0f", "") == "🪴":
+        return f'<tg-emoji emoji-id="{STEPY_ID}">{emoji}</tg-emoji>'
     return emoji
 
 

@@ -129,6 +129,22 @@ async def main() -> None:
         except Exception as e:  # noqa: BLE001
             log.warning("не удалось поставить кнопку меню Mini App: %s", e)
 
+    # Премиум-эмодзи: сохранённый админом набор (/emojipack) или файл, но
+    # только ID, которые Telegram подтвердил как премиум-эмодзи.
+    try:
+        import json as _json
+        from bot import premium_emoji
+        saved = settings.get("emoji_pack")
+        if saved:
+            premium_emoji.apply_pack(_json.loads(saved))
+        else:
+            await premium_emoji.validate(bot)
+        st = premium_emoji.STATUS
+        log.info("Премиум-эмодзи (%s): подтверждено %s из %s, наборы: %s",
+                 st["source"], st["valid"], st["total"], ", ".join(st["sets"]) or "—")
+    except Exception as e:  # noqa: BLE001
+        log.warning("проверка премиум-эмодзи не удалась: %s", e)
+
     try:
         from bot import brand
         await brand.apply_once(bot)

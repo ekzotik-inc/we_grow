@@ -38,6 +38,7 @@ ADMIN_EXTRA = [
     ("addadmin", "Назначить админа: /addadmin ID"),
     ("deladmin", "Снять админа: /deladmin ID"),
     ("emojiid", "Получить emoji-id"),
+    ("emojipack", "Набор премиум-эмодзи"),
     ("feedback", "Связь с P&C"),
     ("reset", "Сбросить регистрацию"),
     ("app", "Открыть Mini App (web_app-кнопка)"),

@@ -41,21 +41,23 @@ async def set_avatar(bot: Bot) -> bool:
         return False
 
 
-# Иконки кнопок главного меню из набора Animated Emoji (icon_custom_emoji_id).
-MENU_ICONS = {
-    "steps": "5188501157072347830",   # 👣,
-    "weekly": "5373001317042101552",   # 📈,
-    "progress": "5431577498364158238",   # 📊,
-    "board": "5409008750893734809",   # 🏆,
-    "rules": "5226512880362332956",   # 📖,
-    "help": "5472146462362048818",   # 💡,
-    "feedback": "5465300082628763143",   # 💬
-}
+# Иконки кнопок главного меню — эмодзи из текущего набора премиум-эмодзи
+# (premium_emoji.current_map: подтверждённые Telegram ID).
+MENU_ICON_CHARS = {"steps": "👣", "weekly": "📈", "progress": "📊", "board": "🏆",
+                   "rules": "📖", "help": "💡", "feedback": "💬"}
 
 
-async def use_default_icons() -> None:
-    for name, cid in MENU_ICONS.items():
+async def use_default_icons() -> int:
+    """Ставит иконки кнопок из текущего набора; эмодзи, которых в наборе нет,
+    остаются без иконки (битый ID ломал бы отправку клавиатуры)."""
+    from bot import premium_emoji
+    m = premium_emoji.current_map()
+    n = 0
+    for name, ch in MENU_ICON_CHARS.items():
+        cid = m.get(ch) or m.get(ch.replace("\ufe0f", ""))
         await settings.set(f"icon_{name}", cid)
+        n += bool(cid)
+    return n
 
 
 async def apply_once(bot: Bot) -> None:
@@ -64,9 +66,9 @@ async def apply_once(bot: Bot) -> None:
         await use_default_menu()
         await settings.set("brand_menu_v1", "1")
         log.info("Картинка главного меню WE GROW установлена")
-    if not settings.get("brand_icons_v2"):
+    if not settings.get("brand_icons_v3"):
         await use_default_icons()
-        await settings.set("brand_icons_v2", "1")
+        await settings.set("brand_icons_v3", "1")
         log.info("Иконки кнопок меню обновлены на набор Animated Emoji")
     if not settings.get("brand_avatar_v1") and await set_avatar(bot):
         await settings.set("brand_avatar_v1", "1")
