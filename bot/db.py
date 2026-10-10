@@ -37,9 +37,14 @@ async def connect(dsn: str) -> None:
     global _pool
     # search_path=wegrow — все запросы работают внутри нашей схемы, изолированно
     # от прочих объектов базы. Схему создаёт schema.sql ниже.
+    # Простаивающие соединения пересоздаём через минуту: сетевой путь до
+    # управляемой БД рвёт «тихие» TCP-сессии, и первый запрос после паузы
+    # висел на мёртвом соединении — «Mini App долго открывается при первом
+    # заходе». command_timeout — чтобы запрос не ждал бесконечно.
     _pool = await asyncpg.create_pool(
         dsn, min_size=1, max_size=10, ssl=_ssl_for(dsn),
         server_settings={"search_path": "wegrow"},
+        max_inactive_connection_lifetime=60, command_timeout=20,
     )
     # Идемпотентная схема — применяем на старте, чтобы бот поднимался «из коробки».
     async with _pool.acquire() as conn:
@@ -1049,7 +1054,7 @@ async def engagement(day: date) -> tuple[int, int]:
     return int(submitted), int(active)
 
 
-async def participant_summary(tg_id: int) -> dict | None:
+async def participant_summary(tg_id: int, with_team_rank: bool = True) -> dict | None:
     """Сводка для главного меню: ФИО, команда + её место, баллы, шаги,
     личное место в рейтинге, серия. Ранги считаются по баллам (как в
     лидерборде), только среди подтверждённых и не дисквалифицированных."""
@@ -1082,6 +1087,8 @@ async def participant_summary(tg_id: int) -> dict | None:
         return None
     out = dict(row)
     out["streak"] = await live_streak_len(tg_id, datetime.now(config.tz).date())
+    if not with_team_rank:          # Mini App место команды здесь не нужно
+        return out
     # место команды — по командному лидерборду
     board = await team_leaderboard()
     out["team_rank"] = next(

@@ -40,6 +40,22 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(title="Step Together Mini App", lifespan=lifespan)
 
+import logging  # noqa: E402
+
+_log = logging.getLogger("webapp")
+
+
+@app.middleware("http")
+async def _timing(request: Request, call_next):
+    """Медленные запросы — в лог Render: сразу видно, что тормозит Mini App."""
+    t0 = time.perf_counter()
+    response = await call_next(request)
+    ms = (time.perf_counter() - t0) * 1000
+    if ms > 500:
+        _log.warning("медленный запрос %s %s: %.0f мс", request.method, request.url.path, ms)
+    response.headers["Server-Timing"] = f"app;dur={ms:.0f}"
+    return response
+
 
 # ---- Авторизация через Telegram initData ---------------------------------
 
@@ -189,8 +205,6 @@ async def api_me(x_init_data: str | None = Header(default=None),
     # серию считаем только по принятым дням
     accepted_steps = {e["entry_date"]: e["steps"] for e in entries if e["status"] == "accepted"}
     today = datetime.now(config.tz).date()
-    streak = await db.get_streak(tg_id)
-
     calendar = []
     d = MARATHON_START
     while d <= MARATHON_END:
@@ -204,20 +218,21 @@ async def api_me(x_init_data: str | None = Header(default=None),
         })
         d = d.fromordinal(d.toordinal() + 1)
 
-    # Личное место — то же, что бот показывает в главном меню.
-    summary = await db.participant_summary(tg_id) or {}
+    # Личное место, баллы и живая серия — одним запросом (как в главном меню
+    # бота), без командного рейтинга: на экране «Прогресс» он не нужен.
+    summary = await db.participant_summary(tg_id, with_team_rank=False) or {}
     return {
         "registered": True,
         "full_name": card["full_name"],
         "team_name": card["team_name"],
-        "total_points": await db.total_points(tg_id),
+        "total_points": int(summary.get("points") or 0),
         "rank": summary.get("rnk"),
         "participants": summary.get("total"),
         # Час по таймзоне марафона — для приветствия. Часы клиента не годятся:
         # у участника западнее Бишкека «вечер» наступил бы не тогда.
         "hour": datetime.now(config.tz).hour,
         "today_status": status_by_date.get(today),    # для плитки «Сегодня»
-        "current_streak": await db.live_streak_len(tg_id, today),
+        "current_streak": summary.get("streak", 0),
         "best_streak": _best_streak(accepted_steps),
         "calendar": calendar,
         "marathon": {"start": MARATHON_START.isoformat(), "end": MARATHON_END.isoformat()},
@@ -313,6 +328,11 @@ async def api_weekly_screenshot(ws_id: int, sig: str):
 
 @app.get("/health")
 async def health():
+    # Бот пингует /health каждые 10 минут — заодно держим пул БД «тёплым».
+    try:
+        await db.pool().fetchval("SELECT 1")
+    except Exception:  # noqa: BLE001
+        return {"ok": True, "db": False}
     return {"ok": True}
 
 

@@ -544,7 +544,7 @@ function openExt(u){ try{ if(tg?.openLink){ tg.openLink(u); return false; } }cat
 
 async function api(path){
   const r = await fetch(path, {headers:{"X-Init-Data": getInit(), "X-Session": session()}});
-  if(r.status===401){ clearSession(); renderLogin(); throw new Error("HTTP 401"); }
+  if(r.status===401){ clearSession(); meCacheClear(); renderLogin(); throw new Error("HTTP 401"); }
   if(!r.ok){ let d=""; try{ d=(await r.json()).detail||""; }catch(_){}
     throw new Error("HTTP "+r.status+(d?": "+d:"")); }
   return r.json();
@@ -649,10 +649,27 @@ function week7(cal){
   return `<div class="barsw">${tip}<div class="bars">${bars}</div></div>`;
 }
 
+// Кэш последнего /api/me: экран «Прогресс» рисуется мгновенно из кэша,
+// а свежие данные с сервера (бот в Oregon, участники в Бишкеке) тихо
+// подменяют его — так первый экран не ждёт сети.
+const ME_KEY=()=>"st_me_"+(tg?.initDataUnsafe?.user?.id||"s");
+function meCacheGet(){ try{ const v=localStorage.getItem(ME_KEY()); return v?JSON.parse(v):null; }catch(e){ return null; } }
+function meCacheSet(d){ try{ localStorage.setItem(ME_KEY(), JSON.stringify(d)); }catch(e){} }
+function meCacheClear(){ try{ localStorage.removeItem(ME_KEY()); }catch(e){} }
+
 async function renderProgress(){
   const my=++renderGen;
-  let d; try{ d=await api("/api/me"); }catch(e){ if(my===renderGen)notice(e); return; }
+  const cached=meCacheGet();
+  if(cached && cached.registered) drawProgress(cached);
+  let d; try{ d=await api("/api/me"); }catch(e){ if(my===renderGen && !(cached&&cached.registered))notice(e); return; }
   if(my!==renderGen) return;
+  const same=cached && JSON.stringify(cached)===JSON.stringify(d);
+  meCacheSet(d);
+  if(same) return;              // ничего не изменилось — не перерисовываем
+  drawProgress(d);
+}
+
+function drawProgress(d){
   if(!d.registered) return regNotice();
   document.getElementById("head-sub").textContent = d.team_name ? "Команда: "+d.team_name : "марафон шагов";
 
