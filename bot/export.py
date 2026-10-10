@@ -96,17 +96,17 @@ async def build_workbook() -> tuple[bytes, str]:
     weekly = await db.export_weekly_reports()
     ws3 = wb.create_sheet("Недельные отчёты")
     _sheet(ws3,
-           ["Неделя с", "ФИО", "Команда", "Шаги за неделю", "Бонус",
-            "Отчёт прислан", "Фото"],
+           ["Неделя с", "ФИО", "Команда", "Шаги за неделю", "Бонус заработан",
+            "Бонус засчитан", "Отчёт прислан", "Фото"],
            [[w["week_start"].strftime("%d.%m.%Y"), w["full_name"], w["team_name"] or "",
-             w["computed_total"], w["bonus_points"], _fmt(w["reported_at"]),
+             w["computed_total"], w["earned_bonus"], w["bonus_points"], _fmt(w["reported_at"]),
              "открыть" if w["screenshot_file_id"] else "не прислан"]
             for w in weekly])
     for row_i, w in enumerate(weekly, start=2):
         if w["screenshot_file_id"]:
             url = shot_url(w["id"], "wshot")
             if url:
-                cell = ws3.cell(row=row_i, column=7)
+                cell = ws3.cell(row=row_i, column=8)
                 cell.hyperlink = url
                 cell.font = _LINK
 

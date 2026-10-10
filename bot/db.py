@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import ssl as ssl_module
 from datetime import date, datetime, timedelta, timezone
+from typing import NamedTuple
 from pathlib import Path
 
 import asyncpg
@@ -584,22 +585,36 @@ async def recompute_weekly_bonus(tg_id: int, day: date) -> int:
     """Пересчитывает недельный бонус за неделю, к которой относится day.
     Вызывается при каждой модерации — чтобы бонус всегда отражал ПРИНЯТЫЕ дни,
     а не зависел от момента воскресного расчёта."""
-    return (await recompute_weekly_bonus_change(tg_id, day))[1]
+    return (await recompute_weekly_bonus_change(tg_id, day)).new
 
 
-async def recompute_weekly_bonus_change(tg_id: int, day: date) -> tuple[int, int]:
-    """То же, но возвращает (было, стало) — чтобы поздравить участника ровно
-    в момент, когда бонус вырос (+2 после 5-го дня, +4 после 7-го), а не ждать
-    воскресного расчёта, к которому воскресные результаты ещё не проверены."""
+class BonusChange(NamedTuple):
+    old: int          # засчитанный бонус до пересчёта
+    new: int          # засчитанный бонус после
+    old_earned: int   # заработанный по дням — до
+    earned: int       # заработанный по дням — после
+    reported: bool    # недельный отчёт за эту неделю прислан
+
+
+async def recompute_weekly_bonus_change(tg_id: int, day: date) -> BonusChange:
+    """Пересчёт бонуса недели, к которой относится day, с данными «до/после».
+
+    Заработанный бонус (5 дней подряд 10 000+ → +2, 7 → +4) считается по
+    принятым дням. В баллы он идёт ТОЛЬКО если за эту неделю прислан недельный
+    отчёт (вс 22:00–23:55) — так требуют правила WE GROW."""
     from backend.scoring import weekly_streak_bonus
     monday = day - timedelta(days=day.weekday())
-    old = int(await pool().fetchval(
-        "SELECT COALESCE((SELECT bonus_points FROM weekly_summaries "
-        "WHERE participant_id=$1 AND week_start=$2), 0)", tg_id, monday))
+    row = await pool().fetchrow(
+        "SELECT bonus_points, earned_bonus, reported_at FROM weekly_summaries "
+        "WHERE participant_id=$1 AND week_start=$2", tg_id, monday)
+    old = row["bonus_points"] if row else 0
+    old_earned = row["earned_bonus"] if row else 0
+    reported = bool(row and row["reported_at"])
     steps = await week_steps(tg_id, monday)
-    bonus = weekly_streak_bonus(steps)
-    await award_weekly_bonus(tg_id, monday, bonus, sum(steps))
-    return old, bonus
+    earned = weekly_streak_bonus(steps)
+    bonus = earned if reported else 0
+    await award_weekly_bonus(tg_id, monday, bonus, sum(steps), earned)
+    return BonusChange(old, bonus, old_earned, earned, reported)
 
 
 async def week_steps(tg_id: int, monday: date) -> list[int]:
@@ -614,15 +629,19 @@ async def week_steps(tg_id: int, monday: date) -> list[int]:
     return [by_date.get(monday + timedelta(days=i), 0) for i in range(7)]
 
 
-async def award_weekly_bonus(tg_id: int, monday: date, bonus: int, week_total: int) -> None:
-    """Начисляет/обновляет недельный бонус за серию (идемпотентно по неделе)."""
+async def award_weekly_bonus(tg_id: int, monday: date, bonus: int, week_total: int,
+                             earned: int | None = None) -> None:
+    """Записывает недельный бонус (идемпотентно по неделе): bonus — засчитанный,
+    earned — заработанный по дням (по умолчанию равен засчитанному)."""
+    earned = bonus if earned is None else earned
     await pool().execute(
         """INSERT INTO weekly_summaries
-             (participant_id, week_start, reported_total, computed_total, reconciled, bonus_points)
-           VALUES ($1,$2,$3,$3,false,$4)
+             (participant_id, week_start, reported_total, computed_total, reconciled,
+              bonus_points, earned_bonus)
+           VALUES ($1,$2,$3,$3,false,$4,$5)
            ON CONFLICT (participant_id, week_start) DO UPDATE
-             SET computed_total=$3, bonus_points=$4""",
-        tg_id, monday, week_total, bonus,
+             SET computed_total=$3, bonus_points=$4, earned_bonus=$5""",
+        tg_id, monday, week_total, bonus, earned,
     )
 
 
@@ -1219,7 +1238,7 @@ async def weekly_summary_by_id(ws_id: int) -> asyncpg.Record | None:
 async def export_weekly_reports() -> list[asyncpg.Record]:
     return await pool().fetch(
         """SELECT w.id, w.week_start, w.reported_at, w.computed_total,
-                  w.bonus_points, w.screenshot_file_id,
+                  w.bonus_points, w.earned_bonus, w.screenshot_file_id,
                   p.full_name, t.name AS team_name
              FROM weekly_summaries w
              JOIN participants p ON p.telegram_id=w.participant_id

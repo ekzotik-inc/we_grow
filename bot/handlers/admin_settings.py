@@ -780,14 +780,16 @@ async def _mark_caption(cb: CallbackQuery, suffix: str) -> None:
 
 
 async def _bonus_sync(bot, tg_id: int, day) -> int:
-    """Пересчёт недельного бонуса + поздравление, если бонус вырос."""
-    old, new = await db.recompute_weekly_bonus_change(tg_id, day)
-    if new > old:
+    """Пересчёт недельного бонуса + пуш: «заработал, пришли отчёт» или
+    «засчитан» (если отчёт за неделю уже есть)."""
+    ch = await db.recompute_weekly_bonus_change(tg_id, day)
+    note = texts.bonus_notice(ch)
+    if note:
         try:
-            await bot.send_message(tg_id, texts.weekly_bonus_note(new, old))
+            await bot.send_message(tg_id, note)
         except Exception:  # noqa: BLE001 — участник заблокировал бота
             pass
-    return new
+    return ch.new
 
 
 @router.callback_query(F.data.startswith("mod_ok:"))

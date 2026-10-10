@@ -87,6 +87,9 @@ CREATE TABLE IF NOT EXISTS weekly_summaries (
 ALTER TABLE weekly_summaries ADD COLUMN IF NOT EXISTS bonus_points int NOT NULL DEFAULT 0;
 -- Еженедельный отчёт: скриншот недельной статистики Fitbit (сдаётся в вс).
 ALTER TABLE weekly_summaries ADD COLUMN IF NOT EXISTS reported_at timestamptz;
+-- Бонус за серию, ЗАРАБОТАННЫЙ по принятым дням. В баллы (bonus_points) он
+-- попадает только при недельном отчёте за эту неделю (reported_at).
+ALTER TABLE weekly_summaries ADD COLUMN IF NOT EXISTS earned_bonus int NOT NULL DEFAULT 0;
 
 CREATE TABLE IF NOT EXISTS broadcasts (
     id            bigserial PRIMARY KEY,

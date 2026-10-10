@@ -217,7 +217,9 @@ async def on_weekly_shot(message: Message, state: FSMContext) -> None:
     already = await db.has_weekly_report(tg_id, monday)
     await db.save_weekly_report(tg_id, monday, file_id)
     await state.clear()
-    await message.answer(texts.WEEKLY_UPDATED if already else texts.WEEKLY_SAVED)
+    # Отчёт подтверждает неделю: заработанный по дням бонус идёт в баллы.
+    ch = await db.recompute_weekly_bonus_change(tg_id, monday)
+    await message.answer(texts.weekly_saved(ch.new, ch.earned, updated=already))
 
     # Копия — P&C (информационно, без модерации).
     from bot import notify

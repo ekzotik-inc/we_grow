@@ -56,22 +56,27 @@ async def weekly_report_last_call(bot: Bot) -> None:
     today = datetime.now(config.tz).date()
     monday = today - timedelta(days=today.weekday())
     ids = await db.ids_without_weekly_report(monday)
-    await notify.broadcast(bot, ids, texts.WEEKLY_LAST_CALL)
+    # У кого бонус заработан, но не подтверждён — персональный «бонус сгорает».
+    for tg_id in ids:
+        ch = await db.recompute_weekly_bonus_change(tg_id, monday)
+        text = (texts.weekly_last_call_bonus(ch.earned) if ch.earned
+                else texts.WEEKLY_LAST_CALL)
+        await notify.broadcast(bot, [tg_id], text)
 
 
 async def award_weekly_bonuses(bot: Bot) -> None:
     """Вс 23:55 — страховочный пересчёт недельного бонуса за серию.
 
-    Основной пересчёт и поздравление идут при каждой модерации
-    (admin_settings._bonus_sync). Здесь поздравляем только тех, у кого бонус
-    вырос с прошлого пересчёта — без повторных пушей."""
+    Основной пересчёт и пуши идут при модерации (admin_settings._bonus_sync)
+    и при недельном отчёте. Бонус засчитывается только при отчёте за неделю.
+    Здесь пушим лишь тех, у кого засчитанный бонус вырос — без повторов."""
     if not _marathon_active():
         return
     today = datetime.now(config.tz).date()
     for tg_id in await db.all_active_ids():
-        old, new = await db.recompute_weekly_bonus_change(tg_id, today)
-        if new > old:
-            await notify.broadcast(bot, [tg_id], texts.weekly_bonus_note(new, old))
+        ch = await db.recompute_weekly_bonus_change(tg_id, today)
+        if ch.new > ch.old:
+            await notify.broadcast(bot, [tg_id], texts.weekly_bonus_note(ch.new, ch.old))
 
 
 async def monday_leaderboard(bot: Bot) -> None:
