@@ -475,10 +475,15 @@ HELP = (
             "сотрудник P&amp;C поможет напрямую 🙌")
 )
 
+def _pc_handle() -> str:
+    """@username сотрудника P&C из ссылки обратной связи (config.feedback_url)."""
+    return "@" + config.feedback_url.rstrip("/").rsplit("/", 1)[-1]
+
+
 FEEDBACK = (
     "💬 <b>Обратная связь</b>\n\n"
     + stepy("Есть вопрос, проблема или идея по марафону? Напиши сотруднику P&amp;C "
-            "напрямую — поможем 🙌")
+            f"напрямую — {_pc_handle()}. Поможем 🙌")
 )
 
 ADMIN_PANEL = f"🛠 <b>Админ-панель P&amp;C</b> {pe('👑')}"

@@ -20,8 +20,9 @@ Telegram-бот **Step Together** (@wegrowmarathon_bot) — корпоратив
   До октября 2026 марафон проводился в Узбекистане (Ташкент, UTC+5).
 - Проект **уже запущен в проде, есть живые участники** — миграции только
   аддитивные (`ADD COLUMN IF NOT EXISTS`), данные не ломать.
-- Язык всего интерфейса — русский. Обратная связь ведёт на P&C:
-  https://t.me/DaryaPMI
+- Язык всего интерфейса — русский. Обратная связь ведёт на P&C Кыргызстана:
+  https://t.me/aidanazhanyshbekova (`config.feedback_url`, env `FEEDBACK_URL`;
+  в Mini App — константа `FEEDBACK` в index.html, менять обе).
 
 ## Архитектура (фактическая)
 
