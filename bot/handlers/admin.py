@@ -334,11 +334,27 @@ async def emoji_test(message: Message) -> None:
         verdict = (f"✅ премиум-эмодзи, набор <code>{escape(res[cid])}</code>"
                    if res.get(cid) else "❌ Telegram не признаёт ID")
         lines.append(f'<tg-emoji emoji-id="{cid}">{ch}</tg-emoji> {escape(label)} — {verdict}')
+    # Покрытие эмодзи главного меню и правил: каких нет в рабочей карте.
+    need = "👋🌳🏆👣⭐🔥✅⏳❌📱📖🎯🥉🥈🥇⚡💎👥📸🚩💡💬"
+    import re as _re
+    chars = _re.findall(r".", need)
+    miss = [c for c in chars if not (m.get(c) or m.get(c + "\ufe0f"))]
+    lines.append(f"\nЭмодзи меню и правил в наборе: <b>{len(chars) - len(miss)}</b> "
+                 f"из {len(chars)}" + (f" · нет: {' '.join(miss)}" if miss else " ✅"))
     lines.append(
         "\nЕсли значки слева выглядят как обычные эмодзи, хотя Telegram их "
         "признаёт, — у владельца бота нет Telegram Premium (это обязательное "
         "условие). Подключить набор: /emojipack и прислать любое эмодзи из него.")
     await message.answer("\n".join(lines))
+    # Подпись к фото — как в главном меню: проверка, что в подписях тоже работает.
+    from aiogram.types import FSInputFile
+    from bot import brand
+    try:
+        await message.answer_photo(
+            FSInputFile(brand.ASSETS / brand.MENU_ASSET),
+            caption="🧪 Подпись к фото: 👋 🌳 🏆 👣 ⭐ 🔥 📱 и Stepy 🪴")
+    except Exception as e:  # noqa: BLE001
+        await message.answer(f"Фото с подписью не отправилось: <code>{escape(str(e))}</code>")
 
 
 @router.message(Command("emojipack"))

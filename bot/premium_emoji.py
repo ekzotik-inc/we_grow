@@ -142,10 +142,16 @@ async def check_ids(bot, ids: list[str]) -> dict[str, str | None]:
 
 
 def apply_pack(pack: dict) -> None:
-    set_map(pack["map"])
-    STATUS.update(source=f"набор «{pack.get('title') or pack['name']}»",
-                  checked=True, valid=len(_IDS) - 1, total=len(_IDS) - 1,
-                  sets=[pack["name"]])
+    """Подключает набор ПОВЕРХ текущей (проверенной) карты: эмодзи из набора
+    берутся из него, остальные остаются из файла/прежнего набора. Раньше набор
+    заменял карту целиком, и эмодзи, которых в нём нет (👋 🌳 ⭐ 🔥 в главном
+    меню), становились обычными."""
+    merged = dict(_IDS)
+    merged.update(pack["map"])
+    set_map(merged)
+    sets = sorted({*STATUS.get("sets", []), pack["name"]})
+    STATUS.update(source=f"набор «{pack.get('title') or pack['name']}» + проверенные из файла",
+                  checked=True, valid=len(_IDS) - 1, total=len(_IDS) - 1, sets=sets)
 
 
 def pe(emoji: str) -> str:

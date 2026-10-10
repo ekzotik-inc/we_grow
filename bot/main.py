@@ -134,11 +134,10 @@ async def main() -> None:
     try:
         import json as _json
         from bot import premium_emoji
+        await premium_emoji.validate(bot)
         saved = settings.get("emoji_pack")
-        if saved:
+        if saved:      # набор от /emojipack — поверх проверенной карты
             premium_emoji.apply_pack(_json.loads(saved))
-        else:
-            await premium_emoji.validate(bot)
         st = premium_emoji.STATUS
         log.info("Премиум-эмодзи (%s): подтверждено %s из %s, наборы: %s",
                  st["source"], st["valid"], st["total"], ", ".join(st["sets"]) or "—")
