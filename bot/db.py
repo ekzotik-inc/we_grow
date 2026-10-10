@@ -363,6 +363,8 @@ async def wipe_marathon() -> dict:
         async with conn.transaction():
             for table in _WIPE_TABLES:
                 await conn.execute(f"DELETE FROM {table}")
+            # Картинки дня после перезапуска должны уйти заново.
+            await conn.execute("DELETE FROM settings WHERE key LIKE 'daily_sent_%'")
     return before
 
 

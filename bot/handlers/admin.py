@@ -10,7 +10,7 @@ from aiogram import F, Router
 from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
-from aiogram.types import CallbackQuery, Message, ReplyKeyboardRemove
+from aiogram.types import CallbackQuery, InlineKeyboardButton, Message, ReplyKeyboardRemove
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 
 from bot import db, keyboards, notify, settings, texts
@@ -123,6 +123,7 @@ async def wipe_do(message: Message, state: FSMContext) -> None:
         await message.answer("Сброс отменён — слово не совпало. Ничего не удалено.")
         return
     s = await db.wipe_marathon()
+    await settings.load()   # сброшены и отметки картинок дня
     await message.answer(
         "🧨 <b>Марафон сброшен</b>\n\n"
         f"Удалено: участников <b>{s['participants']}</b>, результатов "
@@ -482,6 +483,49 @@ async def admins_set(cb: CallbackQuery) -> None:
                 "Админ-панель — команда /admin."))
     text, kb = await _admins_view(cb.from_user.id)
     await cb.message.edit_text(text, reply_markup=kb)
+
+
+# ---- 🖼 Картинки дня: расписание и превью ----------------------------------
+
+@router.callback_query(F.data == "adm:daily")
+async def daily_list(cb: CallbackQuery) -> None:
+    if not _is_admin(cb.from_user.id):
+        return await cb.answer()
+    from bot import daily
+    today = datetime.now(config.tz).date()
+    lines = ["🖼 <b>Картинки дня</b> — уходят всем участникам в 09:00\n"]
+    b = InlineKeyboardBuilder()
+    for n, (_, title, _) in daily.SLIDES.items():
+        d = daily.day_of(n)
+        info = daily.sent_info(n)
+        if not daily.path(n).exists():
+            st = "⚠️ нет файла"
+        elif info:
+            st = f"✅ отправлено ({info.split(':')[1]} чел.)"
+        elif d < today:
+            st = "— пропущено"
+        elif d == today:
+            st = "⏳ сегодня в 09:00"
+        else:
+            st = "🕒 запланировано"
+        lines.append(f"<b>{n:02d}</b> · {d.strftime('%d.%m')} · {escape(title)} — {st}")
+        if daily.path(n).exists():
+            b.button(text=f"👁 {n:02d}", callback_data=f"adm:dprev:{n}")
+    lines.append("\n👁 — превью себе в личку.")
+    b.adjust(6)
+    b.row(InlineKeyboardButton(text="⬅️ Назад", callback_data="adm:back"))
+    await cb.message.edit_text("\n".join(lines), reply_markup=b.as_markup())
+    await cb.answer()
+
+
+@router.callback_query(F.data.startswith("adm:dprev:"))
+async def daily_preview(cb: CallbackQuery) -> None:
+    if not _is_admin(cb.from_user.id):
+        return await cb.answer()
+    from bot import daily
+    ok = await daily.send_preview(cb.bot, cb.from_user.id, int(cb.data.rsplit(":", 1)[1]))
+    await cb.answer("Отправил превью в личку" if ok else "Не получилось отправить",
+                    show_alert=not ok)
 
 
 def _parse_id_arg(text: str) -> int | None:

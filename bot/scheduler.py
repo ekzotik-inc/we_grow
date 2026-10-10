@@ -160,6 +160,9 @@ def setup_scheduler(bot: Bot) -> AsyncIOScheduler:
     sched.add_job(award_weekly_bonuses, "cron", day_of_week="sun", hour=23, minute=55, args=[bot])
     sched.add_job(monday_leaderboard, "cron", day_of_week="mon", hour=10, minute=0, args=[bot])
     sched.add_job(pc_daily_digest, "cron", hour=9, minute=0, args=[bot])
+    # Картинки дня WE GROW (bot/daily.py): расписание внутри, по датам марафона.
+    from bot.daily import send_daily_card
+    sched.add_job(send_daily_card, "cron", hour=9, minute=0, args=[bot])
     sched.add_job(nightly_backup, "cron", hour=23, minute=59, args=[bot])
 
     # Отложенные рассылки админов — проверяем каждую минуту.
