@@ -394,6 +394,16 @@
   .spin{width:34px;height:34px;border-radius:50%;border:3px solid var(--line);
     border-top-color:var(--tq);animation:sp .8s linear infinite;margin:60px auto}
   @keyframes sp{to{transform:rotate(360deg)}}
+  .pz-list{display:flex;flex-direction:column;gap:12px;margin-top:6px}
+  .pz-row{display:flex;gap:12px;align-items:center;padding:12px;border-radius:14px;
+    background:var(--card2);border:1px solid var(--line)}
+  .pz-ic{font-size:30px;width:48px;height:48px;display:grid;place-items:center;border-radius:14px;
+    background:linear-gradient(135deg,rgba(0,209,210,.18),rgba(122,92,255,.18))}
+  .pz-seats{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin-top:6px}
+  .pz-seat{margin:0;padding:10px 4px;text-align:center}
+  .pz-n{font-weight:800;font-size:15px;background:var(--grad);-webkit-background-clip:text;
+    background-clip:text;color:transparent}
+  .pz-items{display:flex;justify-content:center;gap:2px;font-size:17px;margin-top:4px}
 </style>
 </head>
 <body>
@@ -778,9 +788,9 @@ function drawProgress(d){
         <div class="gv" id="s-steps">0</div>
         <div class="gsub">принято дней: <b style="color:var(--text)">${acc.length}</b></div></div>
 
-      <div class="gc d2"><div class="gl">Место в марафоне</div>
-        <div class="gv">${d.rank?"#"+d.rank:"—"}</div>
-        <div class="gsub">${d.participants?`из ${d.participants} участников`:"пока без рейтинга"}</div></div>
+      <div class="gc d2"><div class="gl">Место команды</div>
+        <div class="gv">${d.team_rank?"#"+d.team_rank:"—"}</div>
+        <div class="gsub">${d.teams_total?`из ${d.teams_total} команд`:"пока без рейтинга"}</div></div>
 
       <div class="gc w2 d3">
         <div class="row"><div class="sec-title">${ico("bolt")}Активность недели</div>
@@ -896,14 +906,16 @@ async function renderBoard(){
   const my=++renderGen;
   let d; try{ d=await api("/api/leaderboard"); }catch(e){ if(my===renderGen)notice(e); return; }
   if(my!==renderGen) return;
-  const top=d.top||[];
+  const teams=d.teams||[];
   V.innerHTML=`<div class="view">
-    <div class="card d1">${secHead("trophy","Команды","Средний балл участников команды · при равенстве — дни, когда вся команда прошла 10 000+")}
-      ${bars(d.teams,false)}</div>
-    <div class="card d2">${secHead("crown","Тройка лидеров","Первые три места марафона","warm")}
-      ${podium(top.slice(0,3))}</div>
-    <div class="card d3">${secHead("bolt","Топ-10 участников","Все участники марафона в общем зачёте")}
-      ${bars(top,true)}</div></div>`;
+    <div class="card d1">${secHead("crown","Лидеры WE GROW","Тройка команд-лидеров","warm")}
+      ${podium(teams.slice(0,3))}</div>
+    <div class="card d2">${secHead("trophy","Командный зачёт","Средний балл участников команды · при равенстве — дни, когда вся команда прошла 10 000+")}
+      ${bars(teams,false)}</div>
+    <div class="card d3" style="text-align:center">
+      <div class="badge">${ico("gift")}Приз команде-победителю</div>
+      <p class="muted" style="margin:10px 0 0;line-height:1.5">Каждому из 5 участников — наушники <b style="color:var(--text)">Redmi Buds Essential</b> и колонка <b style="color:var(--text)">POCO</b> 🎧🔊</p>
+    </div></div>`;
 }
 
 function stepyBox(html){
@@ -940,7 +952,7 @@ async function renderRules(){
     "Если команда заполнена, P&C предложит другую.",
     "Присоединяясь, ты обещаешь дойти до финиша 🏁",
     `Даты: <b>${MARATHON_TEXT()}</b> включительно.`,
-    "Каждую неделю выходит лидерборд участников и команд.",
+    "Каждую неделю выходит лидерборд команд — соревнуются команды, личного зачёта нет.",
     "Шаги присылай <b>каждый день до 23:55</b>: число + скриншот из Google Health.",
     "В <b>воскресенье с 22:00 до 23:55</b> — еженедельный отчёт: скриншот недельной статистики (кнопка «📈 Еженедельный отчёт»).",
     "P&C может запросить дополнительный скрин для проверки.",
@@ -1009,24 +1021,35 @@ async function renderRules(){
 }
 
 function renderPrizes(){
+  // Призы WE GROW — тот же текст, что в боте (texts.PRIZES_LINE).
+  const seat=(i)=>`<div class="pz-seat card d${Math.min(i,3)}"><div class="pz-n">${i}</div>
+      <div class="pz-items"><span>🎧</span><span>🔊</span></div></div>`;
   V.innerHTML=`<div class="view">
     <div class="card hero d1" style="padding:26px 18px">
       <svg class="ic gift-ic"><use href="#i-gift"/></svg>
-      <div class="stage" style="font-size:18px">Призы держатся в секрете</div>
+      <div class="stage" style="font-size:19px">Призы WE GROW</div>
       <p class="muted" style="margin:10px auto 0;max-width:360px;line-height:1.5">
-        Награды за марафон пока скрыты под покровом тайны 🤫<br>
-        Дойди до финиша — и узнаешь, какой <b style="color:var(--text)">сюрприз</b> ждёт лучших.
-        Обещаем: это стоит каждого шага ✨</p>
+        Побеждает <b style="color:var(--text)">команда</b> с самым высоким средним баллом.
+        Приз получает <b style="color:var(--text)">каждый из 5 участников</b> команды-победителя 🏆</p>
     </div>
-    <div class="mysteries">
-      ${[1,2,3].map(i=>`<div class="myst card d${i}"><div class="q">?</div>
-        <div class="mrow"><div class="lchip c${i}">${i}</div><div class="ml">место</div></div>
-        <div class="ms">скоро откроется</div></div>`).join("")}
+    <div class="card d2">
+      ${secHead("trophy","Каждому в команде-победителе","Комплект на одного участника")}
+      <div class="pz-list">
+        <div class="pz-row"><div class="pz-ic">🎧</div><div><b>Наушники Redmi Buds Essential</b>
+          <div class="muted" style="font-size:13px">беспроводные — для прогулок под музыку</div></div></div>
+        <div class="pz-row"><div class="pz-ic">🔊</div><div><b>Брендированная колонка POCO</b>
+          <div class="muted" style="font-size:13px">компактная, с фирменным дизайном</div></div></div>
+      </div>
+    </div>
+    <div class="card d3">
+      ${secHead("users","5 комплектов","По одному на каждого участника команды")}
+      <div class="pz-seats">${[1,2,3,4,5].map(seat).join("")}</div>
     </div>
     <div class="card d3" style="text-align:center">
-      <div class="badge">${ico("sparkle")}Подсказка</div>
+      <div class="badge">${ico("sparkle")}Как победить</div>
       <p class="muted" style="margin-top:10px;line-height:1.5">
-        Стабильность и командный дух повышают шансы.<br>Двигайся каждый день — и будь в топе 🚀</p>
+        Командный результат — среднее баллов участников, так что важен вклад <b style="color:var(--text)">каждого</b>.
+        Шагайте каждый день и не забывайте недельный отчёт в воскресенье 🚀</p>
     </div></div>`;
 }
 
@@ -1036,6 +1059,7 @@ function renderFAQ(){
     [ico("calendar"),"Что за еженедельный отчёт?","Каждое <b>воскресенье с 22:00 до 23:55</b> жми кнопку «📈 Еженедельный отчёт» в боте и пришли <b>скриншот недельной статистики</b> из Google Health. Отчёт подтверждает неделю: <b>без него бонус за серию не засчитывается</b>. В другое время кнопка закрыта — бот напомнит."],
     [ico("hourglass"),"Почему баллы не начислились сразу?","Каждый результат проверяет P&C. В календаре день сначала <b>⏳ на проверке</b>, после подтверждения становится зелёным — и капают баллы."],
     [ico("target"),"Сколько баллов за день?","5 000–9 999 → <b>1</b>, 10 000–14 999 → <b>2</b>, 15 000–19 999 → <b>3</b>, 20 000+ → <b>4</b>. Меньше 5 000 — 0 баллов."],
+    [ico("gift"),"Какие призы?","Команда-победитель: <b>каждому из 5 участников</b> — наушники <b>Redmi Buds Essential</b> и брендированная колонка <b>POCO</b> 🎧🔊. Побеждает команда с самым высоким средним баллом."],
     [ico("users"),"Как считается команда?","По <b>среднему</b> личных баллов участников (в команде 5 человек). При равенстве — по числу дней, когда вся команда прошла 10 000+, затем по сумме шагов."],
     [ico("flame"),"Что за серия и бонус?","Серия — дни <b>подряд</b> по 10 000+ шагов. 5 дней → <b>+2</b>, 7 дней → <b>+4</b> (по итогам недели, бонусы не суммируются). Пропуск обнуляет серию."],
     [ico("camera"),"Какой скриншот подойдёт?","Только из приложения Google Health: страница «Шаги» с фильтром <b>«Все источники»</b>, где видны <b>дата</b> и <b>число шагов</b> за сегодня. Скриншоты из других приложений не принимаются. Для недельного отчёта — экран со статистикой за неделю."],

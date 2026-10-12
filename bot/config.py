@@ -30,8 +30,8 @@ class Config:
     # Прямой контакт сотрудника P&C для обратной связи.
     feedback_url: str = os.getenv("FEEDBACK_URL", "https://t.me/aidanazhanyshbekova").strip()
     # Старт марафона: до этой даты бот не принимает шаги, а «Прогресс» заблюрен.
-    marathon_start: date = date.fromisoformat(os.getenv("MARATHON_START", "2026-10-26"))
-    marathon_end: date = date.fromisoformat(os.getenv("MARATHON_END", "2026-11-08"))
+    marathon_start: date = date.fromisoformat(os.getenv("MARATHON_START", "2026-11-02"))
+    marathon_end: date = date.fromisoformat(os.getenv("MARATHON_END", "2026-11-15"))
 
     @property
     def tz(self) -> ZoneInfo:

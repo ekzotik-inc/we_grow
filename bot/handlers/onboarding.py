@@ -157,9 +157,8 @@ async def cmd_app(message: Message) -> None:
 async def menu_board(message: Message) -> None:
     # Лидерборд прямо в чате + inline-кнопка открыть в приложении.
     teams = await db.team_leaderboard()
-    top = await db.top_participants(10)
     await message.answer(
-        texts.render_leaderboard(teams, top),
+        texts.render_leaderboard(teams),
         reply_markup=keyboards.open_app_kb("🏆 Открыть лидерборд"),
     )
 

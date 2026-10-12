@@ -220,14 +220,15 @@ async def api_me(x_init_data: str | None = Header(default=None),
 
     # Личное место, баллы и живая серия — одним запросом (как в главном меню
     # бота), без командного рейтинга: на экране «Прогресс» он не нужен.
-    summary = await db.participant_summary(tg_id, with_team_rank=False) or {}
+    summary = await db.participant_summary(tg_id) or {}
     return {
         "registered": True,
         "full_name": card["full_name"],
         "team_name": card["team_name"],
         "total_points": int(summary.get("points") or 0),
-        "rank": summary.get("rnk"),
-        "participants": summary.get("total"),
+        # Место КОМАНДЫ — личного рейтинга в WE GROW нет.
+        "team_rank": summary.get("team_rank"),
+        "teams_total": summary.get("teams_total"),
         # Час по таймзоне марафона — для приветствия. Часы клиента не годятся:
         # у участника западнее Бишкека «вечер» наступил бы не тогда.
         "hour": datetime.now(config.tz).hour,
@@ -268,11 +269,11 @@ async def api_team(x_init_data: str | None = Header(default=None),
 async def api_leaderboard(x_init_data: str | None = Header(default=None),
                           x_session: str | None = Header(default=None)):
     await _auth(x_init_data, x_session)
+    # Только командный зачёт: личного топа в WE GROW нет.
     teams = await db.team_leaderboard()
-    top = await db.top_participants(10)
     return {
-        "teams": [{"name": t["name"], "points": t["points"]} for t in teams],
-        "top": [{"name": p["full_name"] or "—", "points": p["points"]} for p in top],
+        "teams": [{"name": t["name"], "points": t["points"],
+                   "members": t["members"], "full_days": t["full_days"]} for t in teams],
     }
 
 

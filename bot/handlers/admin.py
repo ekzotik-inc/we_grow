@@ -191,8 +191,7 @@ async def adm_board(cb: CallbackQuery) -> None:
     if not _is_admin(cb.from_user.id):
         return await cb.answer()
     teams = await db.team_leaderboard()
-    top = await db.top_participants(10)
-    await cb.message.answer(texts.render_leaderboard(teams, top))
+    await cb.message.answer(texts.render_leaderboard(teams))
     await cb.answer()
 
 
@@ -766,5 +765,4 @@ async def leaderboard(message: Message) -> None:
     if not _is_admin(message.from_user.id):
         return
     teams = await db.team_leaderboard()
-    top = await db.top_participants(10)
-    await message.answer(texts.render_leaderboard(teams, top))
+    await message.answer(texts.render_leaderboard(teams))

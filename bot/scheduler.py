@@ -80,12 +80,11 @@ async def award_weekly_bonuses(bot: Bot) -> None:
 
 
 async def monday_leaderboard(bot: Bot) -> None:
-    """Пн 10:00 — итоги недели: топ-3 команд и топ-3 участников."""
+    """Пн 10:00 — итоги недели: командный зачёт (личного топа нет)."""
     if not _marathon_active():
         return
     teams = await db.team_leaderboard()
-    top = await db.top_participants(10)
-    text = texts.render_leaderboard(teams[:3], top, header="Итоги недели")
+    text = texts.render_leaderboard(teams, header="Итоги недели")
     await notify.broadcast_all(bot, text)
 
 

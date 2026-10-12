@@ -22,6 +22,11 @@ def marathon_dates() -> str:
     return (f"{s.day} {_MONTHS_GEN[s.month - 1]} — "
             f"{e.day} {_MONTHS_GEN[e.month - 1]} {e.year}")
 
+# Призы WE GROW (команда-победитель). Тот же текст — в Mini App, вкладка «Призы».
+PRIZES_LINE = ("Команда-победитель: <b>каждому из 5 участников</b> — наушники "
+               "<b>Redmi Buds Essential</b> 🎧 и брендированная колонка <b>POCO</b> 🔊")
+
+
 # --- Главный герой ---------------------------------------------------------
 STEPY = pe("🪴")            # 5305729158385533791
 GROW = STEPY               # обратная совместимость (используется в лидерборде)
@@ -91,7 +96,7 @@ def _rules_body() -> str:
         "<b>среднее</b> личных баллов участников: один человек не «вытянет» всех.\n"
         "🤝 При равенстве выше команда, у которой больше дней, когда <b>вся</b> "
         "команда прошла 10 000+, затем — у кого больше шагов суммарно.\n"
-        "📣 Каждую неделю — лидерборд команд и топ-10 участников."
+        "📣 Каждую неделю — лидерборд команд."
         "</blockquote>\n\n"
 
         "📸 <b>Как сдавать шаги</b>\n"
@@ -106,6 +111,9 @@ def _rules_body() -> str:
         "⏳ Сначала результат проверяет P&amp;C — потом день станет зелёным и "
         "капнут баллы."
         "</blockquote>\n\n"
+
+        "🎁 <b>Призы</b>\n"
+        f"<blockquote>🏆 {PRIZES_LINE}</blockquote>\n\n"
 
         "🚩 <b>Важно знать</b>\n"
         "<blockquote expandable>"
@@ -485,7 +493,9 @@ HELP = (
     "<b>🏆 Как считается команда?</b>\n"
     "По <b>среднему</b> личных баллов участников (в команде 5 человек). При "
     "равенстве — по числу дней, когда вся команда прошла 10 000+, затем по "
-    "сумме шагов."
+    "сумме шагов.\n\n"
+    "<b>🎁 Какие призы?</b>\n"
+    f"{PRIZES_LINE}."
     "</blockquote>\n\n"
 
     "📆 <b>Воскресенье и приложение</b>\n"
@@ -667,7 +677,7 @@ def profile_card(s: dict, today_entry=None, today=None) -> str:
         f"🌳 <b>{team}</b>{team_rank}\n"
         "<blockquote>"
         f"👣 Шаги: <b>{steps_fmt}</b>\n"
-        f"⭐ Баллы: <b>{s['points']}</b> · <b>{s['rnk']}</b> место из {s['total']}\n"
+        f"⭐ Мои баллы: <b>{s['points']}</b>\n"
         f"🔥 Серия: <b>{streak}</b> {_plural_days(streak)} подряд"
         "</blockquote>\n"
         + (f"{status}\n" if status else "")
@@ -758,20 +768,16 @@ def _board_block(items, key, unit: str = "") -> str:
 
 
 def render_leaderboard(teams, top=None, header: str = "Лидерборд",
-                       top_title: str = "Топ-10 участников",
                        subtitle: str | None = None) -> str:
-    """Лидерборд: команды + общий топ участников."""
-    def block(items, unit=""):
-        key = "full_name" if items and "full_name" in items[0] else "name"
-        return _board_block(items, key, unit)
-
+    """Лидерборд WE GROW — только командный зачёт (личного топа нет:
+    так решил заказчик, соревнуются команды). top оставлен для совместимости
+    и игнорируется."""
     head = (f"{pe('👑')} <b>{escape(header.upper())}</b>\n"
-            f"<i>{escape(subtitle or 'Step Together · растём вместе')}</i>\n\n")
-    text = head + f"{pe('🌟')} <b>Команды</b> <i>· средний балл участника</i>\n{block(teams)}"
-    if top is not None:
-        text += f"\n\n{pe('👣')} <b>{escape(top_title)}</b>\n{block(top)}"
+            f"<i>{escape(subtitle or 'Step Together · командный зачёт')}</i>\n\n")
+    text = (head + f"{pe('🌟')} <b>Команды</b> <i>· средний балл участника</i>\n"
+            + _board_block(teams, "name"))
     return text + "\n\n" + stepy(
-        "Каждый шаг двигает не только тебя, но и всю команду. "
+        "Побеждает команда — каждый шаг каждого участника поднимает её средний балл. "
         "Разрыв в пару баллов закрывается одной вечерней прогулкой 🌿")
 
 
