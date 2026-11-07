@@ -443,90 +443,111 @@
     filter:drop-shadow(0 0 1px rgba(255,255,255,.5))}
   .pz-mini svg{width:19px;height:19px}
   .pz-mini .wave,.pz-mini .sweep{display:none}
-  /* ---- Призы: сундук ---- */
+  /* ---- Призы: сцена «Финиш» (дорожка, лента, медаль) ---- */
   .prizes .pz-hero{text-align:center;padding:22px 16px 18px;overflow:hidden;position:relative;
-    background:radial-gradient(120% 90% at 50% 0%,rgba(255,198,92,.16),transparent 60%),var(--card)}
-  .pz-kicker{font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:var(--gold);opacity:.9}
-  .pz-title{font-size:22px;font-weight:800;margin-top:6px;line-height:1.2;
-    background:linear-gradient(90deg,#fff1b0,#ffc844 40%,#fff1b0 60%,#ffc844);background-size:200% 100%;
-    -webkit-background-clip:text;background-clip:text;color:transparent;animation:goldShine 5s linear infinite}
+    background:radial-gradient(120% 90% at 50% 0%,rgba(16,185,129,.16),transparent 60%),var(--card)}
+  .pz-kicker{font-size:11px;letter-spacing:.22em;text-transform:uppercase;color:#34D399;font-weight:800}
+  .pz-title{font:800 22px/1.2 Unbounded,Inter,sans-serif;margin-top:8px;
+    background:linear-gradient(90deg,#fff 0%,#fde68a 35%,#fff 55%,#fde68a 80%);background-size:200% 100%;
+    -webkit-background-clip:text;background-clip:text;color:transparent;animation:goldShine 6s linear infinite}
   .pz-sub{color:var(--muted);font-size:13px;margin-top:6px}
   .pz-cd{display:flex;justify-content:center;gap:8px;margin-top:14px}
-  .cd-box{min-width:58px;padding:9px 6px 7px;border-radius:14px;background:rgba(255,198,92,.08);
-    border:1px solid rgba(255,198,92,.28);box-shadow:inset 0 1px 0 rgba(255,255,255,.06)}
-  .cd-box b{display:block;font-size:22px;font-variant-numeric:tabular-nums;color:#fff3c4}
+  .cd-box{min-width:58px;padding:9px 6px 7px;border-radius:14px;background:rgba(255,255,255,.04);
+    border:1px solid rgba(255,255,255,.1);box-shadow:inset 0 1px 0 rgba(255,255,255,.06)}
+  .cd-box b{display:block;font:800 22px Unbounded,Inter,sans-serif;font-variant-numeric:tabular-nums;color:#fff}
   .cd-box span{font-size:10.5px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em}
-  .cd-done{color:var(--gold);font-weight:700}
-  .chest-stage{position:relative;height:330px;margin:4px 0 6px;display:grid;place-items:center;cursor:pointer;overflow:hidden;transition:height .6s;
+  .cd-done{color:#FBBF24;font-weight:700}
+
+  .fin-stage{position:relative;height:330px;margin:12px 0 6px;cursor:pointer;overflow:hidden;border-radius:24px;
+    background:radial-gradient(90% 55% at 50% 22%,rgba(16,185,129,.20),transparent 70%),
+      linear-gradient(180deg,rgba(255,255,255,.035),rgba(255,255,255,0) 60%);
+    border:1px solid rgba(255,255,255,.08);transition:height .7s cubic-bezier(.2,.8,.2,1);
     -webkit-tap-highlight-color:transparent;outline:none}
-  .ch-box{position:relative;width:230px;z-index:2;animation:chIdle 2.6s ease-in-out infinite;transform-origin:50% 90%}
-  .ch-svg{width:100%;height:auto;overflow:visible;filter:drop-shadow(0 14px 22px rgba(0,0,0,.55))}
-  .ch-lid{transform-box:fill-box;transform-origin:50% 100%;transition:transform .9s cubic-bezier(.2,1.4,.4,1)}
-  .ch-inner{opacity:0;transition:opacity .5s .25s}
-  .ch-lock{transition:opacity .3s,transform .4s}
-  .ch-halo{position:absolute;max-width:100%;width:250px;height:250px;border-radius:50%;
-    background:radial-gradient(circle,rgba(255,198,92,.45),rgba(255,122,89,.15) 45%,transparent 70%);
-    filter:blur(10px);animation:pzGlow 3s ease-in-out infinite}
-  .ch-rays{position:absolute;width:420px;height:420px;opacity:0;transition:opacity .6s .3s;
-    background:repeating-conic-gradient(from 0deg,rgba(255,214,120,.22) 0 7deg,transparent 7deg 22deg);
-    -webkit-mask:radial-gradient(circle,#000 18%,transparent 62%);mask:radial-gradient(circle,#000 18%,transparent 62%);
-    animation:spin 18s linear infinite}
-  .ch-sparks{position:absolute;inset:0;pointer-events:none}
-  .ch-sparks i{position:absolute;left:var(--x);bottom:24%;width:var(--s);height:var(--s);border-radius:50%;
-    background:#ffe08a;box-shadow:0 0 8px #ffc844;opacity:0;animation:spark 3.2s ease-out var(--d) infinite}
-  .ch-tap{position:absolute;bottom:4px;font-size:13px;font-weight:700;letter-spacing:.04em;color:#ffe9a8;
-    padding:7px 14px;border-radius:999px;background:rgba(255,198,92,.12);border:1px solid rgba(255,198,92,.35);
-    animation:tapPulse 1.6s ease-in-out infinite;transition:opacity .3s}
-  .ch-fly{position:absolute;inset:0;pointer-events:none;z-index:3}
-  .fly-card{position:absolute;left:50%;top:62%;width:142px;padding:12px 10px 12px;border-radius:18px;text-align:center;
-    background:linear-gradient(160deg,rgba(40,48,74,.92),rgba(18,22,36,.94));border:1px solid rgba(255,214,120,.45);
-    box-shadow:0 18px 40px rgba(0,0,0,.5),0 0 22px rgba(255,198,92,.25);
-    opacity:0;transform:translate(-50%,-20%) scale(.2);display:flex;flex-direction:column;align-items:center;gap:3px}
+  .fin-svg{position:absolute;left:50%;bottom:0;width:440px;max-width:none;height:auto;transform:translateX(-50%);
+    transition:opacity .7s .35s,transform 1.1s cubic-bezier(.2,.8,.2,1) .25s}
+  .lane-run{stroke-dasharray:5 13;animation:laneRun .8s linear infinite}
+  .fin-horizon{animation:pzGlow 3.2s ease-in-out infinite}
+  .tape-l{transform-box:view-box;transform-origin:72px 92px;animation:tapeL 3.4s ease-in-out infinite}
+  .tape-r{transform-box:view-box;transform-origin:288px 92px;animation:tapeR 3.4s ease-in-out infinite}
+  .post-cap{animation:capBlink 1.6s ease-in-out infinite}
+  .fin-flash{position:absolute;left:50%;top:124px;width:90px;height:90px;margin:-45px 0 0 -45px;border-radius:50%;pointer-events:none;
+    background:radial-gradient(circle,#fff 0%,rgba(253,230,138,.85) 25%,rgba(16,185,129,.35) 55%,transparent 72%);opacity:0;transform:scale(.2)}
+  .fin-streaks{position:absolute;inset:0;pointer-events:none;opacity:0;transition:opacity .4s .2s}
+  .fin-streaks i{position:absolute;left:50%;top:124px;width:2px;height:var(--h);border-radius:2px;
+    background:linear-gradient(180deg,rgba(253,230,138,0),rgba(253,230,138,.9));transform-origin:50% 0;
+    transform:rotate(var(--a)) translateY(18px) scaleY(0);opacity:0}
+  .fin-hint{position:absolute;left:50%;bottom:14px;transform:translateX(-50%);white-space:nowrap;
+    display:inline-flex;align-items:center;gap:8px;font-size:12.5px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;
+    color:#ECFDF5;padding:9px 16px;border-radius:999px;background:rgba(16,185,129,.16);border:1px solid rgba(52,211,153,.45);
+    -webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);animation:tapPulse 1.8s ease-in-out infinite;transition:opacity .3s}
+  .fin-hint i{width:7px;height:7px;border-radius:50%;background:#34D399;box-shadow:0 0 10px #34D399}
+  .fin-medal{position:absolute;left:50%;top:10px;width:118px;margin-left:-59px;z-index:3;pointer-events:none;
+    opacity:0;transform:translateY(-240px)}
+  .fin-medal svg{width:100%;height:auto;overflow:visible;transform-origin:50% 0;filter:drop-shadow(0 14px 22px rgba(0,0,0,.55))}
+  .medal-shine{animation:medalShine 3.2s ease-in-out 2s infinite}
+  .ch-fly{position:absolute;inset:0;pointer-events:none;z-index:2}
+  .fly-card{position:absolute;left:50%;bottom:58px;width:142px;padding:12px 10px;border-radius:18px;text-align:center;
+    background:linear-gradient(160deg,rgba(30,41,59,.92),rgba(11,15,23,.95));border:1px solid rgba(255,255,255,.12);
+    box-shadow:0 18px 40px rgba(0,0,0,.5),inset 0 1px 0 rgba(255,255,255,.08);
+    opacity:0;transform:translate(-50%,-150px) scale(.2);display:flex;flex-direction:column;align-items:center;gap:3px}
   .fly-card b{font-size:13.5px;line-height:1.2}
   .fly-card span{font-size:11.5px;color:var(--muted)}
   .fc-img{width:96px;height:96px;object-fit:contain;position:relative;z-index:1;
     filter:drop-shadow(0 0 1.5px rgba(255,255,255,.5)) drop-shadow(0 6px 10px rgba(0,0,0,.5))}
   .fc-svg svg{width:96px;height:96px}
-  .fc-glow{position:absolute;top:10px;width:96px;height:96px;border-radius:50%;filter:blur(16px);opacity:.7;animation:pzGlow 3s ease-in-out infinite}
-  .fc-glow.tq{background:radial-gradient(circle,#00d1d2,#7a5cff 65%,transparent 75%)}
-  .fc-glow.gold{background:radial-gradient(circle,#ffc65c,#ff7a59 65%,transparent 75%)}
-  .chest-stage.open .ch-box{animation:chOpen .55s ease-out}
-  .chest-stage.open .ch-lid{transform:rotate(-24deg) translate(-8px,-26px)}
-  .chest-stage.open .ch-inner{opacity:1}
-  .chest-stage.open .ch-lock{opacity:0;transform:translateY(10px)}
-  .chest-stage.open .ch-rays{opacity:1}
-  .chest-stage.open .ch-tap{opacity:0}
-  .chest-stage.open .fc1{animation:fly1 1s cubic-bezier(.2,1.3,.4,1) .45s forwards, bob 3.4s ease-in-out 1.6s infinite}
-  .chest-stage.open .fc2{animation:fly2 1s cubic-bezier(.2,1.3,.4,1) .6s forwards, bob 3.4s ease-in-out 1.9s infinite}
-  .chest-stage.instant *{transition:none!important}
-  .chest-stage.instant .fc1,.chest-stage.instant .fc2{animation-delay:0s,.2s;animation-duration:.01s,3.4s}
-  .chest-stage.open{height:460px;align-items:end;padding-bottom:40px}
-  .pz-reveal{opacity:0;transform:translateY(16px);max-height:0;overflow:hidden;transition:opacity .6s 1.2s,transform .6s 1.2s}
+  .fc-glow{position:absolute;top:10px;width:96px;height:96px;border-radius:50%;filter:blur(16px);opacity:.6;animation:pzGlow 3s ease-in-out infinite}
+  .fc-glow.tq{background:radial-gradient(circle,#10B981,#0EA5E9 65%,transparent 75%)}
+  .fc-glow.gold{background:radial-gradient(circle,#FBBF24,#F59E0B 60%,transparent 75%)}
+  .ch-caption{position:absolute;bottom:16px;left:0;right:0;text-align:center;font-weight:800;font-size:14px;letter-spacing:.02em;
+    color:#fff;opacity:0;transform:translateY(8px);transition:opacity .6s 1.5s,transform .6s 1.5s;z-index:4}
+  .ch-caption em{font-style:normal;color:#FBBF24}
+
+  .fin-stage.open{height:470px}
+  .fin-stage.open .fin-svg{opacity:.22;transform:translateX(-50%) translateY(46px) scale(1.1)}
+  .fin-stage.open .lane-run{animation-duration:.35s}
+  .fin-stage.open .tape-l{animation:none;transform:rotate(80deg);opacity:0;transition:transform 1.1s cubic-bezier(.3,1.35,.5,1),opacity .5s ease .75s}
+  .fin-stage.open .tape-r{animation:none;transform:rotate(-80deg);opacity:0;transition:transform 1.1s cubic-bezier(.3,1.35,.5,1) .04s,opacity .5s ease .75s}
+  .fin-stage.open .fin-flash{animation:flash .75s ease-out forwards}
+  .fin-stage.open .fin-streaks{opacity:1}
+  .fin-stage.open .fin-streaks i{animation:streak .9s cubic-bezier(.2,.8,.2,1) var(--d) forwards}
+  .fin-stage.open .fin-hint{opacity:0}
+  .fin-stage.open .fin-medal{animation:medalDrop 1s cubic-bezier(.3,1.45,.5,1) .4s forwards}
+  .fin-stage.open .fin-medal svg{animation:medalSwing 4s ease-in-out 1.4s infinite}
+  .fin-stage.open .fc1{animation:card1 .95s cubic-bezier(.2,1.25,.4,1) .7s forwards, bob 3.6s ease-in-out 1.8s infinite}
+  .fin-stage.open .fc2{animation:card2 .95s cubic-bezier(.2,1.25,.4,1) .85s forwards, bob 3.6s ease-in-out 2.1s infinite}
+  .fin-stage.open .ch-caption{opacity:1;transform:none}
+  .fin-stage.instant *{transition:none!important}
+  .fin-stage.instant .fin-flash,.fin-stage.instant .fin-streaks i{animation:none}
+  .fin-stage.instant .fin-medal{animation-delay:0s;animation-duration:.01s}
+  .fin-stage.instant .fc1,.fin-stage.instant .fc2{animation-delay:0s,.2s;animation-duration:.01s,3.6s}
+
+  .pz-reveal{opacity:0;transform:translateY(16px);max-height:0;overflow:hidden;transition:opacity .6s 1.3s,transform .6s 1.3s}
   .pz-reveal.show{opacity:1;transform:none;max-height:none;overflow:visible}
-  .pz-glass{background:linear-gradient(160deg,rgba(255,198,92,.06),transparent 60%),var(--card);border-color:rgba(255,198,92,.22)}
+  .pz-glass{background:linear-gradient(160deg,rgba(16,185,129,.07),transparent 60%),var(--card);border-color:rgba(52,211,153,.22)}
   .pz-h{font-weight:800;font-size:16px}
   .pz-sub2{color:var(--muted);font-size:13px;margin:4px 0 10px;line-height:1.45}
   .pz-steps{display:flex;flex-direction:column;gap:10px;margin-top:10px;font-size:13.5px;line-height:1.45}
   .pz-steps div{display:flex;gap:10px;align-items:flex-start}
   .pz-steps p{margin:0}
-  .pz-steps span{flex:none;width:24px;height:24px;border-radius:50%;display:grid;place-items:center;font-weight:800;font-size:12px;
-    color:#1a1205;background:linear-gradient(135deg,#fff1b0,#ffc844)}
+  .pz-steps span{flex:none;width:24px;height:24px;border-radius:8px;display:grid;place-items:center;font-weight:800;font-size:12px;
+    color:#04210f;background:var(--em)}
   .pz-seat{text-align:center;padding:8px 2px;border-radius:12px;background:var(--card2);border:1px solid var(--line)}
-  @keyframes chIdle{0%,100%{transform:rotate(0)}6%{transform:rotate(-2.5deg)}12%{transform:rotate(2.5deg)}18%{transform:rotate(-1.5deg)}24%{transform:rotate(0)}}
-  @keyframes chOpen{0%{transform:scale(1)}35%{transform:scale(.94,1.06)}70%{transform:scale(1.04,.96)}100%{transform:scale(1)}}
-  @keyframes fly1{0%{opacity:0;transform:translate(-50%,-10%) scale(.2) rotate(0)}100%{opacity:1;transform:translate(-104%,-138%) scale(1) rotate(-6deg)}}
-  @keyframes fly2{0%{opacity:0;transform:translate(-50%,-10%) scale(.2) rotate(0)}100%{opacity:1;transform:translate(4%,-132%) scale(1) rotate(6deg)}}
-  @keyframes bob{0%,100%{margin-top:0}50%{margin-top:-8px}}
-  @keyframes spark{0%{opacity:0;transform:translateY(0) scale(.6)}20%{opacity:1}100%{opacity:0;transform:translateY(-170px) scale(1.2)}}
-  @keyframes tapPulse{0%,100%{transform:scale(1);box-shadow:0 0 0 0 rgba(255,198,92,.35)}50%{transform:scale(1.05);box-shadow:0 0 0 8px rgba(255,198,92,0)}}
+  @keyframes laneRun{to{stroke-dashoffset:-18}}
+  @keyframes tapeL{0%,100%{transform:rotate(0)}50%{transform:rotate(1.4deg)}}
+  @keyframes tapeR{0%,100%{transform:rotate(0)}50%{transform:rotate(-1.4deg)}}
+  @keyframes capBlink{0%,100%{opacity:1}50%{opacity:.45}}
+  @keyframes flash{0%{opacity:0;transform:scale(.2)}25%{opacity:1}100%{opacity:0;transform:scale(4.2)}}
+  @keyframes streak{0%{opacity:0;transform:rotate(var(--a)) translateY(18px) scaleY(0)}30%{opacity:1}100%{opacity:0;transform:rotate(var(--a)) translateY(120px) scaleY(1)}}
+  @keyframes medalDrop{0%{opacity:0;transform:translateY(-240px)}40%{opacity:1}100%{opacity:1;transform:translateY(0)}}
+  @keyframes medalSwing{0%,100%{transform:rotate(-3deg)}50%{transform:rotate(3deg)}}
+  @keyframes medalShine{0%,70%{transform:translateX(-60px)}100%{transform:translateX(60px)}}
+  @keyframes card1{0%{opacity:0;transform:translate(-50%,-150px) scale(.2)}100%{opacity:1;transform:translate(-106%,0) scale(1) rotate(-4deg)}}
+  @keyframes card2{0%{opacity:0;transform:translate(-50%,-150px) scale(.2)}100%{opacity:1;transform:translate(6%,0) scale(1) rotate(4deg)}}
+  @keyframes bob{0%,100%{margin-bottom:0}50%{margin-bottom:6px}}
+  @keyframes tapPulse{0%,100%{box-shadow:0 0 0 0 rgba(52,211,153,.35)}50%{box-shadow:0 0 0 9px rgba(52,211,153,0)}}
   @keyframes goldShine{to{background-position:200% 0}}
   @keyframes spin{to{transform:rotate(360deg)}}
-  @media (prefers-reduced-motion:reduce){.ch-box,.ch-rays,.ch-sparks i,.ch-tap,.pz-title,.fly-card{animation-duration:.01s!important;animation-iteration-count:1!important}}
-  .ch-caption{position:absolute;bottom:2px;left:0;right:0;text-align:center;font-weight:800;font-size:15px;
-    color:#ffe9a8;text-shadow:0 0 14px rgba(255,198,92,.55);opacity:0;transform:translateY(8px);
-    transition:opacity .6s 1.4s,transform .6s 1.4s;z-index:4}
-  .chest-stage.open .ch-caption{opacity:1;transform:none}
-  .chest-stage.instant .ch-caption{transition:none}
+  @media (prefers-reduced-motion:reduce){.lane-run,.tape-l,.tape-r,.post-cap,.fin-horizon,.fin-hint,.pz-title,.medal-shine,.fin-medal svg,.fly-card{animation-duration:.01s!important;animation-iteration-count:1!important}}
   /* ---- Лидерборд ---- */
   .lb-hero{position:relative;border-radius:24px;padding:18px 14px 0;margin-bottom:14px;overflow:hidden;
     background:radial-gradient(90% 70% at 50% 0%,rgba(255,198,92,.18),transparent 65%),
@@ -761,7 +782,7 @@
   .hero-bn .hbtn{width:32px;height:32px;background:rgba(11,15,23,.4);border:1px solid rgba(255,255,255,.08);
     -webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px)}
   .hero-bn .hbtn svg{width:16px;height:16px;stroke-width:1.8}
-  .hb-me{display:flex;align-items:flex-end;position:relative;z-index:1;margin-top:52px}
+  .hb-me{display:flex;align-items:flex-end;gap:12px;position:relative;z-index:1;margin-top:52px}
   .hb-av{width:36px;height:36px;flex:none;border-radius:12px;display:grid;place-items:center;font-weight:900;font-size:16px;
     color:#ECFDF5;background:linear-gradient(135deg,rgba(16,185,129,.55),rgba(99,102,241,.45));border:1px solid rgba(255,255,255,.15);
     box-shadow:0 4px 14px rgba(0,0,0,.35)}
@@ -881,6 +902,20 @@
   @keyframes wkGrow{from{height:0}}
   .pg-card .cal{margin-top:6px}
   @media (prefers-reduced-motion:reduce){.pg-dot,.wk-track i{animation:none}}
+
+  /* ===== Календарь: читаемые шаги в ячейках ===== */
+  .day small{font-size:9.5px;font-weight:800;letter-spacing:-.01em;color:inherit;opacity:.92;line-height:1.1}
+  .day.p0{background:rgba(16,185,129,.08);border:1px solid rgba(16,185,129,.35);color:#D1FAE5}
+  .day.p1{background:linear-gradient(160deg,#0f3d33,#0b2e27);border-color:#1f6b57;color:#ECFDF5}
+  .day.p1 small{color:#6EE7B7;opacity:1}
+  .day.p2{background:linear-gradient(160deg,#047857,#065f46);border-color:#10B981;color:#fff}
+  .day.p2 small{color:#D1FAE5;opacity:1}
+  .day.p3{background:linear-gradient(135deg,#34D399,#10B981);color:#022c22}
+  .day.p3 small{color:#022c22;opacity:.9}
+  .day.pend small{color:#FDE68A;opacity:1}
+  .day.rej small{color:#FCA5A5;opacity:1}
+  .adm-cal .dd.accepted small{color:#A7F3D0}.adm-cal .dd.pending small{color:#FDE68A}.adm-cal .dd.rejected small{color:#FCA5A5}
+  .adm-cal .dd.accepted,.adm-cal .dd.pending{color:#fff}
 
   /* ===== Админка P&C (только просмотр) ===== */
   .hero-bn .hbtn[hidden]{display:none}
@@ -1170,7 +1205,8 @@ const fmtPts=(x)=>{ const n=Number(x)||0; return Number.isInteger(n)?String(n):n
 function countUp(el,to,dur=900,fmt){
   const start=performance.now(), from=0;
   (function tick(t){
-    const p=Math.min(1,(t-start)/dur), e=1-Math.pow(1-p,3);
+    // rAF-время кадра может быть чуть раньше start → без max(0) мелькало отрицательное число
+    const p=Math.min(1,Math.max(0,(t-start)/dur)), e=1-Math.pow(1-p,3);
     const raw=from+(to-from)*e, v=Number.isInteger(to)?Math.round(raw):Math.round(raw*10)/10;
     el.textContent=fmt?fmt(v):v;
     if(p<1)requestAnimationFrame(tick);
@@ -1195,6 +1231,8 @@ function isoDow(iso){
   return (h+5)%7;
 }
 const nfmt=(n)=>String(n).replace(/\B(?=(\d{3})+(?!\d))/g," ");
+// Шаги коротко для ячеек календаря: 9 500 → 9,5K, 12 340 → 12K, 125 000 → 125K.
+const stepsK=(n)=>{ n=Number(n)||0; return n>=1000?(n/1000).toFixed(n>=10000?0:1).replace(".",",")+"K":String(n); };
 
 // Полоса «сегодня»: статус дня + понятное следующее действие.
 function todayStrip(d){
@@ -1361,15 +1399,17 @@ function drawProgress(d){
   const shift=isoDow(d.calendar[0]?.date||d.marathon.start)+1;
   const cal=d.calendar.map((c,idx)=>{
     let base="", badge="";
-    if(c.status==="accepted"){ base=pcls(c.points); badge=c.points?`<small>${c.points}б</small>`:""; }
-    else if(c.status==="pending"){ base="pend"; badge=`<small>${ico("hourglass")}</small>`; }
+    // В ячейке — шаги (коротко: 12,3K); баллы — во всплывающей подсказке.
+    if(c.status==="accepted"){ base=pcls(c.points)||"p0"; badge=c.steps?`<small>${stepsK(c.steps)}</small>`:""; }
+    else if(c.status==="pending"){ base="pend"; badge=`<small>${c.steps?stepsK(c.steps):ico("hourglass")}</small>`; }
     else if(c.status==="rejected"){ base="rej"; badge=`<small>${ico("cross")}</small>`; }
     else if(c.future){ base="empty"; }
     else if(!c.is_today){ base="miss"; }
     else base="empty";
     const cls=["day",base,c.is_today?"today":"",c.future?"future":""].join(" ");
     const stl=idx===0&&shift>1?` style="grid-column-start:${shift}"`:"";
-    return `<div class="${cls}"${stl}><b>${parseInt(c.date.slice(8),10)}</b>${badge}</div>`;
+    const tip=c.status?` title="${nfmt(c.steps||0)} шагов${c.status==="accepted"?" · "+fmtPts(c.points)+" б.":""}"`:"";
+    return `<div class="${cls}"${stl}${tip}><b>${parseInt(c.date.slice(8),10)}</b>${badge}</div>`;
   }).join("");
 
   const ring=(id,pct,inner,cls="")=>`<div class="mring ${cls}">
@@ -1588,7 +1628,7 @@ function lbCount(els,ms=900){
   els.forEach(el=>{ const to=Number(el.dataset.n)||0;
     if(still||!to){ el.textContent=fmtPts(to); return; }
     const t0=performance.now();
-    const step=now=>{ const p=Math.min(1,(now-t0)/ms), e=1-Math.pow(1-p,3);
+    const step=now=>{ const p=Math.min(1,Math.max(0,(now-t0)/ms)), e=1-Math.pow(1-p,3);
       el.textContent=fmtPts(p<1?Math.round(to*e*10)/10:to); if(p<1) requestAnimationFrame(step); };
     requestAnimationFrame(step); });
 }
@@ -1728,36 +1768,49 @@ const POCO_SVG=`<svg class="pz-svg float2" viewBox="0 0 160 140" aria-label="К�
   <g clip-path="url(#spClip)"><rect class="sweep s2" x="-60" y="20" width="36" height="104" fill="url(#shine2)" transform="skewX(-20)"/></g>
 </svg>`;
 
-// ---- Призы: сундук открывается по нажатию, из него вылетают карточки ----
-const CHEST_SVG=`<svg class="ch-svg" viewBox="0 0 220 190" aria-label="Сундук с призами">
+// ---- Призы: сцена «Финиш» — по нажатию лента рвётся, опускается медаль,
+// с финиша вылетают карточки призов. Спортивная подача вместо «сундука».
+const FINISH_SVG=`<svg class="fin-svg" viewBox="0 0 360 260" aria-hidden="true">
   <defs>
-    <linearGradient id="chWood" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#7a3f1d"/><stop offset="1" stop-color="#4a230e"/></linearGradient>
-    <linearGradient id="chWood2" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#8f4a22"/><stop offset="1" stop-color="#5b2c12"/></linearGradient>
-    <linearGradient id="chGold" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#fff1b0"/><stop offset=".45" stop-color="#ffc844"/><stop offset="1" stop-color="#b8780e"/></linearGradient>
-    <radialGradient id="chLight" cx=".5" cy="1" r=".9"><stop offset="0" stop-color="#fff6c9"/><stop offset=".5" stop-color="#ffc65c" stop-opacity=".7"/><stop offset="1" stop-color="#ffc65c" stop-opacity="0"/></radialGradient>
+    <linearGradient id="fTrack" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#0f2a24"/><stop offset=".55" stop-color="#11372d"/><stop offset="1" stop-color="#0b1f1b"/></linearGradient>
+    <linearGradient id="fTape" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#FDE68A"/><stop offset=".5" stop-color="#F59E0B"/><stop offset="1" stop-color="#B45309"/></linearGradient>
+    <linearGradient id="fPost" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#64748B"/><stop offset=".45" stop-color="#E2E8F0"/><stop offset="1" stop-color="#475569"/></linearGradient>
+    <radialGradient id="fHz" cx=".5" cy=".5" r=".5"><stop offset="0" stop-color="#34D399" stop-opacity=".55"/><stop offset="1" stop-color="#34D399" stop-opacity="0"/></radialGradient>
+    <pattern id="fChk" width="10" height="10" patternUnits="userSpaceOnUse"><rect width="10" height="10" fill="#E2E8F0"/><rect width="5" height="5" fill="#0B0F17"/><rect x="5" y="5" width="5" height="5" fill="#0B0F17"/></pattern>
+    <clipPath id="fClip"><polygon points="150,40 210,40 360,260 0,260"/></clipPath>
   </defs>
-  <ellipse cx="110" cy="178" rx="78" ry="8" fill="#000" opacity=".35"/>
-  <!-- свет изнутри (виден при открытии) -->
-  <ellipse class="ch-inner" cx="110" cy="92" rx="76" ry="22" fill="url(#chLight)"/>
-  <!-- корпус -->
-  <rect x="30" y="92" width="160" height="80" rx="10" fill="url(#chWood)"/>
-  <g stroke="#3a1a08" stroke-opacity=".45" stroke-width="2"><line x1="30" y1="118" x2="190" y2="118"/><line x1="30" y1="145" x2="190" y2="145"/></g>
-  <rect x="30" y="92" width="16" height="80" rx="4" fill="url(#chGold)"/>
-  <rect x="174" y="92" width="16" height="80" rx="4" fill="url(#chGold)"/>
-  <rect x="96" y="92" width="28" height="80" fill="url(#chGold)" opacity=".9"/>
-  <rect x="30" y="92" width="160" height="7" fill="url(#chGold)"/>
-  <!-- замок -->
-  <g class="ch-lock"><rect x="98" y="100" width="24" height="28" rx="5" fill="url(#chGold)" stroke="#8a5a0a" stroke-width="1.5"/>
-    <circle cx="110" cy="111" r="3.5" fill="#5a3a06"/><rect x="108.5" y="112" width="3" height="8" rx="1.5" fill="#5a3a06"/></g>
-  <!-- крышка -->
-  <g class="ch-lid">
-    <path d="M30 94 V68 Q30 30 110 30 Q190 30 190 68 V94 Z" fill="url(#chWood2)"/>
-    <path d="M30 94 V68 Q30 30 110 30 Q190 30 190 68 V94" fill="none" stroke="url(#chGold)" stroke-width="6"/>
-    <path d="M46 94 V66 Q46 36 50 34" fill="none" stroke="url(#chGold)" stroke-width="14" stroke-linecap="round" opacity=".9"/>
-    <path d="M174 94 V66 Q174 36 170 34" fill="none" stroke="url(#chGold)" stroke-width="14" stroke-linecap="round" opacity=".9"/>
-    <rect x="96" y="30" width="28" height="64" fill="url(#chGold)" opacity=".9"/>
-    <path d="M44 52 Q110 36 176 52" stroke="#fff" stroke-opacity=".18" stroke-width="3" fill="none"/>
+  <ellipse class="fin-horizon" cx="180" cy="42" rx="150" ry="34" fill="url(#fHz)"/>
+  <polygon points="150,40 210,40 360,260 0,260" fill="url(#fTrack)"/>
+  <g clip-path="url(#fClip)">
+    <g stroke="rgba(236,253,245,.32)" stroke-width="1.4"><line x1="150" y1="40" x2="0" y2="260"/><line x1="160" y1="40" x2="60" y2="260"/><line x1="170" y1="40" x2="120" y2="260"/><line x1="180" y1="40" x2="180" y2="260"/><line x1="190" y1="40" x2="240" y2="260"/><line x1="200" y1="40" x2="300" y2="260"/><line x1="210" y1="40" x2="360" y2="260"/></g>
+    <g class="lane-run" stroke="rgba(52,211,153,.55)" stroke-width="1.6" stroke-linecap="round"><line x1="155" y1="40" x2="30" y2="260"/><line x1="165" y1="40" x2="90" y2="260"/><line x1="175" y1="40" x2="150" y2="260"/><line x1="185" y1="40" x2="210" y2="260"/><line x1="195" y1="40" x2="270" y2="260"/><line x1="205" y1="40" x2="330" y2="260"/></g>
+    <polygon points="75,144 285,144 291,156 69,156" fill="url(#fChk)" opacity=".92"/>
   </g>
+  <polygon points="150,40 210,40 360,260 0,260" fill="none" stroke="rgba(52,211,153,.35)" stroke-width="1.2"/>
+  <rect x="66" y="78" width="7" height="74" rx="2" fill="url(#fPost)"/>
+  <rect x="287" y="78" width="7" height="74" rx="2" fill="url(#fPost)"/>
+  <circle class="post-cap" cx="69.5" cy="76" r="4.5" fill="#34D399"/>
+  <circle class="post-cap" cx="290.5" cy="76" r="4.5" fill="#34D399"/>
+  <g class="tape-l"><rect x="72" y="86" width="108" height="13" fill="url(#fTape)"/>
+    <text x="126" y="96" text-anchor="middle" font-family="Unbounded,Inter,sans-serif" font-size="8.5" font-weight="800" letter-spacing="2.5" fill="#1a1205">FINISH</text></g>
+  <g class="tape-r"><rect x="180" y="86" width="108" height="13" fill="url(#fTape)"/>
+    <text x="234" y="96" text-anchor="middle" font-family="Unbounded,Inter,sans-serif" font-size="8.5" font-weight="800" letter-spacing="2.5" fill="#1a1205">FINISH</text></g>
+</svg>`;
+const MEDAL_SVG=`<svg viewBox="0 0 120 170" aria-label="Золотая медаль">
+  <defs>
+    <linearGradient id="mGold" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#FEF3C7"/><stop offset=".4" stop-color="#FBBF24"/><stop offset=".75" stop-color="#D97706"/><stop offset="1" stop-color="#92400E"/></linearGradient>
+    <linearGradient id="mRib" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#047857"/><stop offset="1" stop-color="#10B981"/></linearGradient>
+    <clipPath id="mDisc"><circle cx="60" cy="112" r="42"/></clipPath>
+  </defs>
+  <path d="M30 0 H52 L72 70 H50 Z" fill="url(#mRib)"/>
+  <path d="M90 0 H68 L48 70 H70 Z" fill="#065F46"/>
+  <path d="M74 0 H80 L60 70 H54 Z" fill="#FDE68A" opacity=".85"/>
+  <rect x="44" y="64" width="32" height="10" rx="3" fill="url(#mGold)"/>
+  <circle cx="60" cy="112" r="44" fill="url(#mGold)"/>
+  <circle cx="60" cy="112" r="35" fill="none" stroke="#FEF3C7" stroke-opacity=".55" stroke-width="1.5"/>
+  <circle cx="60" cy="112" r="31" fill="#B45309" fill-opacity=".18"/>
+  <text x="60" y="127" text-anchor="middle" font-family="Unbounded,Inter,sans-serif" font-size="40" font-weight="900" fill="#78350F" fill-opacity=".85">1</text>
+  <g clip-path="url(#mDisc)"><rect class="medal-shine" x="40" y="60" width="16" height="110" fill="#fff" opacity=".35" transform="skewX(-20)"/></g>
 </svg>`;
 
 function prizeDeadline(){
@@ -1777,7 +1830,7 @@ function tickPrize(){
   const {at}=prizeDeadline(); const L=fmtLeft(at-Date.now());
   el.innerHTML = L ? `<div class="cd-box"><b>${L.d}</b><span>дн</span></div><div class="cd-box"><b>${L.h}</b><span>ч</span></div>
      <div class="cd-box"><b>${L.m}</b><span>мин</span></div><div class="cd-box"><b>${L.s}</b><span>сек</span></div>`
-   : `<div class="cd-done">Розыгрыш завершён — итоги после проверки P&amp;C 🏆</div>`;
+   : `<div class="cd-done">Финиш пройден — итоги после проверки P&amp;C 🏆</div>`;
 }
 
 function renderPrizes(){
@@ -1786,51 +1839,52 @@ function renderPrizes(){
       <div class="pz-items"><img class="pz-mini" src="prize-buds.png" alt=""><span class="pz-mini">${POCO_SVG}</span></div></div>`;
   V.innerHTML=`<div class="view prizes">
     <div class="card pz-hero d1">
-      <div class="pz-kicker">WE GROW · главный приз</div>
-      <div class="pz-title">Сокровища команды-победителя</div>
-      <div class="pz-sub">Розыгрыш завершится <b>${fmtFull(end)} в 23:55</b></div>
+      <div class="pz-kicker">WE GROW · финиш марафона</div>
+      <div class="pz-title">Приз команды-чемпиона</div>
+      <div class="pz-sub">Финиш <b>${fmtFull(end)} в 23:55</b></div>
       <div class="pz-cd" id="pz-cd"></div>
     </div>
 
-    <div class="chest-stage" id="chest" role="button" tabindex="0" aria-label="Открыть сундук">
-      <div class="ch-rays"></div><div class="ch-halo"></div>
-      <div class="ch-sparks">${Array.from({length:14},(_,k)=>`<i style="--x:${(k*37)%100}%;--d:${(k%7)*.35}s;--s:${4+k%4}px"></i>`).join("")}</div>
-      <div class="ch-box">${CHEST_SVG}</div>
+    <div class="fin-stage" id="finish" role="button" tabindex="0" aria-label="Порвать финишную ленту">
+      ${FINISH_SVG}
+      <div class="fin-flash"></div>
+      <div class="fin-streaks">${Array.from({length:12},(_,k)=>`<i style="--a:${k*30}deg;--h:${26+(k%3)*10}px;--d:${(k%4)*.04}s"></i>`).join("")}</div>
+      <div class="fin-medal">${MEDAL_SVG}</div>
       <div class="ch-fly">
         <div class="fly-card fc1"><div class="fc-glow tq"></div>${BUDS_IMG.replace('pz-photo float','fc-img')}<b>Redmi Buds Essential</b><span>беспроводные наушники</span></div>
         <div class="fly-card fc2"><div class="fc-glow gold"></div><div class="fc-img fc-svg">${POCO_SVG}</div><b>Колонка POCO</b><span>брендированная колонка</span></div>
       </div>
-      <div class="ch-tap" id="ch-tap">Нажми на сундук</div>
-      <div class="ch-caption">Каждому участнику команды-победителя 🏆</div>
+      <div class="fin-hint"><i></i>Нажми — порви финишную ленту</div>
+      <div class="ch-caption">Каждому из <em>5</em> участников команды-победителя</div>
     </div>
 
     <div class="pz-reveal" id="pz-reveal">
       <div class="card pz-glass">
-        <div class="pz-h">Как забрать сокровище</div>
+        <div class="pz-h">Как финишировать первыми</div>
         <div class="pz-steps">
           <div><span>1</span><p>Шагай каждый день и сдавай результат до <b>23:55</b></p></div>
           <div><span>2</span><p>По воскресеньям — недельный отчёт, чтобы бонус за серию засчитался</p></div>
           <div><span>3</span><p>Побеждает команда с самым высоким <b>средним</b> баллом — важен вклад каждого</p></div>
         </div>
       </div>
-      <button class="btn-ghost" onclick="closeChest()">Закрыть сундук</button>
+      <button class="btn-ghost" onclick="closeChest()">↺ Повторить финиш</button>
     </div></div>`;
-  const ch=document.getElementById("chest");
+  const ch=document.getElementById("finish");
   const open=()=>openChest();
   ch.addEventListener("click",open);
   ch.addEventListener("keydown",e=>{ if(e.key==="Enter"||e.key===" ") open(); });
   clearInterval(prizeTimer); tickPrize(); prizeTimer=setInterval(tickPrize,1000);
-  try{ if(sessionStorage.getItem("chest_open")) openChest(true); }catch(e){}
+  try{ if(sessionStorage.getItem("finish_open")) openChest(true); }catch(e){}
 }
 function openChest(instant=false){
-  const ch=document.getElementById("chest"); if(!ch||ch.classList.contains("open")) return;
+  const ch=document.getElementById("finish"); if(!ch||ch.classList.contains("open")) return;
   if(!instant){ haptic("heavy"); setTimeout(()=>{ try{ tg?.HapticFeedback?.notificationOccurred("success"); }catch(e){} },650); }
   ch.classList.add("open"); if(instant) ch.classList.add("instant");
   document.getElementById("pz-reveal").classList.add("show");
-  try{ sessionStorage.setItem("chest_open","1"); }catch(e){}
+  try{ sessionStorage.setItem("finish_open","1"); }catch(e){}
 }
 function closeChest(){
-  try{ sessionStorage.removeItem("chest_open"); }catch(e){}
+  try{ sessionStorage.removeItem("finish_open"); }catch(e){}
   hsel(); renderPrizes(); window.scrollTo({top:0,behavior:"smooth"});
 }
 
@@ -2032,7 +2086,7 @@ async function admPerson(id,my){
   if(my!==renderGen) return;
   if(p.marathon) MARATHON=p.marathon;
   const cal=p.calendar||[], lead=cal.length?isoDow(cal[0].date):0;
-  const kfmt=n=>n>=1000?(n/1000).toFixed(n>=10000?0:1).replace(".",",")+"K":String(n);
+  const kfmt=stepsK;
   const cnt=s=>cal.filter(c=>c.status===s).length;
   const days=cal.map(c=>{
     const cls=["dd",c.status||"",c.is_today?"today":"",c.future?"fut":"",c.shot?"shot":""].join(" ");
