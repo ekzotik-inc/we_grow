@@ -131,7 +131,7 @@ async def main() -> None:
     # Постоянная кнопка меню открывает Mini App (если задан URL в настройках/env).
     # Всё, что ниже до polling, — необязательное оформление: оборачиваем, чтобы
     # сбой Telegram не помешал боту начать принимать сообщения.
-    webapp_url = settings.webapp_url()
+    webapp_url = settings.webapp_open_url()   # с ?v=<коммит> — без старого кэша
     if webapp_url:
         try:
             from aiogram.types import MenuButtonWebApp, WebAppInfo

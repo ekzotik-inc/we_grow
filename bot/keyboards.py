@@ -44,7 +44,7 @@ def _mbtn(name: str) -> KeyboardButton:
     Mini App напрямую (web_app)."""
     icon = settings.icon(name) if premium_emoji.ENABLED else None
     web_app = None
-    url = settings.webapp_url()
+    url = settings.webapp_open_url()
     if name in ("progress", "board") and url:
         web_app = WebAppInfo(url=url)
     return KeyboardButton(text=settings.label(name), icon_custom_emoji_id=icon, web_app=web_app)
@@ -74,7 +74,7 @@ def main_kb(admin: bool = False) -> InlineKeyboardMarkup:
         [_ibtn("weekly", "menu:weekly")],
         [_ibtn("rules", "menu:rules"), _ibtn("help", "menu:help")],
     ]
-    url = settings.webapp_url()
+    url = settings.webapp_open_url()
     if url:
         rows.append([_ibtn("app", web_app=WebAppInfo(url=url))])
     rows.append([_ibtn("feedback", url=config.feedback_url)])
@@ -97,7 +97,7 @@ def feedback_kb() -> InlineKeyboardMarkup:
 
 def open_app_kb(text: str = "🌱 Открыть приложение") -> InlineKeyboardMarkup | None:
     """Inline-кнопка, открывающая Mini App с корректным initData."""
-    url = settings.webapp_url()
+    url = settings.webapp_open_url()
     if not url:
         return None
     return InlineKeyboardMarkup(inline_keyboard=[[
@@ -488,7 +488,7 @@ def icons_pick_kb() -> InlineKeyboardMarkup:
 
 
 def open_app_inline(text: str) -> InlineKeyboardButton | None:
-    url = settings.webapp_url()
+    url = settings.webapp_open_url()
     if not url:
         return None
     return InlineKeyboardButton(text=text, web_app=WebAppInfo(url=url))

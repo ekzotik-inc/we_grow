@@ -334,6 +334,7 @@ Telegram-бот **Step Together** (@wegrowmarathon_bot) — корпоратив
   НЕ через `new Date()` — иначе сдвиг в таймзонах западнее Ташкента.
   Race при переключении вкладок гасится токеном поколения `renderGen`.
   Внешние ссылки — через `tg.openLink` (`openExt()`).
+- **Кэш Mini App в Telegram**: кнопки бота и кнопка меню открывают `settings.webapp_open_url()` = URL + `?v=<RENDER_GIT_COMMIT>` — после деплоя адрес новый, и Telegram (Desktop/iOS держат страницу) грузит свежую версию. Для ссылок на файлы (`/shot/…`, Excel) — `webapp_url()` без версии.
 - **Скорость открытия Mini App**: экран «Прогресс» сначала рисуется из
   кэша последнего `/api/me` в localStorage (`meCacheGet/Set`, ключ
   `st_me_<tg id>`, чистится на 401), свежие данные тихо подменяют его (без

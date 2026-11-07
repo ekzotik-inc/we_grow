@@ -81,6 +81,19 @@ def webapp_url() -> str:
     return _cache.get("webapp_url") or config.webapp_url
 
 
+def webapp_open_url() -> str:
+    """URL для кнопок, открывающих Mini App: + ?v=<коммит>. Telegram (особенно
+    Desktop и iOS) держит открытую страницу в кэше и после деплоя показывает
+    старую версию; новый адрес на каждый деплой заставляет загрузить свежую.
+    Для ссылок на файлы (/shot/…) — webapp_url() без версии."""
+    import os
+    url = webapp_url()
+    ver = os.getenv("RENDER_GIT_COMMIT", "")[:7]
+    if not url or not ver:
+        return url
+    return f"{url}{'&' if '?' in url else '?'}v={ver}"
+
+
 def channel_id(kind: str) -> int | None:
     """chat_id канала для заявок (kind='join') или проверки (kind='review')."""
     raw = _cache.get(f"channel_{kind}")
