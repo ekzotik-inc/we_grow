@@ -443,97 +443,81 @@
     filter:drop-shadow(0 0 1px rgba(255,255,255,.5))}
   .pz-mini svg{width:19px;height:19px}
   .pz-mini .wave,.pz-mini .sweep{display:none}
-  /* ---- Призы: объёмный hero с кубком, стеклянные карточки (уровень Whoop) ---- */
-  .prizes{--glass:rgba(15,23,42,.55)}
-  .glass3{background:var(--glass);-webkit-backdrop-filter:blur(20px);backdrop-filter:blur(20px);
-    border:1px solid rgba(255,255,255,.06);border-top-color:rgba(255,255,255,.12);border-bottom-color:rgba(255,255,255,.02);
-    box-shadow:0 24px 48px -24px rgba(0,0,0,.7),inset 0 1px 0 rgba(255,255,255,.04)}
-
-  .pz3-wrap{perspective:900px;margin-bottom:14px}
-  .pz3-hero{position:relative;border-radius:28px;padding:22px 16px 18px;text-align:center;overflow:hidden;
-    transform-style:preserve-3d;transform:rotateX(var(--rx,0deg)) rotateY(var(--ry,0deg));
-    transition:transform .6s cubic-bezier(.34,1.56,.64,1);will-change:transform}
-  .pz3-hero.live{transition:transform .12s linear}
-  .pz3-hero::before{content:"";position:absolute;inset:0;pointer-events:none;border-radius:inherit;
-    background:radial-gradient(120% 70% at var(--gx,50%) 0%,rgba(255,255,255,.07),transparent 55%)}
-  .pz-kicker{position:relative;font-size:11px;letter-spacing:.26em;text-transform:uppercase;color:#E7C46F;font-weight:700}
-  .pz-title{position:relative;font:800 23px/1.15 Unbounded,Inter,sans-serif;margin-top:8px;color:#F8FAFC;letter-spacing:-.015em}
-  .pz-sub{position:relative;color:#94A3B8;font-size:13px;margin-top:6px}
-  .pz-sub b{color:#E2E8F0}
-
-  .tr-stage{position:relative;height:250px;margin:6px auto 4px;transform:translateZ(40px);transform-style:preserve-3d}
-  .tr-glow{position:absolute;left:50%;top:46%;width:260px;height:200px;margin:-100px 0 0 -130px;border-radius:50%;
-    background:radial-gradient(closest-side,rgba(245,158,11,.15),rgba(245,158,11,.06) 55%,transparent);filter:blur(50px);pointer-events:none}
-  .tr-core{position:absolute;left:50%;top:44%;width:120px;height:120px;margin:-60px 0 0 -60px;border-radius:50%;
-    background:radial-gradient(closest-side,rgba(253,230,138,.22),transparent);filter:blur(24px);pointer-events:none;animation:corePulse 4s ease-in-out infinite}
-  .tr-cup{position:absolute;left:50%;bottom:58px;width:132px;margin-left:-66px;z-index:2;
+  /* ---- Призы: цельный экран — hero с кубком и таймером, витрина, аккордеон ---- */
+  body[data-tab="prizes"]{background:linear-gradient(180deg,#0B0F17 0%,#06090E 100%) fixed}
+  .prizes{background:none}
+  .pz-hero4{position:relative;border-radius:28px;padding:22px 18px 20px;text-align:center;overflow:hidden;
+    background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);
+    -webkit-backdrop-filter:blur(20px);backdrop-filter:blur(20px);
+    transform:perspective(900px) rotateX(var(--rx,0deg)) rotateY(var(--ry,0deg));
+    transition:transform .6s cubic-bezier(.34,1.56,.64,1)}
+  .pz-hero4.live{transition:transform .12s linear}
+  .pz-kicker{font-size:11px;letter-spacing:.26em;text-transform:uppercase;color:#E7C46F;font-weight:700}
+  .pz-title{font:800 24px/1.15 Unbounded,Inter,sans-serif;margin-top:8px;color:#fff;letter-spacing:-.015em}
+  .tr4{position:relative;height:236px;margin:8px 0 2px}
+  .tr4-glow{position:absolute;left:50%;top:50%;width:250px;height:230px;margin:-115px 0 0 -125px;border-radius:50%;pointer-events:none;
+    background:radial-gradient(closest-side,rgba(245,158,11,.38),rgba(245,158,11,.12) 45%,rgba(16,185,129,.10) 65%,transparent);filter:blur(40px)}
+  .tr4-cup{position:absolute;left:50%;top:6px;width:184px;margin-left:-92px;
     animation:trIn .9s cubic-bezier(.2,.8,.2,1) both,trFloat 4s ease-in-out .9s infinite}
-  .tr-cup svg{display:block;width:100%;height:auto;overflow:visible;filter:drop-shadow(0 18px 22px rgba(0,0,0,.55)) drop-shadow(0 0 18px rgba(245,158,11,.18))}
+  .tr4-cup svg{display:block;width:100%;height:auto;overflow:visible;filter:drop-shadow(0 22px 26px rgba(0,0,0,.55))}
+  .tr4-floor{position:absolute;left:50%;bottom:4px;width:150px;height:16px;margin-left:-75px;border-radius:50%;
+    background:radial-gradient(closest-side,rgba(0,0,0,.5),transparent);animation:shFloat 4s ease-in-out .9s infinite}
   .t-shine{animation:trShine 5s ease-in-out 1.6s infinite}
-  .tr-shadow{position:absolute;left:50%;bottom:52px;width:96px;height:14px;margin-left:-48px;border-radius:50%;z-index:1;
-    background:radial-gradient(closest-side,rgba(0,0,0,.55),transparent);animation:shFloat 4s ease-in-out .9s infinite}
-  /* полупрозрачный стеклянный пьедестал */
-  .ped{position:absolute;left:50%;bottom:6px;width:190px;height:58px;margin-left:-95px;z-index:0}
-  .ped-body{position:absolute;left:0;right:0;top:15px;bottom:0;border-radius:0 0 50% 50% / 0 0 22px 22px;
-    background:linear-gradient(180deg,rgba(255,255,255,.10),rgba(255,255,255,.02) 70%,transparent),
-      linear-gradient(90deg,rgba(255,255,255,.02),rgba(255,255,255,.07) 50%,rgba(255,255,255,.02));
-    border:1px solid rgba(255,255,255,.07);border-top:0}
-  .ped-top{position:absolute;left:0;right:0;top:0;height:30px;border-radius:50%;
-    background:radial-gradient(60% 70% at 50% 40%,rgba(253,230,138,.20),rgba(255,255,255,.06) 60%,rgba(255,255,255,.03));
-    border:1px solid rgba(255,255,255,.14);border-bottom-color:rgba(255,255,255,.04);
-    box-shadow:0 0 30px rgba(245,158,11,.12),inset 0 2px 6px rgba(255,255,255,.08)}
-  .ped-label{position:absolute;left:0;right:0;bottom:9px;font:700 9px Inter,sans-serif;letter-spacing:.32em;color:rgba(231,196,111,.55)}
-
-  .pz-cd{position:relative;display:flex;justify-content:center;gap:8px;margin-top:6px}
-  .cd-box{min-width:60px;padding:10px 6px 8px;border-radius:14px;background:rgba(2,6,23,.35);
-    border:1px solid rgba(255,255,255,.06);border-top-color:rgba(255,255,255,.1)}
-  .cd-box b{display:block;font:700 21px Unbounded,Inter,sans-serif;font-variant-numeric:tabular-nums;color:#F8FAFC}
-  .cd-box span{font-size:10px;color:#64748B;text-transform:uppercase;letter-spacing:.12em}
+  .cd-pill{display:inline-flex;align-items:center;gap:6px;margin-top:6px;padding:9px 16px;border-radius:999px;
+    background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.08);color:#fff;
+    font:600 14px ui-monospace,SFMono-Regular,Menlo,Consolas,"Roboto Mono",monospace;font-variant-numeric:tabular-nums;letter-spacing:.01em}
+  .cd-pill i{font-style:normal;color:#64748B}
+  .cd-pill small{font-size:12px;color:#94A3B8;font-weight:500}
+  .cd-note{font-size:12px;color:#64748B;margin-top:8px}
   .cd-done{color:#E7C46F;font-weight:700}
 
-  .pz-kit-head{display:flex;align-items:baseline;justify-content:space-between;padding:4px 4px 0}
-  .pz-kit-head h3{margin:0;font:700 16px Unbounded,Inter,sans-serif;color:#F8FAFC}
-  .pz-kit-head span{font-size:12px;color:#94A3B8}
-  .pz-kit-head span b{color:#E7C46F;font-size:14px}
-  .pz-kit-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:40px}
-  .pz-item{position:relative;border-radius:22px;padding:70px 14px 14px;text-align:left;cursor:pointer;
+  .pz-kit4{margin-top:26px}
+  .pz-kit4 h3{margin:0 4px;font:800 20px/1.2 Inter,sans-serif;color:#fff;letter-spacing:-.01em}
+  .pz-kit4 h3 em{font-style:normal;background:linear-gradient(90deg,#34D399,#10B981 60%,#22C55E);
+    -webkit-background-clip:text;background-clip:text;color:transparent}
+  .pz-grid4{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:44px}
+  .pz-card4{position:relative;border-radius:24px;padding:96px 14px 16px;cursor:pointer;
+    background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);
+    -webkit-backdrop-filter:blur(20px);backdrop-filter:blur(20px);
     -webkit-tap-highlight-color:transparent;transition:transform .45s cubic-bezier(.34,1.56,.64,1)}
-  .pz-item:active,.pz-item.press{transform:scale(.97)}
-  .pz-item .float-img{position:absolute;left:50%;top:-34px;width:104px;height:104px;margin-left:-52px;display:grid;place-items:center;
+  .pz-card4.press{transform:scale(.97)}
+  .pz-card4 .img4{position:absolute;left:50%;top:-38px;width:128px;height:128px;margin-left:-64px;display:grid;place-items:center;
     animation:imgFloat 4.4s ease-in-out infinite}
-  .pz-item:nth-child(2) .float-img{animation-delay:-2.2s}
-  .pz-item .float-img img,.pz-item .float-img svg{width:100%;height:100%;object-fit:contain;
-    filter:drop-shadow(0 16px 18px rgba(0,0,0,.6)) drop-shadow(0 0 1px rgba(255,255,255,.35))}
-  .pz-item .float-img .wave,.pz-item .float-img .sweep{display:none}
-  .pz-item b{display:block;font-size:14px;color:#F8FAFC;line-height:1.25}
-  .pz-item small{display:block;font-size:12px;color:#94A3B8;margin-top:3px}
+  .pz-card4:nth-child(2) .img4{animation-delay:-2.2s}
+  .pz-card4 .img4 img,.pz-card4 .img4 svg{width:100%;height:100%;object-fit:contain;filter:drop-shadow(0 14px 16px rgba(0,0,0,.45))}
+  .pz-card4 .img4 .wave,.pz-card4 .img4 .sweep{display:none}
+  .pz-card4 b{display:block;font:700 15px/1.25 Inter,sans-serif;color:#fff}
+  .pz-card4 small{display:block;font-size:12.5px;color:#A3B1C6;margin-top:4px}
   .sheen{position:absolute;inset:0;border-radius:inherit;overflow:hidden;pointer-events:none}
   .sheen::before{content:"";position:absolute;top:-50%;left:-60%;width:38%;height:200%;
-    background:linear-gradient(90deg,transparent,rgba(255,255,255,.10) 45%,rgba(255,255,255,.18) 50%,rgba(255,255,255,.10) 55%,transparent);
+    background:linear-gradient(90deg,transparent,rgba(255,255,255,.07) 45%,rgba(255,255,255,.14) 50%,rgba(255,255,255,.07) 55%,transparent);
     transform:translateX(-120%) rotate(45deg);animation:sheen 4.5s ease-in-out infinite}
-  .pz-item:nth-child(2) .sheen::before{animation-delay:.7s}
-  .pz-note{font-size:12px;color:#64748B;text-align:center;margin:12px 0 0}
+  .pz-card4:nth-child(2) .sheen::before{animation-delay:.7s}
+  .pz-foot{display:flex;align-items:flex-start;gap:8px;margin:12px 4px 0;font-size:12px;line-height:1.45;color:#64748B}
+  .pz-foot .ic{flex:none;width:15px;height:15px;margin-top:1px;color:#64748B}
 
-  .pz-steps-card{border-radius:22px;padding:16px;margin-top:14px}
-  .pz-h{font-weight:800;font-size:16px;color:#F8FAFC}
-  .pz-steps{display:flex;flex-direction:column;gap:12px;margin-top:12px;font-size:13.5px;line-height:1.45;color:#CBD5E1}
-  .pz-steps div{display:flex;gap:12px;align-items:flex-start}
-  .pz-steps p{margin:0}
-  .pz-steps b{color:#F8FAFC}
-  .pz-steps span{flex:none;width:24px;height:24px;border-radius:8px;display:grid;place-items:center;
-    font:700 11px Unbounded,Inter,sans-serif;color:#1a1205;background:linear-gradient(180deg,#F7E2A6,#D4A74A)}
+  .pz-acc{margin-top:22px;border-top:1px solid rgba(255,255,255,.05);border-bottom:1px solid rgba(255,255,255,.05)}
+  .pz-acc summary{list-style:none;display:flex;align-items:center;justify-content:space-between;gap:10px;padding:15px 4px;cursor:pointer;
+    font:700 15px Inter,sans-serif;color:#E2E8F0;-webkit-tap-highlight-color:transparent}
+  .pz-acc summary::-webkit-details-marker{display:none}
+  .pz-acc summary .ic{width:18px;height:18px;color:#64748B;transition:transform .3s}
+  .pz-acc[open] summary .ic{transform:rotate(90deg)}
+  .pz-acc ol{list-style:none;margin:0;padding:0 4px 6px}
+  .pz-acc li{display:flex;gap:12px;align-items:baseline;padding:11px 0;border-top:1px solid rgba(255,255,255,.05);
+    font-size:13.5px;line-height:1.45;color:#CBD5E1}
+  .pz-acc li span{flex:none;font:700 12px Unbounded,Inter,sans-serif;color:#34D399;min-width:14px}
+  .pz-acc li b{color:#fff}
   .pz-seat{text-align:center;padding:8px 2px;border-radius:12px;background:var(--card2);border:1px solid var(--line)}
 
   @keyframes trIn{from{opacity:0;transform:translateY(26px) scale(.92)}to{opacity:1;transform:none}}
   @keyframes trFloat{0%,100%{transform:translateY(0) scale(1)}50%{transform:translateY(-7px) scale(1.02)}}
   @keyframes shFloat{0%,100%{transform:scale(1);opacity:1}50%{transform:scale(.82);opacity:.7}}
-  @keyframes corePulse{0%,100%{opacity:.8}50%{opacity:1}}
   @keyframes trShine{0%,72%{transform:translateX(-40px) skewX(-18deg)}100%{transform:translateX(190px) skewX(-18deg)}}
   @keyframes imgFloat{0%,100%{transform:translateY(0)}50%{transform:translateY(-6px)}}
   @keyframes sheen{0%{transform:translateX(-120%) rotate(45deg)}28%,100%{transform:translateX(520%) rotate(45deg)}}
   @keyframes spin{to{transform:rotate(360deg)}}
-  @media (prefers-reduced-motion:reduce){.tr-cup,.tr-shadow,.tr-core,.t-shine,.float-img,.sheen::before{animation:none!important}
-    .pz3-hero{transform:none!important}}
+  @media (prefers-reduced-motion:reduce){.tr4-cup,.tr4-floor,.t-shine,.img4,.sheen::before{animation:none!important}
+    .pz-hero4{transform:none!important}}
   /* ---- Лидерборд ---- */
   .lb-hero{position:relative;border-radius:24px;padding:18px 14px 0;margin-bottom:14px;overflow:hidden;
     background:radial-gradient(90% 70% at 50% 0%,rgba(255,198,92,.18),transparent 65%),
@@ -1011,6 +995,7 @@
   <symbol id="i-l-check" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></symbol>
   <symbol id="i-l-flame" viewBox="0 0 24 24"><path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.07-2.14-.22-4.05 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.15.43-2.29 1-3a2.5 2.5 0 0 0 2.5 2.5z"/></symbol>
   <symbol id="i-l-shield" viewBox="0 0 24 24"><path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"/></symbol>
+  <symbol id="i-l-info" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></symbol>
   <symbol id="i-l-chev" viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/></symbol>
   <defs><linearGradient id="gGold" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#FDE68A"/><stop offset=".55" stop-color="#F59E0B"/><stop offset="1" stop-color="#B45309"/></linearGradient>
     <filter id="glow" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="1.4" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs>
@@ -1756,53 +1741,47 @@ let prizeTimer=null;
 function tickPrize(){
   const el=document.getElementById("pz-cd"); if(!el){ clearInterval(prizeTimer); prizeTimer=null; return; }
   const {at}=prizeDeadline(); const L=fmtLeft(at-Date.now());
-  el.innerHTML = L ? `<div class="cd-box"><b>${L.d}</b><span>дн</span></div><div class="cd-box"><b>${L.h}</b><span>ч</span></div>
-     <div class="cd-box"><b>${L.m}</b><span>мин</span></div><div class="cd-box"><b>${L.s}</b><span>сек</span></div>`
+  el.innerHTML = L ? `<span class="cd-pill">${L.d}<small>дн</small><i>:</i>${L.h}<small>ч</small><i>:</i>${L.m}<small>мин</small><i>:</i>${L.s}<small>сек</small></span>`
    : `<div class="cd-done">Финиш пройден — итоги после проверки P&amp;C 🏆</div>`;
 }
 
 function renderPrizes(){
   const {end}=prizeDeadline();
   V.innerHTML=`<div class="view prizes">
-    <div class="pz3-wrap"><section class="pz3-hero glass3" id="pz3-hero">
+    <section class="pz-hero4" id="pz3-hero">
       <div class="pz-kicker">WE GROW · главный приз</div>
       <div class="pz-title">Приз команды-чемпиона</div>
-      <div class="pz-sub">Финиш марафона — <b>${fmtFull(end)}, 23:55</b></div>
-      <div class="tr-stage">
-        <div class="tr-glow"></div><div class="tr-core"></div>
-        <div class="ped"><div class="ped-body"><div class="ped-label">WE GROW</div></div><div class="ped-top"></div></div>
-        <div class="tr-shadow"></div>
-        <div class="tr-cup">${TROPHY_SVG}</div>
-      </div>
-      <div class="pz-cd" id="pz-cd"></div>
-    </section></div>
-
-    <section class="pz-kit">
-      <div class="pz-kit-head"><h3>Комплект победителя</h3><span><b>×5</b> — каждому в команде</span></div>
-      <div class="pz-kit-grid">
-        <div class="pz-item glass3"><div class="sheen"></div>
-          <div class="float-img"><img src="prize-buds.png" alt="Redmi Buds Essential"></div>
-          <b>Redmi Buds Essential</b><small>беспроводные наушники</small></div>
-        <div class="pz-item glass3"><div class="sheen"></div>
-          <div class="float-img">${POCO_SVG.replace(/ float2/,"")}</div>
-          <b>Колонка POCO</b><small>брендированная колонка</small></div>
-      </div>
-      <p class="pz-note">Приз получает каждый из 5 участников команды-победителя</p>
+      <div class="tr4"><div class="tr4-glow"></div><div class="tr4-floor"></div><div class="tr4-cup">${TROPHY_SVG}</div></div>
+      <div id="pz-cd"></div>
+      <div class="cd-note">до финиша · ${fmtFull(end)}, 23:55</div>
     </section>
 
-    <div class="pz-steps-card glass3">
-      <div class="pz-h">Как стать чемпионами</div>
-      <div class="pz-steps">
-        <div><span>1</span><p>Шагай каждый день и сдавай результат до <b>23:55</b></p></div>
-        <div><span>2</span><p>По воскресеньям — недельный отчёт, чтобы бонус за серию засчитался</p></div>
-        <div><span>3</span><p>Побеждает команда с самым высоким <b>средним</b> баллом — важен вклад каждого</p></div>
+    <section class="pz-kit4">
+      <h3>Комплект победителя <em>×5</em></h3>
+      <div class="pz-grid4">
+        <div class="pz-card4"><div class="sheen"></div>
+          <div class="img4"><img src="prize-buds.png" alt="Redmi Buds Essential"></div>
+          <b>Redmi Buds Essential</b><small>беспроводные наушники</small></div>
+        <div class="pz-card4"><div class="sheen"></div>
+          <div class="img4">${POCO_SVG.replace(/ float2/,"")}</div>
+          <b>Колонка POCO</b><small>брендированная колонка</small></div>
       </div>
-    </div></div>`;
-  // Нажатие на карточку приза: пружинный scale(.97) + тактильный отклик
-  V.querySelectorAll(".pz-item").forEach(el=>{
+      <p class="pz-foot">${ico("l-info")}<span>Приз получает каждый из 5 участников команды-победителя.</span></p>
+    </section>
+
+    <details class="pz-acc">
+      <summary>Как стать чемпионами ${ico("l-chev")}</summary>
+      <ol>
+        <li><span>1</span><p style="margin:0">Шагай каждый день и сдавай результат до <b>23:55</b></p></li>
+        <li><span>2</span><p style="margin:0">По воскресеньям — недельный отчёт, чтобы бонус за серию засчитался</p></li>
+        <li><span>3</span><p style="margin:0">Побеждает команда с самым высоким <b>средним</b> баллом — важен вклад каждого</p></li>
+      </ol>
+    </details></div>`;
+  V.querySelectorAll(".pz-card4").forEach(el=>{
     el.addEventListener("pointerdown",()=>{ el.classList.add("press"); hsel(); });
     ["pointerup","pointerleave","pointercancel"].forEach(ev=>el.addEventListener(ev,()=>el.classList.remove("press")));
   });
+  V.querySelector(".pz-acc")?.addEventListener("toggle",()=>hsel());
   clearInterval(prizeTimer); tickPrize(); prizeTimer=setInterval(tickPrize,1000);
   startTilt();
 }
@@ -2154,6 +2133,7 @@ function show(tab){
   document.querySelectorAll(".nav button,.hbtn").forEach(b=>b.classList.toggle("on",b.dataset.tab===tab));
   if(tab!=="admin") backBtn(null);
   if(tab!=="prizes") stopTilt();
+  document.body.dataset.tab=tab;
   if(tab==="admin"){ V.dataset.tab=""; ADM.pid=null; renderAdmin(); return; }   // данные P&C — всегда свежие
   if(tab==="rules"||tab==="prizes"||tab==="faq"){ renderGen++; views[tab](); return; }   // статичны — всегда свежие
   if(loaded[tab]&&V.dataset.tab===tab) return;
