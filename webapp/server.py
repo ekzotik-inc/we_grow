@@ -12,7 +12,7 @@ import json
 import re
 import time
 from contextlib import asynccontextmanager
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 from pathlib import Path
 from urllib.parse import parse_qsl
 
@@ -301,6 +301,7 @@ async def api_me(x_init_data: str | None = Header(default=None),
     summary = await db.participant_summary(tg_id) or {}
     return {
         "registered": True,
+        "admin": await _is_admin(tg_id),          # показать вкладку «Админка»
         "full_name": card["full_name"],
         "team_name": card["team_name"],
         "total_points": int(summary.get("points") or 0),
@@ -360,6 +361,183 @@ async def api_leaderboard(x_init_data: str | None = Header(default=None),
     return {
         "teams": [{"name": t["name"], "points": t["points"],
                    "members": t["members"], "full_days": t["full_days"]} for t in teams],
+    }
+
+
+# ---- Админка Mini App (только просмотр) -----------------------------------
+# Все действия (модерация, ручной ввод, отмена) остаются в боте: там пересчёт
+# серий/бонусов/флешмобов и пуши участникам. Здесь — только чтение.
+
+ADMIN_LIST_LIMIT = 500          # участников в списке админки
+ADMIN_QUEUE_LIMIT = 100         # заявок в очереди модерации
+SILENT_DAYS = 2                 # «молчит» — нет результатов N+ дней
+
+
+async def _require_admin(init_data: str | None, session: str | None) -> int:
+    tg_id = await _auth(init_data, session)
+    if not await _is_admin(tg_id):
+        raise HTTPException(status_code=403, detail="admins only")
+    return tg_id
+
+
+def _shot_link(entry_id: int, file_id: str | None) -> str | None:
+    if not file_id:
+        return None
+    from bot.export import shot_sig
+    return f"/shot/{entry_id}/{shot_sig(entry_id)}"
+
+
+def _iso(v) -> str | None:
+    return v.isoformat() if v is not None else None
+
+
+@app.get("/api/admin/overview")
+async def api_admin_overview(x_init_data: str | None = Header(default=None),
+                             x_session: str | None = Header(default=None)):
+    """Сводка P&C: сегодня, очередь, молчуны, активности дня, динамика по дням."""
+    await _require_admin(x_init_data, x_session)
+    today = datetime.now(config.tz).date()
+    st = await db.digest_stats(today)
+    counts = await db.status_counts()
+    days = await db.pool().fetch(
+        """SELECT d.entry_date,
+                  count(*) FILTER (WHERE d.status='accepted') AS accepted,
+                  count(*) FILTER (WHERE d.status='pending')  AS pending,
+                  count(*) FILTER (WHERE d.status='rejected') AS rejected
+             FROM daily_entries d JOIN participants p ON p.telegram_id=d.participant_id
+            WHERE p.approved_at IS NOT NULL AND p.disqualified_at IS NULL
+              AND d.entry_date BETWEEN $1 AND $2
+            GROUP BY d.entry_date ORDER BY d.entry_date""",
+        MARATHON_START, min(today, MARATHON_END))
+    ch = await db.challenge_for(today)
+    fm = await db.flashmob_for(today)
+    return {
+        "today": today.isoformat(), "marathon": _marathon(),
+        "active": int(st["active"] or 0),
+        "submitted": int(st["total"] or 0), "accepted": int(st["accepted"] or 0),
+        "pending_today": int(st["pending"] or 0), "rejected": int(st["rejected"] or 0),
+        "queue": await db.pending_submissions_count(),
+        "registrations": int(counts.get("pending") or 0),
+        "disqualified": int(counts.get("disq") or 0),
+        "silent": [{"name": r["full_name"] or "—", "team": r["team_name"],
+                    "last": _iso(r["last_entry"])} for r in st["silent"]],
+        "days": [{"date": r["entry_date"].isoformat(), "accepted": int(r["accepted"]),
+                  "pending": int(r["pending"]), "rejected": int(r["rejected"])} for r in days],
+        "challenge": ({"multiplier": ch["multiplier"],
+                       "after": ch["after_time"].strftime("%H:%M") if ch["after_time"] else None,
+                       "teams": len(ch["team_ids"] or [])} if ch else None),
+        "flashmob": ({"pct": fm["threshold_pct"], "min_steps": fm["min_steps"],
+                      "bonus": fm["bonus_points"], "teams": len(fm["team_ids"] or [])}
+                     if fm else None),
+    }
+
+
+@app.get("/api/admin/queue")
+async def api_admin_queue(x_init_data: str | None = Header(default=None),
+                          x_session: str | None = Header(default=None)):
+    """Очередь модерации (результаты на проверке) и заявки на регистрацию."""
+    await _require_admin(x_init_data, x_session)
+    from backend.scoring import REVIEW_STEPS
+    subs = await db.pending_submissions(ADMIN_QUEUE_LIMIT)
+    regs = await db.pending_participants()
+    return {
+        "total": await db.pending_submissions_count(),
+        "entries": [{"id": r["id"], "tg_id": r["participant_id"],
+                     "name": r["full_name"] or "—", "team": r["team_name"],
+                     "date": r["entry_date"].isoformat(), "steps": r["steps"],
+                     "big": r["steps"] > REVIEW_STEPS,
+                     "shot": _shot_link(r["id"], r["screenshot_file_id"])} for r in subs],
+        "registrations": [{"tg_id": r["telegram_id"], "name": r["full_name"] or "—",
+                           "username": r["username"], "team": r["team_name"],
+                           "created": _iso(r["created_at"])} for r in regs],
+    }
+
+
+@app.get("/api/admin/participants")
+async def api_admin_participants(q: str = "", x_init_data: str | None = Header(default=None),
+                                 x_session: str | None = Header(default=None)):
+    """Все участники с анкетой: баллы, шаги, дни, последняя сдача. Поиск по
+    ФИО / @username / ID / последним цифрам телефона."""
+    await _require_admin(x_init_data, x_session)
+    q = (q or "").strip()[:64]
+    digits = re.sub(r"\D", "", q)
+    rows = await db.pool().fetch(
+        """SELECT p.telegram_id, p.full_name, p.username, t.name AS team_name,
+                  p.approved_at, p.disqualified_at,
+                  COALESCE(sum(d.points) FILTER (WHERE d.status='accepted'),0)
+                + COALESCE((SELECT sum(w.bonus_points) FROM weekly_summaries w
+                             WHERE w.participant_id=p.telegram_id),0) AS points,
+                  COALESCE(sum(d.steps) FILTER (WHERE d.status='accepted'),0) AS steps,
+                  count(d.id) FILTER (WHERE d.status='accepted') AS days,
+                  count(d.id) FILTER (WHERE d.status='pending')  AS pending,
+                  max(d.entry_date) AS last_entry
+             FROM participants p
+             LEFT JOIN teams t ON t.id=p.team_id
+             LEFT JOIN daily_entries d ON d.participant_id=p.telegram_id
+            WHERE p.team_id IS NOT NULL
+              AND ($1::text = '' OR p.full_name ILIKE $2::text OR p.username ILIKE $2::text
+                   OR p.telegram_id::text = $1::text
+                   OR (length($3::text) >= 4
+                       AND regexp_replace(coalesce(p.phone,''), '[^0-9]', '', 'g')
+                           LIKE '%' || $3::text || '%'))
+            GROUP BY p.telegram_id, t.name
+            ORDER BY (p.disqualified_at IS NOT NULL), (p.approved_at IS NULL), p.full_name
+            LIMIT $4::int""",
+        q, f"%{q.lstrip('@')}%", digits, ADMIN_LIST_LIMIT)
+    def status(r) -> str:
+        if r["disqualified_at"] is not None:
+            return "dq"
+        return "active" if r["approved_at"] is not None else "waiting"
+    return {"items": [{"tg_id": r["telegram_id"], "name": r["full_name"] or "—",
+                       "username": r["username"], "team": r["team_name"],
+                       "status": status(r), "points": int(r["points"]),
+                       "steps": int(r["steps"]), "days": int(r["days"]),
+                       "pending": int(r["pending"]), "last": _iso(r["last_entry"])}
+                      for r in rows]}
+
+
+@app.get("/api/admin/participant/{tg_id}")
+async def api_admin_participant(tg_id: int, x_init_data: str | None = Header(default=None),
+                                x_session: str | None = Header(default=None)):
+    """Карточка участника: профиль, итоги, календарь дней марафона, недельные отчёты."""
+    await _require_admin(x_init_data, x_session)
+    p = await db.user_detail(tg_id)
+    if p is None or p["team_id"] is None:
+        raise HTTPException(status_code=404, detail="not found")
+    entries = {e["entry_date"]: e for e in await db.entries_for_admin(tg_id)}
+    weekly = await db.weekly_rows(tg_id)
+    today = datetime.now(config.tz).date()
+    calendar, d = [], MARATHON_START
+    while d <= MARATHON_END:
+        e = entries.get(d)
+        calendar.append({
+            "date": d.isoformat(), "is_today": d == today, "future": d > today,
+            "steps": e["steps"] if e else None, "points": e["points"] if e else 0,
+            "status": e["status"] if e else None, "source": e["source"] if e else None,
+            "shot": _shot_link(e["id"], e["screenshot_file_id"]) if e else None,
+        })
+        d = d.fromordinal(d.toordinal() + 1)
+    weeks, monday = [], MARATHON_START - timedelta(days=MARATHON_START.weekday())
+    while monday <= MARATHON_END:
+        w = weekly.get(monday)
+        weeks.append({"start": monday.isoformat(),
+                      "reported": bool(w and w["reported_at"]),
+                      "source": w["report_source"] if w else None,
+                      "earned": int(w["earned_bonus"]) if w else 0,
+                      "bonus": int(w["bonus_points"]) if w else 0})
+        monday += timedelta(days=7)
+    acc = [e for e in entries.values() if e["status"] == "accepted"]
+    status = ("dq" if p["disqualified_at"] is not None
+              else "active" if p["approved_at"] is not None else "waiting")
+    return {
+        "tg_id": tg_id, "name": p["full_name"] or "—", "username": p["username"],
+        "phone": p["phone"], "team": p["team_name"], "status": status,
+        "registered": _iso(p["created_at"]),
+        "points": sum(e["points"] for e in acc) + sum(w["bonus"] for w in weeks),
+        "steps": sum(e["steps"] for e in acc), "days": len(acc),
+        "streak": await db.live_streak_len(tg_id, today),
+        "best_streak": _best_streak({e["entry_date"]: e["steps"] for e in acc}),
+        "calendar": calendar, "weeks": weeks, "marathon": _marathon(),
     }
 
 

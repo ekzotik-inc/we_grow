@@ -750,16 +750,18 @@
   @media (prefers-reduced-motion:reduce){.aur{animation:none}.lbx-bar i{transition:none}}
   /* ===== Шапка-баннер (hero) ===== */
   body{padding-top:0}
-  .hero-bn{position:relative;max-width:620px;margin:0 auto 6px;min-height:calc(150px + var(--safe-top));
-    padding:calc(var(--safe-top) + 12px) 16px 14px;display:flex;flex-direction:column;justify-content:space-between;
-    background:linear-gradient(to bottom,rgba(11,15,23,.4) 0%,rgba(11,15,23,.95) 100%),url(hero.jpg) center 40%/cover no-repeat}
-  .hero-bn::after{content:"";position:absolute;left:0;right:0;bottom:-1px;height:24px;background:linear-gradient(to bottom,transparent,#0B0F17);pointer-events:none}
+  .hero-bn{position:relative;max-width:620px;margin:0 auto 6px;min-height:calc(176px + var(--safe-top));
+    padding:calc(var(--safe-top) + 12px) 16px 18px;display:flex;flex-direction:column;justify-content:space-between;
+    background:
+      linear-gradient(180deg,rgba(11,15,23,.12) 0%,rgba(11,15,23,.28) 36%,rgba(11,15,23,.78) 72%,#0B0F17 100%),
+      url(hero.jpg) center 32%/cover no-repeat}
+  .hero-bn::after{content:"";position:absolute;left:0;right:0;bottom:-1px;height:42px;background:linear-gradient(to bottom,transparent,#0B0F17);pointer-events:none}
   .hb-top{display:flex;align-items:center;justify-content:space-between;position:relative;z-index:1}
   .hb-brand{font-size:11px;font-weight:800;letter-spacing:.2em;color:rgba(52,211,153,.8);text-shadow:0 1px 8px rgba(0,0,0,.6)}
   .hero-bn .hbtn{width:32px;height:32px;background:rgba(11,15,23,.4);border:1px solid rgba(255,255,255,.08);
     -webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px)}
   .hero-bn .hbtn svg{width:16px;height:16px;stroke-width:1.8}
-  .hb-me{display:flex;align-items:center;gap:12px;position:relative;z-index:1;margin-top:46px}
+  .hb-me{display:flex;align-items:flex-end;position:relative;z-index:1;margin-top:52px}
   .hb-av{width:36px;height:36px;flex:none;border-radius:12px;display:grid;place-items:center;font-weight:900;font-size:16px;
     color:#ECFDF5;background:linear-gradient(135deg,rgba(16,185,129,.55),rgba(99,102,241,.45));border:1px solid rgba(255,255,255,.15);
     box-shadow:0 4px 14px rgba(0,0,0,.35)}
@@ -793,20 +795,19 @@
   body{font-family:Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif}
   .tm-title{padding:4px 4px 12px}.tm-title h2{margin:0;font:700 22px/1.2 Unbounded,Inter,sans-serif;color:#fff}
   .tm-title p{margin:4px 0 0;font:500 12px Inter,sans-serif;color:#64748B}
-  .tm-card{background:rgba(255,255,255,.03);-webkit-backdrop-filter:blur(20px);backdrop-filter:blur(20px);
-    border:1px solid rgba(255,255,255,.08);border-radius:24px;padding:16px;margin:0 0 14px;
-    box-shadow:inset 0 1px 0 rgba(255,255,255,.08)}
-  .tm-card.mine{border-color:rgba(16,185,129,.35);box-shadow:inset 0 1px 0 rgba(255,255,255,.08),0 0 28px rgba(16,185,129,.12)}
+  .tm-card{background:rgba(255,255,255,.035);-webkit-backdrop-filter:blur(18px);backdrop-filter:blur(18px);
+    border:1px solid rgba(255,255,255,.08);border-radius:24px;padding:16px 14px 8px;margin:0 0 14px}
+  .tm-card.mine{border-color:rgba(16,185,129,.35);box-shadow:0 0 28px rgba(16,185,129,.12)}
   .tm-head{display:flex;align-items:center;gap:12px}
   .tm-head h3{margin:0;font:700 20px/1.2 Unbounded,Inter,sans-serif;color:#fff;letter-spacing:-.01em}
   .tm-head p{margin:3px 0 0;font:500 12px Inter,sans-serif;color:#64748B}
   .tm-place{width:38px;height:38px;flex:none;border-radius:12px;display:grid;place-items:center;font:900 16px Unbounded,sans-serif;
     color:#CBD5E1;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1)}
   .tm-place.gold,.tm-place.silver,.tm-place.bronze{color:#1b1406;background:var(--mgrad);border:none;box-shadow:0 0 16px var(--mg)}
-  .tm-metrics{display:grid;grid-template-columns:repeat(3,1fr);margin:16px 0 6px;padding:12px 0;
-    border-top:1px solid rgba(255,255,255,.06);border-bottom:1px solid rgba(255,255,255,.06)}
-  .tm-metrics>div{display:flex;flex-direction:column;align-items:center;text-align:center;gap:4px;padding:0 6px}
-  .tm-metrics>div+div{border-left:1px solid rgba(255,255,255,.07)}
+  .tm-metrics{display:grid;grid-template-columns:repeat(3,1fr);align-items:center;margin:14px 0 2px;padding:2px 0 10px;
+    background:transparent;border:0}
+  .tm-metrics>div{display:flex;flex-direction:column;align-items:center;text-align:center;gap:4px;padding:0 8px;min-width:0}
+  .tm-metrics>div+div{border-left:1px solid rgba(255,255,255,.08)}
   .tm-metrics b{font:900 22px/1 Unbounded,Inter,sans-serif;color:#fff;font-variant-numeric:tabular-nums}
   .tm-metrics b.em{color:#34D399}.tm-metrics b.au{color:#FBBF24}
   .tm-metrics span{font:500 11px/1.25 Inter,sans-serif;color:#64748B}
@@ -880,6 +881,66 @@
   @keyframes wkGrow{from{height:0}}
   .pg-card .cal{margin-top:6px}
   @media (prefers-reduced-motion:reduce){.pg-dot,.wk-track i{animation:none}}
+
+  /* ===== Админка P&C (только просмотр) ===== */
+  .hero-bn .hbtn[hidden]{display:none}
+  .hero-bn .hbtn.adm-btn svg{color:#FBBF24}
+  @media (max-width:430px){ .hbtns.adm .hbtn:not(.adm-btn) span{display:none}
+    .hbtns.adm .hbtn:not(.adm-btn){width:34px;padding:0;justify-content:center} }
+  .adm-seg{display:flex;gap:4px;padding:4px;border-radius:16px;background:rgba(255,255,255,.04);border:1px solid var(--line);margin-bottom:12px}
+  .adm-seg button{flex:1;border:0;background:transparent;color:#94A3B8;font:700 13px Inter,sans-serif;padding:9px 4px;border-radius:12px;cursor:pointer}
+  .adm-seg button.on{background:rgba(16,185,129,.18);color:#fff;box-shadow:inset 0 0 0 1px rgba(52,211,153,.45)}
+  .adm-kpi{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px}
+  .adm-kpi .card{margin:0;padding:14px;display:flex;flex-direction:column;gap:3px}
+  .adm-kpi .tap{cursor:pointer}.adm-kpi .tap:active{transform:scale(.97)}
+  .adm-kpi b{font:800 24px/1.1 Unbounded,Inter,sans-serif;color:#fff}
+  .adm-kpi b small{font:600 13px Inter,sans-serif;color:#94A3B8}
+  .adm-kpi span{font-size:12px;color:#94A3B8;line-height:1.3}
+  .adm-kpi .warn b{color:#FBBF24}
+  .adm-bar{height:6px;border-radius:99px;background:rgba(255,255,255,.07);overflow:hidden;margin-top:6px}
+  .adm-bar i{display:block;height:100%;background:var(--em);border-radius:99px}
+  .adm-chart{display:flex;align-items:flex-end;gap:4px;height:110px;margin-top:12px}
+  .adm-chart .col{flex:1;min-width:0;height:100%;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;gap:4px}
+  .adm-chart .stk{width:100%;display:flex;flex-direction:column-reverse;border-radius:6px;overflow:hidden;background:rgba(255,255,255,.04)}
+  .adm-chart .stk i{display:block}
+  .adm-chart .a{background:#10B981}.adm-chart .p{background:#F59E0B}.adm-chart .r{background:#EF4444}
+  .adm-chart small{font-size:9px;color:#64748B}
+  .adm-leg{display:flex;gap:12px;flex-wrap:wrap;font-size:11px;color:#94A3B8;margin-top:10px}
+  .adm-leg i{display:inline-block;width:8px;height:8px;border-radius:2px;margin-right:5px}
+  .adm-row{display:flex;align-items:center;gap:10px;padding:10px 0;border-top:1px solid var(--line);cursor:pointer}
+  .adm-row:first-of-type{border-top:0}
+  .adm-row:active{opacity:.7}
+  .adm-row>.ic{width:16px;height:16px;color:#64748B;flex:none}
+  .adm-mid{flex:1;min-width:0}
+  .adm-nm{font-weight:700;font-size:14px;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .adm-sub{font-size:11.5px;color:#94A3B8;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .adm-rt{text-align:right;flex:none;font-size:12px;color:#94A3B8}
+  .adm-rt b{display:block;font:800 15px Unbounded,Inter,sans-serif;color:#fff}
+  .chip{display:inline-block;font-size:10.5px;font-weight:800;padding:2px 8px;border-radius:99px;vertical-align:1px}
+  .chip.ok{color:#6EE7B7;background:rgba(16,185,129,.15)}.chip.wt{color:#FCD34D;background:rgba(245,158,11,.15)}
+  .chip.dq{color:#FCA5A5;background:rgba(239,68,68,.15)}
+  .adm-q{display:flex;gap:12px;padding:12px 0;border-top:1px solid var(--line)}
+  .adm-q:first-of-type{border-top:0}
+  .adm-th{width:64px;height:86px;flex:none;border-radius:12px;background:rgba(255,255,255,.05);object-fit:cover;box-sizing:border-box;border:1px solid var(--line);cursor:zoom-in}
+  .adm-th.none{display:grid;place-items:center;font-size:10px;color:#64748B;cursor:default;text-align:center}
+  .adm-search{width:100%;box-sizing:border-box;padding:12px 14px;border-radius:14px;border:1px solid var(--line);background:rgba(255,255,255,.04);
+    color:var(--text);font-size:16px;outline:none;margin-bottom:12px;-webkit-user-select:text;user-select:text}
+  .adm-search:focus{border-color:rgba(52,211,153,.6)}
+  .adm-note{font-size:12px;color:#64748B;line-height:1.5;margin:4px 4px 0}
+  .adm-back{border:0;background:transparent;color:#34D399;font:700 14px Inter,sans-serif;padding:4px 0 12px;cursor:pointer}
+  .adm-cal{display:grid;grid-template-columns:repeat(7,1fr);gap:6px;margin-top:10px}
+  .adm-cal .dd{aspect-ratio:1;min-width:0;border-radius:10px;border:1px solid var(--line);background:rgba(255,255,255,.03);
+    display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:#CBD5E1}
+  .adm-cal .dd small{font-size:8.5px;font-weight:600;color:#94A3B8}
+  .adm-cal .dd.accepted{background:rgba(16,185,129,.16);border-color:rgba(16,185,129,.45)}
+  .adm-cal .dd.pending{background:rgba(245,158,11,.14);border-color:rgba(245,158,11,.45)}
+  .adm-cal .dd.rejected{background:rgba(239,68,68,.12);border-color:rgba(239,68,68,.4)}
+  .adm-cal .dd.today{box-shadow:0 0 0 2px rgba(52,211,153,.7)}
+  .adm-cal .dd.fut{opacity:.35}.adm-cal .dd.shot{cursor:zoom-in}
+  .adm-cal .gap{visibility:hidden}
+  .adm-ov{position:fixed;inset:0;z-index:50;background:rgba(0,0,0,.88);display:flex;align-items:center;justify-content:center;padding:24px}
+  .adm-ov[hidden]{display:none}
+  .adm-ov img{max-width:100%;max-height:100%;border-radius:12px}
 </style>
 </head>
 <body>
@@ -967,10 +1028,12 @@
   <symbol id="i-l-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></symbol>
   <symbol id="i-l-check" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></symbol>
   <symbol id="i-l-flame" viewBox="0 0 24 24"><path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.07-2.14-.22-4.05 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.15.43-2.29 1-3a2.5 2.5 0 0 0 2.5 2.5z"/></symbol>
+  <symbol id="i-l-shield" viewBox="0 0 24 24"><path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"/></symbol>
   <symbol id="i-l-chev" viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/></symbol>
   <defs><linearGradient id="gGold" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#FDE68A"/><stop offset=".55" stop-color="#F59E0B"/><stop offset="1" stop-color="#B45309"/></linearGradient>
     <filter id="glow" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="1.4" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs>
 </svg>
+<div class="adm-ov" id="adm-ov" hidden onclick="this.hidden=true"><img id="adm-ov-img" alt="Скриншот"></div>
 <div class="aur a1"></div><div class="aur a2"></div>
 <header class="hero-bn" id="hero">
   <div class="hb-top">
@@ -978,6 +1041,7 @@
     <div class="hbtns">
       <button class="hbtn" data-tab="rules" aria-label="Правила"><svg viewBox="0 0 24 24"><use href="#i-l-book"/></svg><span>Правила</span></button>
       <button class="hbtn" data-tab="faq" aria-label="Помощь"><svg viewBox="0 0 24 24"><use href="#i-l-help"/></svg><span>Помощь</span></button>
+      <button class="hbtn adm-btn" data-tab="admin" id="hb-admin" aria-label="Админка" hidden><svg viewBox="0 0 24 24"><use href="#i-l-shield"/></svg><span>Админка</span></button>
     </div>
   </div>
   <div class="hb-me">
@@ -1265,6 +1329,7 @@ function fillHead(d){
 }
 function plural(n,a,b,c){const m=n%10,h=n%100;return m===1&&h!==11?a:m>=2&&m<=4&&(h<12||h>14)?b:c;}
 function drawProgress(d){
+  setAdminBtn(!!d.admin);
   if(!d.registered) return d.admin?adminHome(d):regNotice();
   fillHead(d);
   const A=!!d.aggregate;   // админ: суммы по всем участникам
@@ -1812,6 +1877,7 @@ function adminHome(d){
       <div class="sec-title">${ico("l-check")}Режим администратора</div>
       <p class="muted" style="margin:6px 0 0;line-height:1.5">Ты админ — Mini App открыт целиком без регистрации: лидерборд, все команды с составом, призы и правила. Даты марафона: <b style="color:var(--text)">${MARATHON_TEXT()}</b>.</p>
     </div>
+    <div class="card tile2" style="margin:12px 0" onclick="show('admin')">${ico("l-shield")}<b>Админка</b><span>сводка, проверка, участники и их дни</span></div>
     <div class="stats2">
       <div class="card tile2" onclick="show('board')">${ico("l-trophy")}<b>Лидеры</b><span>командный зачёт</span></div>
       <div class="card tile2" onclick="show('team')">${ico("l-users")}<b>Команды</b><span>составы и баллы</span></div>
@@ -1829,6 +1895,175 @@ function adminTeams(d){
     <div class="tm-title"><h2>Все команды</h2><p>${teams.length} команд · ${total} участников</p></div>
     ${teams.map((t,k)=>teamCard(t,k+1,teams.length,false)).join("")}</div>`;
   growBars();
+}
+
+
+// ---- Админка P&C: только просмотр. Действия (модерация, ручной ввод,
+// отмена) — в боте: там пересчёт серий/бонусов/флешмобов и пуши участникам.
+const ADM={sec:"sum", q:"", pid:null};
+const ST_CHIP={active:'<span class="chip ok">активен</span>',waiting:'<span class="chip wt">ждёт подтверждения</span>',dq:'<span class="chip dq">дисквалифицирован</span>'};
+const ENTRY_TXT={accepted:"принят",pending:"на проверке",rejected:"отклонён"};
+const SILENT_TXT="2+ дня";
+function setAdminBtn(on){
+  const b=document.getElementById("hb-admin"); if(!b) return;
+  b.hidden=!on; b.parentElement.classList.toggle("adm",!!on);
+}
+// Нативная кнопка «Назад» Telegram — в карточке участника.
+function backBtn(fn){
+  try{ const bb=tg?.BackButton; if(!bb) return;
+    if(window.__admBack) bb.offClick(window.__admBack);
+    window.__admBack=fn||null; if(fn){ bb.onClick(fn); bb.show(); } else bb.hide();
+  }catch(e){}
+}
+function admGo(sec){ hsel(); ADM.sec=sec; ADM.pid=null; renderAdmin(); window.scrollTo({top:0}); }
+function admOpen(id){ himp(); ADM.pid=id; renderAdmin(); window.scrollTo({top:0}); }
+function admBack(){ hsel(); ADM.pid=null; renderAdmin(); window.scrollTo({top:0}); }
+function admShot(url){ if(!url) return; himp(); document.getElementById("adm-ov-img").src=url; document.getElementById("adm-ov").hidden=false; }
+function admTabs(){
+  return `<div class="adm-seg">${[["sum","Сводка"],["queue","Проверка"],["people","Участники"]].map(([k,l])=>
+    `<button class="${ADM.sec===k?"on":""}" onclick="admGo('${k}')">${l}</button>`).join("")}</div>`;
+}
+function admShell(body,tabs=true){ V.innerHTML=`<div class="view adm">${tabs?admTabs():""}${body}</div>`; }
+function admErr(e){
+  const m=String(e&&e.message||e||"");
+  admShell(`<div class="center">${m.includes("403")?"Раздел доступен только администраторам.":"Не удалось загрузить 😔<br><span class='muted'>"+esc(m)+"</span>"}
+    <br><br><button class="btn-grad" style="max-width:220px;margin:0 auto" onclick="renderAdmin()">Обновить</button></div>`);
+}
+const actNote=()=>`<p class="adm-note">Здесь только просмотр. Принять или отклонить результат, внести или отменить день — в боте: <b style="color:#CBD5E1">/admin</b>.</p>
+  <button class="btn-ghost" style="margin-top:10px" onclick="openBot()">Открыть бота</button>`;
+const lastTxt=(iso)=>iso?"последняя сдача "+fmtDM(iso):"ещё не сдавал";
+const teamsTxt=(n)=>n?n+" "+plural(n,"команда","команды","команд"):"все команды";
+
+async function renderAdmin(){
+  const my=++renderGen;
+  if(ADM.pid) return admPerson(ADM.pid,my);
+  backBtn(null);
+  if(ADM.sec==="people") return admPeople(my);
+  admShell(`<div class="spin"></div>`);
+  try{
+    const d=await api(ADM.sec==="queue"?"/api/admin/queue":"/api/admin/overview");
+    if(my!==renderGen) return;
+    ADM.sec==="queue"?admQueue(d):admSummary(d);
+  }catch(e){ if(my===renderGen) admErr(e); }
+}
+
+function admSummary(d){
+  if(d.marathon) MARATHON=d.marathon;
+  const pct=d.active?Math.min(100,Math.round(d.submitted/d.active*100)):0;
+  const sum=x=>x.accepted+x.pending+x.rejected;
+  const max=Math.max(d.active,...d.days.map(sum),1);
+  const chart=d.days.length?`<div class="adm-chart">${d.days.map(x=>{const t=sum(x)||1;
+      return `<div class="col"><div class="stk" style="height:${(sum(x)/max*100).toFixed(1)}%">
+        <i class="a" style="height:${x.accepted/t*100}%"></i><i class="p" style="height:${x.pending/t*100}%"></i><i class="r" style="height:${x.rejected/t*100}%"></i></div>
+        <small>${fmtDM(x.date).slice(0,2)}</small></div>`;}).join("")}</div>
+      <div class="adm-leg"><span><i style="background:#10B981"></i>принято</span><span><i style="background:#F59E0B"></i>на проверке</span><span><i style="background:#EF4444"></i>отклонено</span><span>полный столбец — ${d.active} активных</span></div>`
+    :`<p class="muted" style="margin:8px 0 0">Марафон ещё не начался — данных по дням пока нет.</p>`;
+  const acts=[];
+  if(d.challenge) acts.push(`🎲 Тайный челлендж ×${d.challenge.multiplier}${d.challenge.after?" после "+d.challenge.after:" весь день"} · ${teamsTxt(d.challenge.teams)}`);
+  if(d.flashmob) acts.push(`🤝 Флешмоб: ${d.flashmob.pct}% команды от ${nfmt(d.flashmob.min_steps)} шагов → +${d.flashmob.bonus} · ${teamsTxt(d.flashmob.teams)}`);
+  const silent=d.silent||[];
+  admShell(`
+    <div class="adm-kpi">
+      <div class="card"><b>${d.submitted}<small> / ${d.active}</small></b><span>сдали сегодня (${fmtDM(d.today)})</span>
+        <div class="adm-bar"><i style="width:${pct}%"></i></div></div>
+      <div class="card tap ${d.queue?"warn":""}" onclick="admGo('queue')"><b>${d.queue}</b><span>результатов ждут проверки →</span></div>
+      <div class="card"><b>${d.accepted}</b><span>принято сегодня${d.rejected?` · отклонено ${d.rejected}`:""}</span></div>
+      <div class="card tap ${d.registrations?"warn":""}" onclick="admGo('queue')"><b>${d.registrations}</b><span>заявок на регистрацию →</span></div>
+    </div>
+    <div class="card"><div class="sec-title">${ico("l-cal")}Сдачи по дням</div>${chart}</div>
+    <div class="card"><div class="sec-title">${ico("l-flame")}Активности сегодня</div>
+      <p class="muted" style="margin:8px 0 0;line-height:1.6">${acts.length?acts.map(esc).join("<br>"):"Сегодня челленджей и флешмобов нет."}</p></div>
+    <div class="card"><div class="sec-title">${ico("l-clock")}Молчат ${SILENT_TXT} · ${silent.length}</div>
+      ${silent.length?silent.map(s=>`<div class="adm-row" style="cursor:default"><div class="adm-mid"><div class="adm-nm">${esc(s.name)}</div>
+        <div class="adm-sub">${esc(s.team||"—")}</div></div><div class="adm-rt">${s.last?"сдавал "+fmtDM(s.last):"ни разу"}</div></div>`).join("")
+        :`<p class="muted" style="margin:8px 0 0">Все активные участники сдают результаты 👏</p>`}
+      ${d.disqualified?`<p class="adm-note">Дисквалифицировано: ${d.disqualified}</p>`:""}</div>
+    ${actNote()}`);
+}
+
+function admQueue(d){
+  const regs=d.registrations||[], es=d.entries||[];
+  admShell(`
+    ${regs.length?`<div class="card"><div class="sec-title">${ico("l-users")}Заявки на регистрацию · ${regs.length}</div>
+      ${regs.map(r=>`<div class="adm-row" onclick="admOpen(${Number(r.tg_id)})"><div class="adm-mid"><div class="adm-nm">${esc(r.name)}</div>
+        <div class="adm-sub">${esc(r.team||"—")}${r.username?" · @"+esc(r.username):""}</div></div>${ico("l-chev")}</div>`).join("")}</div>`:""}
+    <div class="card"><div class="sec-title">${ico("l-cam")}На проверке · ${d.total}</div>
+      ${es.length?es.map(e=>`<div class="adm-q">
+        ${e.shot?`<img class="adm-th" loading="lazy" decoding="async" alt="" src="${e.shot}" onclick="admShot('${e.shot}')">`:`<div class="adm-th none">без<br>скрина</div>`}
+        <div class="adm-mid" onclick="admOpen(${Number(e.tg_id)})" style="cursor:pointer">
+          <div class="adm-nm">${esc(e.name)}</div><div class="adm-sub">${esc(e.team||"—")}</div>
+          <div style="margin-top:8px;font:800 18px Unbounded,Inter,sans-serif;color:#fff">${nfmt(e.steps)} <small style="font:600 12px Inter,sans-serif;color:#94A3B8">шагов</small></div>
+          <div class="adm-sub">за ${fmtFull(e.date)}${e.big?' · <span class="chip wt">больше 30 000</span>':""}</div></div></div>`).join("")
+        :`<p class="muted" style="margin:8px 0 0">Очередь пуста — всё проверено ✅</p>`}
+      ${d.total>es.length?`<p class="adm-note">Показаны первые ${es.length} из ${d.total}.</p>`:""}</div>
+    ${actNote()}`);
+}
+
+let admTimer=null;
+function admPeople(my){
+  admShell(`<input class="adm-search" id="adm-q" type="search" placeholder="ФИО, @username, ID или цифры телефона">
+    <div id="adm-list"><div class="spin"></div></div>`);
+  const inp=document.getElementById("adm-q");
+  inp.value=ADM.q;
+  inp.addEventListener("input",()=>{ clearTimeout(admTimer); admTimer=setTimeout(()=>{ ADM.q=inp.value.trim(); admList(++renderGen); },300); });
+  admList(my);
+}
+async function admList(my){
+  const box=()=>document.getElementById("adm-list");
+  let d; try{ d=await api("/api/admin/participants?q="+encodeURIComponent(ADM.q)); }
+  catch(e){ if(my===renderGen) admErr(e); return; }
+  if(my!==renderGen||!box()) return;
+  const it=d.items||[];
+  box().innerHTML=`<div class="card">
+    <div class="sec-title">${ico("l-users")}${ADM.q?"Найдено":"Все участники"} · ${it.length}</div>
+    ${it.length?it.map(p=>`<div class="adm-row" onclick="admOpen(${Number(p.tg_id)})">
+      <div class="adm-mid"><div class="adm-nm">${esc(p.name)}</div>
+        <div class="adm-sub">${esc(p.team||"—")} · ${lastTxt(p.last)}${p.pending?` · ⏳ ${p.pending}`:""}</div>
+        ${p.status!=="active"?`<div style="margin-top:4px">${ST_CHIP[p.status]||""}</div>`:""}</div>
+      <div class="adm-rt"><b>${fmtPts(p.points)}</b>${p.days} ${plural(p.days,"день","дня","дней")}</div></div>`).join("")
+      :`<p class="muted" style="margin:8px 0 0">Никого не нашли.</p>`}</div>`;
+}
+
+async function admPerson(id,my){
+  backBtn(admBack);
+  admShell(`<button class="adm-back" onclick="admBack()">← Назад</button><div class="spin"></div>`,false);
+  let p; try{ p=await api("/api/admin/participant/"+encodeURIComponent(id)); }
+  catch(e){ if(my===renderGen) admErr(e); return; }
+  if(my!==renderGen) return;
+  if(p.marathon) MARATHON=p.marathon;
+  const cal=p.calendar||[], lead=cal.length?isoDow(cal[0].date):0;
+  const kfmt=n=>n>=1000?(n/1000).toFixed(n>=10000?0:1).replace(".",",")+"K":String(n);
+  const cnt=s=>cal.filter(c=>c.status===s).length;
+  const days=cal.map(c=>{
+    const cls=["dd",c.status||"",c.is_today?"today":"",c.future?"fut":"",c.shot?"shot":""].join(" ");
+    const tip=c.status?`${fmtFull(c.date)}: ${nfmt(c.steps)} шагов, ${ENTRY_TXT[c.status]||c.status}${c.source==="admin"?" (внесено P&C)":""}`:fmtFull(c.date);
+    return `<div class="${cls}" title="${esc(tip)}" ${c.shot?`onclick="admShot('${c.shot}')"`:""}>${fmtDM(c.date).slice(0,2)}
+      <small>${c.status?kfmt(c.steps)+(c.source==="admin"?"✍":""):"—"}</small></div>`;}).join("");
+  const wk=(p.weeks||[]).map((w,i)=>`<div class="adm-row" style="cursor:default"><div class="adm-mid">
+      <div class="adm-nm">Неделя ${i+1} · с ${fmtDM(w.start)}</div>
+      <div class="adm-sub">${w.reported?(w.source==="admin"?"отчёт засчитан P&C":"отчёт прислан"):"отчёта нет"}${w.earned?` · заработано +${w.earned}`:""}</div></div>
+      <div class="adm-rt"><b>+${w.bonus}</b>засчитано</div></div>`).join("");
+  admShell(`<button class="adm-back" onclick="admBack()">← Назад</button>
+    <div class="card">
+      <div class="at-head"><div class="hb-av">${esc(((p.team||p.name||"?").trim()[0]||"?").toUpperCase())}</div>
+        <div class="at-nm"><b>${esc(p.name)}</b><span>${esc(p.team||"—")}${p.username?" · @"+esc(p.username):""}</span></div></div>
+      <div style="margin:-4px 0 12px">${ST_CHIP[p.status]||""}</div>
+      <div class="at-stats">
+        <div><b>${fmtPts(p.points)}</b><span>баллов с бонусами</span></div>
+        <div><b>${kfmt(p.steps)}</b><span>шагов принято</span></div>
+        <div><b>${p.days}</b><span>${plural(p.days,"день","дня","дней")} принято</span></div>
+        <div><b>${p.streak}</b><span>серия сейчас</span></div>
+        <div><b>${p.best_streak}</b><span>лучшая серия</span></div>
+        <div><b>${cnt("pending")}</b><span>на проверке</span></div>
+      </div>
+      <div class="adm-sub" style="white-space:normal">${p.phone?`Телефон: <b style="color:#CBD5E1;-webkit-user-select:text;user-select:text">${esc(p.phone)}</b> · `:""}ID ${Number(p.tg_id)}</div>
+    </div>
+    <div class="card"><div class="sec-title">${ico("l-cal")}Дни марафона</div>
+      <div class="cal-wd"><span>Пн</span><span>Вт</span><span>Ср</span><span>Чт</span><span>Пт</span><span>Сб</span><span>Вс</span></div>
+      <div class="adm-cal">${'<div class="dd gap"></div>'.repeat(lead)}${days}</div>
+      <div class="adm-leg"><span><i style="background:#10B981"></i>принят ${cnt("accepted")}</span><span><i style="background:#F59E0B"></i>на проверке ${cnt("pending")}</span><span><i style="background:#EF4444"></i>отклонён ${cnt("rejected")}</span><span>✍ — внесено P&C · тап по дню — скриншот</span></div></div>
+    <div class="card"><div class="sec-title">${ico("l-check")}Недельные отчёты</div>${wk}</div>
+    ${actNote()}`,false);
 }
 
 const emptyRow=()=>`<div class="muted" style="padding:8px 0">— пока пусто —</div>`;
@@ -1910,10 +2145,12 @@ async function retryInit(){
   loaded.progress=false; V.dataset.tab=""; show("progress");
 }
 
-const views={progress:renderProgress,team:renderTeam,board:renderBoard,rules:renderRules,prizes:renderPrizes,faq:renderFAQ};
+const views={progress:renderProgress,team:renderTeam,board:renderBoard,rules:renderRules,prizes:renderPrizes,faq:renderFAQ,admin:renderAdmin};
 const loaded={};
 function show(tab){
   document.querySelectorAll(".nav button,.hbtn").forEach(b=>b.classList.toggle("on",b.dataset.tab===tab));
+  if(tab!=="admin") backBtn(null);
+  if(tab==="admin"){ V.dataset.tab=""; ADM.pid=null; renderAdmin(); return; }   // данные P&C — всегда свежие
   if(tab==="rules"||tab==="prizes"||tab==="faq"){ renderGen++; views[tab](); return; }   // статичны — всегда свежие
   if(loaded[tab]&&V.dataset.tab===tab) return;
   V.dataset.tab=tab; loaded[tab]=true; views[tab]();
