@@ -198,6 +198,9 @@ async def _admin_view() -> dict:
         """SELECT COALESCE(max(s.current_len),0) FROM streaks s
              JOIN participants p ON p.telegram_id=s.participant_id
             WHERE p.approved_at IS NOT NULL AND p.disqualified_at IS NULL""")
+    board = await db.team_leaderboard()
+    leader = ({"name": board[0]["name"], "points": board[0]["points"]}
+              if board and board[0]["points"] else None)
     today = datetime.now(config.tz).date()
     calendar, d, total = [], MARATHON_START, 0
     while d <= MARATHON_END:
@@ -225,7 +228,7 @@ async def _admin_view() -> dict:
         "hour": datetime.now(config.tz).hour,
         "today_status": next((c["status"] for c in calendar if c["is_today"]), None),
         "current_streak": int(streak or 0), "best_streak": int(streak or 0),
-        "calendar": calendar, "marathon": _marathon(),
+        "calendar": calendar, "marathon": _marathon(), "leader": leader,
     }
 
 def _best_streak(steps_by_date: dict[date, int]) -> int:

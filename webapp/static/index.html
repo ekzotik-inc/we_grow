@@ -827,6 +827,59 @@
   .tm-pt small{margin-left:3px;font:500 11px Inter,sans-serif;color:#64748B}
   .tm-empty,.tm-note{font:500 12px Inter,sans-serif;color:#64748B;text-align:center;padding:10px 0}
   @media (prefers-reduced-motion:reduce){.tm-bar i{transition:none}}
+  /* ===== Прогресс: hero + bento (Apple Fitness / Whoop) ===== */
+  .pg-hero,.pg-card,.pg-tile,.pg-today{background:rgba(255,255,255,.035);-webkit-backdrop-filter:blur(20px);backdrop-filter:blur(20px);
+    border:1px solid rgba(255,255,255,.07);border-radius:22px}
+  .pg-hero{padding:18px 18px 8px;margin-bottom:12px;overflow:hidden;
+    background:radial-gradient(90% 70% at 100% 0%,rgba(6,182,212,.12),transparent 60%),rgba(255,255,255,.035)}
+  .pg-kick{font:700 11px Inter,sans-serif;letter-spacing:.18em;text-transform:uppercase;color:#34D399}
+  .pg-main{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:8px}
+  .pg-num{font:900 34px/1 Unbounded,Inter,sans-serif;color:#fff;letter-spacing:-.02em;font-variant-numeric:tabular-nums}
+  .pg-chip{font:700 12px Inter,sans-serif;padding:5px 10px;border-radius:99px;color:#A7F3D0;background:rgba(16,185,129,.16);border:1px solid rgba(16,185,129,.4)}
+  .pg-cap{font:500 13px Inter,sans-serif;color:#94A3B8;margin-top:8px}
+  .pg-spark{display:block;width:calc(100% + 36px);height:86px;margin:8px -18px 0}
+  .pg-spark-empty{font:500 12px Inter,sans-serif;color:#64748B;padding:18px 0 12px}
+  .pg-today{display:flex;align-items:center;gap:12px;padding:13px 16px;margin-bottom:12px;cursor:pointer;transition:transform .15s}
+  .pg-today:active{transform:scale(.98)}
+  .pg-dot{width:10px;height:10px;border-radius:50%;flex:none;background:#F59E0B;box-shadow:0 0 0 0 rgba(245,158,11,.6);animation:dotPulse 1.6s infinite}
+  .pg-today.ok .pg-dot{background:#22C55E;animation:none;box-shadow:0 0 10px #22C55E}
+  .pg-today.wait .pg-dot{background:#38BDF8;box-shadow:0 0 0 0 rgba(56,189,248,.6)}
+  @keyframes dotPulse{70%{box-shadow:0 0 0 9px rgba(245,158,11,0)}100%{box-shadow:0 0 0 0 rgba(245,158,11,0)}}
+  .pg-tt{flex:1;min-width:0}.pg-tt>div{font:600 14px Inter,sans-serif;color:#F1F5F9}.pg-tt b{color:#fff;font-weight:800}
+  .pg-tt span{font:500 12px Inter,sans-serif;color:#64748B}
+  .pg-go{font:800 12px Inter,sans-serif;padding:7px 12px;border-radius:99px;color:#04210f;background:linear-gradient(90deg,#10B981,#22C55E)}
+  .pg-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px}
+  .pg-tile{padding:14px;display:flex;flex-direction:column;gap:8px;min-height:150px;cursor:pointer;transition:transform .15s}
+  .pg-tile:active{transform:scale(.98)}
+  .pg-lbl{font:700 11px Inter,sans-serif;letter-spacing:.12em;text-transform:uppercase;color:#64748B}
+  .pg-ring{display:flex;align-items:center;gap:10px}
+  .pg-ring .mring{width:56px;height:56px}.pg-ring .mring .em .ic{width:20px;height:20px;color:#FB923C}
+  .pg-ring .mring .fg{stroke:#F97316}
+  .pg-big{font:900 26px/1 Unbounded,Inter,sans-serif;color:#fff;display:flex;align-items:baseline;gap:5px}
+  .pg-big small{font:600 12px Inter,sans-serif;color:#64748B}
+  .pg-big.au{background:linear-gradient(135deg,#FDE68A,#F59E0B);-webkit-background-clip:text;background-clip:text;color:transparent}
+  .pg-sub{font:500 12px Inter,sans-serif;color:#64748B;margin-top:auto}
+  .pg-team{display:flex;align-items:center;gap:8px;min-width:0}
+  .pg-team>span:last-child{font:700 15px Inter,sans-serif;color:#F1F5F9;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .pg-cup{width:30px;height:30px;flex:none;border-radius:10px;display:grid;place-items:center;background:rgba(245,158,11,.15);border:1px solid rgba(245,158,11,.4)}
+  .pg-cup .ic{width:16px;height:16px;color:#FBBF24;stroke-width:2}
+  .pg-tile .pg-big.au{margin-top:auto}
+  .pg-card{padding:16px;margin-bottom:12px}
+  .pg-head{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:12px}
+  .pg-head span{font:700 15px Inter,sans-serif;color:#fff}.pg-head b{font:800 14px Unbounded,Inter,sans-serif;color:#34D399}
+  .pg-head em{font:500 12px Inter,sans-serif;color:#64748B;font-style:normal}
+  .wk{display:grid;grid-template-columns:repeat(7,1fr);gap:8px;height:150px;padding-top:26px}
+  .wk-col{position:relative;display:flex;flex-direction:column;align-items:center;gap:8px;min-width:0}
+  .wk-track{flex:1;width:100%;max-width:26px;display:flex;align-items:flex-end;border-radius:99px;background:rgba(255,255,255,.04)}
+  .wk-track i{display:block;width:100%;border-radius:99px;background:linear-gradient(0deg,#10B981,#06B6D4);opacity:.45;
+    animation:wkGrow .8s cubic-bezier(.16,1,.3,1) both}
+  .wk-col.hi .wk-track i{opacity:1;box-shadow:0 0 14px rgba(6,182,212,.6)}
+  .wk-d{font:600 11px Inter,sans-serif;color:#64748B}.wk-col.now .wk-d{color:#34D399}
+  .wk-tip{position:absolute;top:-26px;white-space:nowrap;font:800 11px Inter,sans-serif;color:#0B0F17;background:#E0F2FE;padding:3px 7px;border-radius:8px;
+    box-shadow:0 4px 14px rgba(6,182,212,.4)}
+  @keyframes wkGrow{from{height:0}}
+  .pg-card .cal{margin-top:6px}
+  @media (prefers-reduced-motion:reduce){.pg-dot,.wk-track i{animation:none}}
 </style>
 </head>
 <body>
@@ -1126,6 +1179,43 @@ function spark(vals){
 }
 
 // Столбики последних 7 дней с подписью на лучшем дне.
+// Сплайн общего прогресса: подписи первого/последнего дня, светящаяся точка.
+function spark2(vals){
+  if(vals.length<2) return `<div class="pg-spark-empty">график появится со второго дня</div>`;
+  const W=320,H=86,P=8, max=Math.max(...vals,1);
+  const pt=vals.map((v,i)=>[P+i*(W-2*P)/(vals.length-1), H-10-(v/max)*(H-24)]);
+  let p=`M${pt[0][0].toFixed(1)},${pt[0][1].toFixed(1)}`;
+  for(let i=1;i<pt.length;i++){const [x0,y0]=pt[i-1],[x1,y1]=pt[i],m=(x0+x1)/2;
+    p+=` C${m.toFixed(1)},${y0.toFixed(1)} ${m.toFixed(1)},${y1.toFixed(1)} ${x1.toFixed(1)},${y1.toFixed(1)}`;}
+  const [lx,ly]=pt[pt.length-1];
+  return `<svg class="pg-spark" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" aria-hidden="true">
+    <defs><linearGradient id="pgArea" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#10B981" stop-opacity=".35"/><stop offset="1" stop-color="#10B981" stop-opacity="0"/></linearGradient>
+      <linearGradient id="pgLine" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#10B981"/><stop offset="1" stop-color="#06B6D4"/></linearGradient></defs>
+    <path d="${p} L${lx.toFixed(1)},${H} L${P},${H} Z" fill="url(#pgArea)"/>
+    <path d="${p}" fill="none" stroke="url(#pgLine)" stroke-width="2.6" stroke-linecap="round"/>
+    <circle cx="${lx.toFixed(1)}" cy="${ly.toFixed(1)}" r="9" fill="#06B6D4" opacity=".25"><animate attributeName="r" values="5;11;5" dur="2s" repeatCount="indefinite"/></circle>
+    <circle cx="${lx.toFixed(1)}" cy="${ly.toFixed(1)}" r="4" fill="#fff"/>
+  </svg>`;
+}
+// Текущая календарная неделя пн–вс (по серверным датам).
+function curWeek(cal){
+  const ti=cal.findIndex(c=>c.is_today);
+  const last=ti>=0?ti:(cal.every(c=>c.future)?0:cal.filter(c=>!c.future).length-1);
+  const start=last-isoDow(cal[last].date);
+  return Array.from({length:7},(_,k)=>cal[start+k]||null);
+}
+const weekSum=cal=>cal.length?curWeek(cal).reduce((s,c)=>s+(c?.steps||0),0):0;
+function week7b(cal){
+  if(!cal.length) return "";
+  const days=curWeek(cal), WD=["ПН","ВТ","СР","ЧТ","ПТ","СБ","ВС"];
+  const max=Math.max(...days.map(c=>c?.steps||0),1);
+  let hi=days.findIndex(c=>c?.is_today);
+  if(hi<0||!(days[hi]?.steps)) hi=days.reduce((b,c,i)=>((c?.steps||0)>(days[b]?.steps||0)?i:b),0);
+  return `<div class="wk">${days.map((c,i)=>{const v=c?.steps||0,h=v?Math.max(8,Math.round(v/max*100)):4;
+    return `<div class="wk-col ${i===hi&&v?"hi":""} ${c?.is_today?"now":""}">
+      ${i===hi&&v?`<span class="wk-tip">${nfmt(v)}</span>`:""}
+      <div class="wk-track"><i style="height:${h}%"></i></div><span class="wk-d">${WD[i]}</span></div>`;}).join("")}</div>`;
+}
 function week7(cal){
   const days=cal.filter(c=>!c.future).slice(-7);
   if(!days.length) return "";
@@ -1223,76 +1313,70 @@ function drawProgress(d){
                 stroke-dasharray="${C.toFixed(1)}" stroke-dashoffset="${C.toFixed(1)}"/></svg>
       <div class="em">${inner}</div></div>`;
 
+  const tday=d.calendar.find(c=>c.is_today);
+  const todayDone=A?(tday?.accepted||0)+(tday?.pending||0):(d.today_status?1:0);
+  const todayTotal=A?(d.participants||0):1;
+  const todayTxt=A?`Сегодня сдано: <b>${todayDone} / ${todayTotal}</b>`
+    :d.today_status==="accepted"?`Сегодня засчитано: <b>${nfmt(tday?.steps||0)}</b> шагов`
+    :d.today_status==="pending"?`Сегодня: <b>${nfmt(tday?.steps||0)}</b> шагов на проверке`
+    :d.today_status==="rejected"?`Сегодня: результат <b>отклонён</b> — пришли заново`
+    :`Сегодня ещё не сдано — до <b>23:55</b>`;
+  const todaySub=A?(tday?`принято ${tday.accepted||0}${tday.pending?` · на проверке ${tday.pending}`:""}`:"марафон ещё не идёт")
+    :(tday?.points?`+${tday.points} б. за день`:"число шагов + скриншот в боте");
+  const todayState=A?(todayDone>=todayTotal&&todayTotal?"ok":"warn")
+    :d.today_status==="accepted"?"ok":d.today_status==="pending"?"wait":"warn";
+  const card2=A
+    ? (d.leader?`<div class="pg-tile" onclick="show('board')">
+        <div class="pg-lbl">Лидер</div>
+        <div class="pg-team"><span class="pg-cup">${ico("l-trophy")}</span><span>${esc(d.leader.name)}</span></div>
+        <div class="pg-big au">${fmtPts(d.leader.points)}<small>ср. балл</small></div></div>`
+      :`<div class="pg-tile" onclick="show('board')"><div class="pg-lbl">Лидер</div>
+        <div class="pg-team"><span class="pg-cup">${ico("l-trophy")}</span><span>пока нет</span></div>
+        <div class="pg-sub">появится после первых баллов</div></div>`)
+    : `<div class="pg-tile" onclick="show('board')">
+        <div class="pg-lbl">Место команды</div>
+        <div class="pg-team"><span class="pg-cup">${ico("l-trophy")}</span><span>${esc(d.team_name||"")}</span></div>
+        <div class="pg-big au">${d.team_rank?"#"+d.team_rank:"—"}<small>${d.teams_total?`из ${d.teams_total}`:""}</small></div></div>`;
   const body=`
-    <div class="bento">
-      <div class="gc w2 d1">
-        <div class="hi">
-          <div><div class="gl">${A?"Сводка марафона":hello+","}</div><h2>${A?"Все участники":esc(first)}</h2></div>
-          <div class="pill">${ico("sparkle")}${d.total_points} балл(ов)</div>
-        </div>
-        <div class="gsub">${A?`Суммарные шаги всех участников по дням`:done?`Шаги за ${done} дн. марафона`:"Здесь появится твоя динамика шагов"}</div>
-        ${spark(d.calendar.filter(c=>!c.future).map(c=>c.steps||0))}
+    <section class="pg-hero">
+      <div class="pg-kick">${A?"Общий прогресс":"Мой прогресс"}</div>
+      <div class="pg-main"><span class="pg-num" id="s-steps">0</span>
+        <span class="pg-chip">+${fmtPts(d.total_points)} ${plural(Math.round(d.total_points),"балл","балла","баллов")}</span></div>
+      <div class="pg-cap">${A?`${d.participants||0} ${plural(d.participants||0,"участник","участника","участников")} в строю`
+        :`${hello}, ${esc(first)} · ${st.e} ${st.n}`}</div>
+      ${spark2(d.calendar.filter(c=>!c.future).map(c=>c.steps||0))}
+    </section>
+
+    <div class="pg-today ${todayState}" ${!A&&d.today_status!=="accepted"&&d.today_status!=="pending"?`onclick="openSteps()"`:""}>
+      <span class="pg-dot"></span>
+      <div class="pg-tt"><div>${todayTxt}</div><span>${todaySub}</span></div>
+      ${!A&&d.today_status!=="accepted"&&d.today_status!=="pending"&&tday?`<span class="pg-go">Сдать</span>`:""}
+    </div>
+
+    <div class="pg-grid">
+      <div class="pg-tile">
+        <div class="pg-lbl">${A?"Лучшая серия":"Серия"}</div>
+        <div class="pg-ring">${ring("ring-streak",streakPct,ico("l-flame"))}
+          <div class="pg-big">${streak}<small>${plural(streak,"день","дня","дней")}</small></div></div>
+        <div class="pg-sub">${A?"у самого стабильного":streak>=7?"бонус недели взят":`до +${streak>=5?4:2} б. — ещё ${goalLeft} дн.`}</div>
       </div>
+      ${card2}
+    </div>
 
-      ${A?`<div class="gc d1"><div class="gl">Участников</div>
-        <div class="gv">${d.participants||0}</div><div class="gsub">подтверждены, без дисквалификации</div></div>`:`<div class="gc d1">
-        <div class="gl">Стадия растения</div>
-        <div class="mini" style="margin-top:10px">
-          ${ring("ring-stage",stagePct,st.e)}
-          <div style="min-width:0"><div class="gv sm">${st.n}</div>
-            <div class="gsub">${si<4?`ещё <b style="color:var(--text)">${Math.max(0,nextAt-d.total_points)}</b> б. до «${STAGES[si+1].n}»`
-                                    :"максимальная стадия"}</div></div>
-        </div>
-      </div>`}
+    <section class="pg-card">
+      <div class="pg-head"><span>Активность недели</span><b>${nfmt(weekSum(d.calendar))}</b></div>
+      ${week7b(d.calendar)}
+    </section>
 
-      <div class="gc vi d2">
-        <div class="gl">${A?"Лучшая серия сейчас":"Серия дней"}</div>
-        <div class="mini" style="margin-top:10px">
-          ${ring("ring-streak",streakPct,ico("flame"))}
-          <div style="min-width:0"><div class="gv sm">${streak} дн.</div>
-            <div class="gsub">${A?"дней подряд 10 000+ у лидера":streak>=7?"бонус недели взят"
-              :`до <b style="color:var(--text)">+${streak>=5?4:2}</b> ещё ${goalLeft} дн.`}</div></div>
-        </div>
+    <section class="pg-card">
+      <div class="pg-head"><span>Календарь марафона</span><em>${fmtDM(d.marathon.start)}–${fmtDM(d.marathon.end)}</em></div>
+      <div class="cal-wd"><div>ПН</div><div>ВТ</div><div>СР</div><div>ЧТ</div><div>ПТ</div><div>СБ</div><div>ВС</div></div>
+      <div class="cal">${cal}</div>
+      <div class="legend">
+        <span><i class="lg-acc"></i>принято</span><span><i class="lg-pend"></i>на проверке</span><span><i class="lg-rej"></i>отклонено</span>
+        ${!A&&missed?`<span>пропущено ${missed}</span>`:""}
       </div>
-
-      <div class="w2">${todayStrip(d)}</div>
-
-      <div class="gc d1"><div class="gl">Шагов пройдено</div>
-        <div class="gv" id="s-steps">0</div>
-        <div class="gsub">${A?"принятые результаты всех участников":`принято дней: <b style="color:var(--text)">${acc.length}</b>`}</div></div>
-
-      ${A?`<div class="gc d2" onclick="show('team')" style="cursor:pointer"><div class="gl">Команды</div>
-        <div class="gv">${ico("l-users")}</div><div class="gsub">составы и результаты →</div></div>`
-      :`<div class="gc d2"><div class="gl">Место команды</div>
-        <div class="gv">${d.team_rank?"#"+d.team_rank:"—"}</div>
-        <div class="gsub">${d.teams_total?`из ${d.teams_total} команд`:"пока без рейтинга"}</div></div>`}
-
-      <div class="gc w2 d3">
-        <div class="row"><div class="sec-title">${ico("bolt")}Активность недели</div>
-          <span class="pill">${ico("steps")}${nfmt(steps)}</span></div>
-        ${week7(d.calendar)}
-      </div>
-
-      <div class="gc w2 d3">
-        <div class="row"><div class="sec-title">${ico("calendar")}Календарь марафона</div>
-          <span class="muted">${fmtDM(d.marathon.start)}–${fmtDM(d.marathon.end)}</span></div>
-        <div class="cal-wd"><div>ПН</div><div>ВТ</div><div>СР</div><div>ЧТ</div><div>ПТ</div>
-          <div>СБ</div><div>ВС</div></div>
-        <div class="cal">${cal}</div>
-        <div class="calsum">
-          ${A?`<span>дней с результатами <b>${done}</b> из ${d.calendar.length}</span>`
-            :`<span>сдано <b>${done}</b> из ${d.calendar.length}</span>
-          <span>принято <b>${acc.length}</b></span>`}
-          ${missed&&!A?`<span>пропущено <b>${missed}</b></span>`:""}
-          ${left?`<span>впереди <b>${left}</b> дн.</span>`:""}
-        </div>
-        <div class="legend">
-          <span><i class="lg-acc"></i>принято</span>
-          <span><i class="lg-pend"></i>на проверке</span>
-          <span><i class="lg-rej"></i>отклонено</span>
-        </div>
-      </div>
-    </div>`;
+    </section>`;
 
   // До старта марафона «Прогресс» заблюрен + дисклеймер. Считаем по
   // СЕРВЕРНЫМ флагам future (таймзона Бишкека), а не по часам клиента.
