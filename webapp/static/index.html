@@ -48,34 +48,19 @@
 
   /* Заголовок */
   .app-head{display:flex;align-items:center;gap:12px;padding:8px 2px 14px}
-  /* Эмблема: стеклянный значок, вращающееся неоновое кольцо, росток из следов */
-  .logo{position:relative;width:48px;height:48px;border-radius:15px;flex:none;display:grid;place-items:center;
-    box-shadow:0 8px 24px rgba(0,209,210,.25),0 0 0 1px rgba(255,255,255,.06)}
-  .logo::before{content:"";position:absolute;inset:-1.5px;border-radius:16px;
-    background:conic-gradient(from var(--a,0deg),#00d1d2,#7a5cff,#ffc65c,#00d1d2);
-    animation:logoSpin 6s linear infinite}
-  .logo::after{content:"";position:absolute;inset:1.5px;border-radius:13.5px;
-    background:radial-gradient(120% 100% at 30% 0%,#26304a,#0f1422 70%)}
-  .logo svg{position:relative;z-index:1;width:38px;height:38px;overflow:visible;filter:drop-shadow(0 0 4px rgba(0,209,210,.45))}
-  .logo .lg-shine{position:absolute;inset:1.5px;border-radius:13.5px;z-index:2;overflow:hidden;pointer-events:none}
-  .logo .lg-shine::before{content:"";position:absolute;top:-20%;left:-60%;width:40%;height:140%;
-    background:linear-gradient(90deg,transparent,rgba(255,255,255,.35),transparent);transform:skewX(-20deg);
-    animation:logoShine 4.5s ease-in-out infinite}
-  .lg-leaf-l{transform-origin:24px 30px;animation:leafL 3.2s ease-in-out infinite}
-  .lg-leaf-r{transform-origin:24px 26px;animation:leafR 3.2s ease-in-out .2s infinite}
-  .lg-step{animation:stepGlow 2.4s ease-in-out infinite}
-  .lg-step.s2{animation-delay:.4s}.lg-step.s3{animation-delay:.8s}
-  @property --a{syntax:"<angle>";inherits:false;initial-value:0deg}
-  @keyframes logoSpin{to{--a:360deg}}
-  @keyframes logoShine{0%,55%{left:-60%}85%,100%{left:130%}}
-  @keyframes leafL{0%,100%{transform:rotate(0)}50%{transform:rotate(-7deg)}}
-  @keyframes leafR{0%,100%{transform:rotate(0)}50%{transform:rotate(7deg)}}
-  @keyframes stepGlow{0%,100%{opacity:.35}40%{opacity:1}}
+  /* Эмблема: силуэт финиширующего бегуна на «живом» пятне в цветах проекта */
+  .logo{position:relative;width:50px;height:50px;flex:none;display:grid;place-items:center}
+  .logo svg{width:100%;height:100%;overflow:visible}
+  .lg-blob{transform-origin:50% 50%;animation:blobMorph 7s ease-in-out infinite}
+  .lg-blob2{transform-origin:50% 50%;animation:blobMorph 9s ease-in-out -3s infinite reverse}
+  .lg-run{transform-origin:25px 40px;animation:runBob 1.8s ease-in-out infinite}
+  .lg-tape{stroke-dasharray:4 0;animation:tapeWave 1.8s ease-in-out infinite}
+  @keyframes blobMorph{0%,100%{transform:rotate(0) scale(1)}33%{transform:rotate(8deg) scale(1.06,.96)}66%{transform:rotate(-6deg) scale(.96,1.05)}}
+  @keyframes runBob{0%,100%{transform:translateY(0)}50%{transform:translateY(-1.2px)}}
+  @keyframes tapeWave{0%,100%{d:path("M3 28 C11 23 17 31 25 27 C33 23 39 31 47 25")}50%{d:path("M3 26 C11 31 17 23 25 28 C33 32 39 23 47 28")}}
   .app-head h1{font-size:18px;margin:0;font-weight:800;letter-spacing:.3px;
-    background:linear-gradient(90deg,#fff 0%,#bff7f7 30%,#c9bcff 50%,#fff 70%);background-size:220% 100%;
-    -webkit-background-clip:text;background-clip:text;color:transparent;animation:titleShine 7s linear infinite}
-  @keyframes titleShine{to{background-position:220% 0}}
-  @media (prefers-reduced-motion:reduce){.logo::before,.lg-shine::before,.lg-leaf-l,.lg-leaf-r,.lg-step,.app-head h1{animation:none}}
+    background:linear-gradient(90deg,#fff 0%,#9ff3f3 45%,#c9bcff 100%);-webkit-background-clip:text;background-clip:text;color:transparent}
+  @media (prefers-reduced-motion:reduce){.lg-blob,.lg-blob2,.lg-run,.lg-tape{animation:none}}
   .app-head p{margin:1px 0 0;font-size:12px;color:var(--muted)}
 
   /* Карточки */
@@ -687,21 +672,23 @@
 </svg>
 <div class="wrap">
   <div class="app-head">
-    <div class="logo" aria-hidden="true"><svg viewBox="5 5 40 41">
+    <div class="logo" aria-hidden="true"><svg viewBox="0 0 50 50">
       <defs>
-        <linearGradient id="lgL" x1="0" y1="1" x2="1" y2="0"><stop offset="0" stop-color="#00d1d2"/><stop offset="1" stop-color="#7af5e0"/></linearGradient>
-        <linearGradient id="lgR" x1="0" y1="1" x2="1" y2="0"><stop offset="0" stop-color="#7a5cff"/><stop offset="1" stop-color="#c3b2ff"/></linearGradient>
-        <linearGradient id="lgS" x1="0" y1="1" x2="0" y2="0"><stop offset="0" stop-color="#ffc65c"/><stop offset="1" stop-color="#00d1d2"/></linearGradient>
+        <radialGradient id="lgB1" cx=".35" cy=".4" r=".7"><stop offset="0" stop-color="#7a5cff"/><stop offset=".7" stop-color="#7a5cff" stop-opacity=".55"/><stop offset="1" stop-color="#7a5cff" stop-opacity="0"/></radialGradient>
+        <radialGradient id="lgB2" cx=".65" cy=".6" r=".65"><stop offset="0" stop-color="#00d1d2"/><stop offset=".7" stop-color="#00d1d2" stop-opacity=".45"/><stop offset="1" stop-color="#00d1d2" stop-opacity="0"/></radialGradient>
       </defs>
-      <ellipse class="lg-step" cx="14" cy="42" rx="2.6" ry="3.6" fill="#ffc65c" transform="rotate(-20 14 42)"/>
-      <ellipse class="lg-step s2" cx="21" cy="36.5" rx="2.6" ry="3.6" fill="#ffc65c" transform="rotate(-20 21 36.5)"/>
-      <ellipse class="lg-step s3" cx="16" cy="31" rx="2.3" ry="3.2" fill="#ffc65c" opacity=".8" transform="rotate(-20 16 31)"/>
-      <path d="M24 44 C24 36 25 30 24 20" stroke="url(#lgS)" stroke-width="2.6" fill="none" stroke-linecap="round"/>
-      <path class="lg-leaf-l" d="M24 30 C16 30 9 25 8 16 C17 15 23 21 24 30 Z" fill="url(#lgL)"/>
-      <path class="lg-leaf-r" d="M24 26 C25 16 32 9 42 8 C42 18 34 25 24 26 Z" fill="url(#lgR)"/>
-      <path d="M24 30 C19 27 14 22 11 18" stroke="#fff" stroke-opacity=".35" stroke-width=".9" fill="none"/>
-      <path d="M24 26 C30 22 35 16 39 11" stroke="#fff" stroke-opacity=".35" stroke-width=".9" fill="none"/>
-    </svg><span class="lg-shine"></span></div>
+      <path class="lg-blob" d="M25 3 C37 2 47 11 46 24 C46 37 37 47 24 46 C12 46 3 37 4 25 C4 13 13 4 25 3 Z" fill="url(#lgB1)"/>
+      <path class="lg-blob2" d="M27 6 C39 8 46 18 44 29 C42 40 31 46 21 43 C11 40 6 30 8 20 C10 11 18 5 27 6 Z" fill="url(#lgB2)" opacity=".85"/>
+      <g class="lg-run" fill="#0f1422" stroke="#0f1422" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="25" cy="10.8" r="3.5" stroke="none"/>
+        <path d="M19.8 16.6 Q25 15 30.2 16.6 L28.4 23 L27.6 29.6 Q25 30.8 22.4 29.6 L21.6 23 Z" stroke-width="1"/>
+        <path d="M20.6 17.4 L16.4 12.6 L14.6 6.8" stroke-width="3.1" fill="none"/>
+        <path d="M29.4 17.4 L33.6 12.6 L35.4 6.8" stroke-width="3.1" fill="none"/>
+        <path d="M23.4 29.4 L21.2 36.4 L20.2 44" stroke-width="3.6" fill="none"/>
+        <path d="M26.6 29.4 L30.8 34.6 L34.6 36.8" stroke-width="3.4" fill="none"/>
+      </g>
+      <path class="lg-tape" d="M3 28 C11 23 17 31 25 27 C33 23 39 31 47 25" stroke="#ffc65c" stroke-width="2.4" fill="none" stroke-linecap="round"/>
+    </svg></div>
     <div><h1>Step Together</h1><p id="head-sub">марафон шагов со Stepy</p></div>
   </div>
   <div id="view"><div class="spin"></div><div class="muted" id="load-hint" style="text-align:center;font-size:13px;margin-top:-6px"></div></div>
