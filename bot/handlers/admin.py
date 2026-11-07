@@ -631,6 +631,57 @@ async def admins_set(cb: CallbackQuery) -> None:
     await cb.message.edit_text(text, reply_markup=kb)
 
 
+# ---- 📸 Итоги команд: картинка с результатами каждой команде ---------------
+
+@router.callback_query(F.data == "adm:treport")
+async def treport_preview(cb: CallbackQuery) -> None:
+    """Превью: админ получает картинки всех команд и подпись, затем подтверждает."""
+    if not _is_admin(cb.from_user.id):
+        return await cb.answer()
+    await cb.answer("Готовлю картинки…")
+    from aiogram.types import BufferedInputFile, InputMediaPhoto
+    from bot import team_report
+    teams = await team_report.build_all()
+    if not teams:
+        return await cb.message.answer("Команд пока нет.")
+    for i in range(0, len(teams), 10):
+        chunk = teams[i:i + 10]
+        await cb.bot.send_media_group(cb.from_user.id, [
+            InputMediaPhoto(media=BufferedInputFile(t["png"], filename=f"t{t['team_id']}.jpg"))
+            for t in chunk])
+    await cb.bot.send_message(cb.from_user.id, teams[0]["caption"])
+    reach = sum(t["members"] for t in teams)
+    lines = [f"• {escape(t['name'])} — {t['members']} чел." for t in teams]
+    b = InlineKeyboardBuilder()
+    b.button(text="📤 Отправить всем командам", callback_data="adm:treport_go")
+    b.button(text="✖️ Отмена", callback_data="adm:treport_x")
+    b.adjust(1)
+    await cb.bot.send_message(
+        cb.from_user.id,
+        "📸 <b>Итоги команд</b> — превью выше (подпись — пример для первой команды).\n"
+        "Каждая команда получит СВОЮ картинку и подпись про командный зачёт:\n\n"
+        + "\n".join(lines) + f"\n\nВсего получателей: <b>{reach}</b>. Отправить?",
+        reply_markup=b.as_markup())
+
+
+@router.callback_query(F.data == "adm:treport_x")
+async def treport_cancel(cb: CallbackQuery) -> None:
+    await cb.answer("Отменено")
+    await cb.message.edit_reply_markup(reply_markup=None)
+
+
+@router.callback_query(F.data == "adm:treport_go")
+async def treport_send(cb: CallbackQuery) -> None:
+    if not _is_admin(cb.from_user.id):
+        return await cb.answer()
+    await cb.message.edit_reply_markup(reply_markup=None)   # защита от двойного нажатия
+    await cb.answer("Отправляю…")
+    from bot import team_report
+    teams, delivered = await team_report.send_all(cb.bot)
+    await cb.message.answer(f"✅ Итоги отправлены: команд — <b>{teams}</b>, "
+                            f"доставлено сообщений — <b>{delivered}</b>.")
+
+
 # ---- 🖼 Картинки дня: расписание и превью ----------------------------------
 
 @router.callback_query(F.data == "adm:daily")

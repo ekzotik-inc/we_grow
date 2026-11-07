@@ -131,6 +131,7 @@ def admin_panel_kb(owner: bool = False, register: bool = False) -> InlineKeyboar
     b.button(text="📢 Каналы", callback_data="adm:channels")
     b.button(text="⚙️ Оформление", callback_data="adm:design")
     b.button(text="🖼 Картинки дня", callback_data="adm:daily")
+    b.button(text="📸 Итоги команд", callback_data="adm:treport")
     b.button(text="👑 Админы", callback_data="adm:admins")
     b.adjust(2)
     if owner:
