@@ -19,6 +19,8 @@ from aiogram.types import CallbackQuery
 from bot import db, keyboards, notify, settings, texts
 from bot.config import config
 
+from bot.handlers.admin import panel_kb  # noqa: E402
+
 router = Router()
 
 
@@ -255,5 +257,5 @@ async def chal_delete(cb: CallbackQuery) -> None:
     await cb.message.edit_text(
         "🗑 <b>Челлендж удалён</b>\n"
         f"Баллы за сегодня вернулись к обычным. Пересчитано записей: <b>{changed}</b>.",
-        reply_markup=keyboards.admin_panel_kb(cb.from_user.id in config.admin_ids))
+        reply_markup=await panel_kb(cb.from_user.id))
     await cb.answer("Удалён")

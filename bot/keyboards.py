@@ -112,7 +112,7 @@ def approve_kb(tg_id: int) -> InlineKeyboardMarkup:
     ]])
 
 
-def admin_panel_kb(owner: bool = False) -> InlineKeyboardMarkup:
+def admin_panel_kb(owner: bool = False, register: bool = False) -> InlineKeyboardMarkup:
     """Главная админ-панель — сгруппирована, оформление вынесено в подменю.
     owner=True (админ из env ADMIN_IDS) добавляет необратимый сброс марафона."""
     b = InlineKeyboardBuilder()
@@ -135,7 +135,12 @@ def admin_panel_kb(owner: bool = False) -> InlineKeyboardMarkup:
     b.adjust(2)
     if owner:
         b.row(InlineKeyboardButton(text="🧨 Сброс марафона", callback_data="adm:wipe"))
-    b.row(InlineKeyboardButton(text="🏠 Главное меню", callback_data="menu:home"))
+    if register:
+        # Админ без анкеты участника: регистрация — отдельной кнопкой, по желанию.
+        b.row(InlineKeyboardButton(text="📝 Зарегистрироваться как участник",
+                                   callback_data="reg:start"))
+    else:
+        b.row(InlineKeyboardButton(text="🏠 Главное меню", callback_data="menu:home"))
     return b.as_markup()
 
 

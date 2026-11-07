@@ -155,6 +155,23 @@ async def _auth(init_data: str | None, session: str | None = None) -> int:
 
 # ---- Вспомогательное -----------------------------------------------------
 
+async def _is_admin(tg_id: int) -> bool:
+    """Админ = env ADMIN_IDS + доп-админы из settings (как settings.is_admin
+    в боте; кеша настроек у webapp нет — читаем ключ напрямую)."""
+    if tg_id in config.admin_ids:
+        return True
+    raw = await db.pool().fetchval("SELECT value FROM settings WHERE key='extra_admins'")
+    return str(tg_id) in {x.strip() for x in (raw or "").split(",") if x.strip()}
+
+
+def _marathon() -> dict:
+    return {"start": MARATHON_START.isoformat(), "end": MARATHON_END.isoformat()}
+
+
+async def _admin_view() -> dict:
+    """Ответ для админа без анкеты участника: видит всё, но без личных данных."""
+    return {"registered": False, "admin": True, "marathon": _marathon()}
+
 def _best_streak(steps_by_date: dict[date, int]) -> int:
     best = cur = 0
     prev: date | None = None
@@ -196,6 +213,8 @@ async def api_me(x_init_data: str | None = Header(default=None),
     card = await db.participant_card(tg_id)
     if card is None or card["team_id"] is None or card["disqualified_at"] is not None \
             or card["approved_at"] is None:
+        if await _is_admin(tg_id):
+            return await _admin_view()
         return {"registered": False}
 
     entries = await db.entries_list(tg_id)
@@ -247,7 +266,15 @@ async def api_team(x_init_data: str | None = Header(default=None),
     card = await db.participant_card(tg_id)
     if card is None or card["team_id"] is None or card["disqualified_at"] is not None \
             or card["approved_at"] is None:
-        return {"registered": False}
+        if not await _is_admin(tg_id):
+            return {"registered": False}
+        # Админ без анкеты: все команды с составом.
+        board = await db.team_leaderboard()
+        return {"registered": False, "admin": True, "teams": [
+            {"name": t["name"], "points": t["points"], "full_days": t["full_days"],
+             "members": [{"name": m["full_name"] or "—", "points": m["points"]}
+                         for m in await db.team_members(t["id"])]}
+            for t in board]}
 
     members = await db.team_members(card["team_id"])
     board = await db.team_leaderboard()

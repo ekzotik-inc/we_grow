@@ -57,11 +57,18 @@ async def cmd_start(message: Message, state: FSMContext,
             await message.answer(texts.NOT_APPROVED_YET, reply_markup=ReplyKeyboardRemove())
         return
 
-    if settings.is_admin(tg_id):
-        # Админ без анкеты участника: сразу даём панель, регистрация — по желанию.
-        from bot.handlers.admin import _is_owner
-        await message.answer(texts.ADMIN_PANEL,
-                             reply_markup=keyboards.admin_panel_kb(_is_owner(tg_id)))
+    wants_register = command is not None and (command.args or "").strip() == "register"
+    if settings.is_admin(tg_id) and not wants_register:
+        # Админ без анкеты участника: только панель — видит всё и так.
+        # Регистрация — отдельной кнопкой «📝 Зарегистрироваться как участник»
+        # (или ссылкой ?start=register из Mini App).
+        from bot.handlers.admin import panel_kb
+        await message.answer(texts.ADMIN_PANEL, reply_markup=await panel_kb(tg_id))
+        return
+    await _start_registration(message)
+
+
+async def _start_registration(message: Message) -> None:
     await message.answer(texts.WELCOME)
     await message.answer(texts.RULES, disable_web_page_preview=True,
                          reply_markup=keyboards.consent_kb())
@@ -205,6 +212,17 @@ async def reset_yes(cb: CallbackQuery, state: FSMContext) -> None:
     await cb.message.edit_reply_markup(reply_markup=None)
     await cb.message.answer(texts.RESET_DONE, reply_markup=ReplyKeyboardRemove())
     await cb.answer()
+
+
+@router.callback_query(F.data == "reg:start")
+async def reg_start(cb: CallbackQuery, state: FSMContext) -> None:
+    """Админ решил участвовать сам: обычная регистрация с правилами и согласием."""
+    await state.clear()
+    await cb.answer()
+    p = await db.get_participant(cb.from_user.id)
+    if p and p["team_id"]:
+        return await show_home(cb.bot, cb.from_user.id)
+    await _start_registration(cb.message)
 
 
 @router.callback_query(F.data == "consent")

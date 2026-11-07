@@ -766,8 +766,16 @@
   .hb-name{font-size:16px;font-weight:800;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-shadow:0 1px 10px rgba(0,0,0,.6)}
   .hb-streak{flex:none;display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:800;padding:3px 8px;border-radius:99px;
     color:#FED7AA;background:rgba(249,115,22,.18);border:1px solid rgba(249,115,22,.45)}
+  .hb-streak[hidden]{display:none}
   .hb-streak .ic{width:12px;height:12px;color:#FB923C;stroke-width:2.2}
   .hb-sub{font-size:11px;color:#94A3B8;margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .stats2{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:12px 0}
+  .tile2{margin:0;display:flex;flex-direction:column;gap:4px;cursor:pointer}
+  .tile2 .ic{width:24px;height:24px;color:#34D399;margin-bottom:6px}
+  .tile2 b{font-size:15px}.tile2 span{font-size:12px;color:#94A3B8}
+  .tile2:active{transform:scale(.97)}
+  .adm-card .sec-title .ic{color:#34D399}
+  .btn-grad .ic{width:18px;height:18px;vertical-align:-4px;margin-right:6px}
 </style>
 </head>
 <body>
@@ -1110,7 +1118,7 @@ function fillHead(d){
 }
 function plural(n,a,b,c){const m=n%10,h=n%100;return m===1&&h!==11?a:m>=2&&m<=4&&(h<12||h>14)?b:c;}
 function drawProgress(d){
-  if(!d.registered) return regNotice();
+  if(!d.registered) return d.admin?adminHome(d):regNotice();
   fillHead(d);
 
   const si=stageIndex(d.total_points,d.best_streak), st=STAGES[si];
@@ -1247,7 +1255,7 @@ async function renderTeam(){
   const my=++renderGen;
   let d; try{ d=await api("/api/team"); }catch(e){ if(my===renderGen)notice(e); return; }
   if(my!==renderGen) return;
-  if(!d.registered) return regNotice();
+  if(!d.registered) return d.admin?adminTeams(d):regNotice();
   const rows=bars(d.members,true);
   V.innerHTML=`<div class="view">
     <div class="card hero d1">
@@ -1624,6 +1632,44 @@ function renderFAQ(){
       <button class="btn-grad" onclick="show('rules')">${ico("list")}Открыть правила</button>
       <button class="btn-ghost" onclick="openPC()">${ico("chat")}Написать P&amp;C</button>
     </div></div>`;
+}
+
+// ---- Режим администратора без анкеты участника -------------------------
+function openRegister(){
+  const url=BOTLINK+"?start=register"; himp();
+  try{ tg?.openTelegramLink?.(url); }catch(e){}
+  if(!tg?.openTelegramLink){ location.href=url; return; }
+  setTimeout(()=>{ try{ tg?.close?.(); }catch(e){} },150);
+}
+function adminHome(d){
+  if(d.marathon) MARATHON=d.marathon;
+  const $=id=>document.getElementById(id);
+  $("hb-name").textContent="Администратор"; $("hb-av").textContent="A"; $("hb-streak").hidden=true;
+  $("head-sub").textContent="Режим P&C • Марафон шагов";
+  V.innerHTML=`<div class="view">
+    <div class="card adm-card">
+      <div class="sec-title">${ico("l-check")}Режим администратора</div>
+      <p class="muted" style="margin:6px 0 0;line-height:1.5">Ты админ — Mini App открыт целиком без регистрации: лидерборд, все команды с составом, призы и правила. Даты марафона: <b style="color:var(--text)">${MARATHON_TEXT()}</b>.</p>
+    </div>
+    <div class="stats2">
+      <div class="card tile2" onclick="show('board')">${ico("l-trophy")}<b>Лидеры</b><span>командный зачёт</span></div>
+      <div class="card tile2" onclick="show('team')">${ico("l-users")}<b>Команды</b><span>составы и баллы</span></div>
+    </div>
+    <div class="card" style="text-align:center">
+      <p class="muted" style="margin:0 0 12px">Хочешь сам шагать в марафоне? Регистрация — как у всех участников, в боте.</p>
+      <button class="btn-grad" onclick="openRegister()">${ico("l-foot")}Зарегистрироваться как участник</button>
+    </div></div>`;
+}
+function adminTeams(d){
+  const teams=d.teams||[];
+  if(!teams.length){ V.innerHTML=`<div class="view">${emptyRow()}</div>`; return; }
+  V.innerHTML=`<div class="view">
+    <div class="card">${secHead("users","Все команды","Режим администратора: составы и личный вклад")}</div>
+    ${teams.map((t,k)=>`<details class="acc"${k===0?" open":""}><summary>
+        <span class="acc-ic"><span class="lbx-rk ${MEDAL[k]||""}" style="width:30px;height:30px;font-size:13px">${k+1}</span></span>
+        <span class="acc-t">${esc(t.name)}<small>${fmtPts(t.points)} pts · ${t.members.length} участн.</small></span>${CHEV}</summary>
+      <div class="acc-body">${t.members.length?bars(t.members,true):emptyRow()}</div></details>`).join("")}
+  </div>`;
 }
 
 const emptyRow=()=>`<div class="muted" style="padding:8px 0">— пока пусто —</div>`;

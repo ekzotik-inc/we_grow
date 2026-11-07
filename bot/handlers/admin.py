@@ -31,12 +31,18 @@ def _is_owner(tg_id: int) -> bool:
     return settings.is_owner(tg_id)
 
 
+async def panel_kb(tg_id: int):
+    """Клавиатура админ-панели; без анкеты участника — с кнопкой регистрации."""
+    p = await db.get_participant(tg_id)
+    return keyboards.admin_panel_kb(_is_owner(tg_id), register=not (p and p["team_id"]))
+
+
 @router.message(Command("admin"))
 async def admin_panel(message: Message) -> None:
     if not _is_admin(message.from_user.id):
         return
     await message.answer(texts.ADMIN_PANEL,
-                         reply_markup=keyboards.admin_panel_kb(_is_owner(message.from_user.id)))
+                         reply_markup=await panel_kb(message.from_user.id))
 
 
 @router.callback_query(F.data == "menu:admin")
@@ -47,7 +53,7 @@ async def admin_panel_from_menu(cb: CallbackQuery) -> None:
         return await cb.answer("Админ-панель доступна только P&C.", show_alert=True)
     await cb.answer()
     await cb.message.answer(texts.ADMIN_PANEL,
-                            reply_markup=keyboards.admin_panel_kb(_is_owner(cb.from_user.id)))
+                            reply_markup=await panel_kb(cb.from_user.id))
 
 
 async def _send_export(bot, chat_id: int) -> None:
@@ -88,7 +94,7 @@ async def adm_back(cb: CallbackQuery) -> None:
         return await cb.answer()
     await cb.message.edit_text(
         texts.ADMIN_PANEL,
-        reply_markup=keyboards.admin_panel_kb(_is_owner(cb.from_user.id)))
+        reply_markup=await panel_kb(cb.from_user.id))
     await cb.answer()
 
 

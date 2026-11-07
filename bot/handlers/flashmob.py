@@ -20,6 +20,8 @@ from aiogram.types import CallbackQuery
 from bot import db, keyboards, notify, settings, texts
 from bot.config import config
 
+from bot.handlers.admin import panel_kb  # noqa: E402
+
 router = Router()
 
 
@@ -280,5 +282,5 @@ async def flash_delete(cb: CallbackQuery) -> None:
         return await cb.answer("Флешмоба на сегодня нет.", show_alert=True)
     await cb.message.edit_text(
         "🗑 <b>Флешмоб удалён</b>\nНачисленные за сегодня командные очки сняты.",
-        reply_markup=keyboards.admin_panel_kb(cb.from_user.id in config.admin_ids))
+        reply_markup=await panel_kb(cb.from_user.id))
     await cb.answer("Удалён")
