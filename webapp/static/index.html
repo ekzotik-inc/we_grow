@@ -600,6 +600,10 @@
   .lb-emo{width:34px;height:34px;font-size:19px}
   .lb-bar{height:4px;margin-top:8px}
   .lb-sc{font-size:17px}
+  .lb-row{grid-template-columns:18px 1fr auto}
+  .lb-ini{font-size:24px;font-weight:800;color:var(--mc);letter-spacing:-.02em}
+  .p1 .lb-ini{font-size:30px}
+  .lb-av{background:radial-gradient(circle at 30% 25%,rgba(255,255,255,.08),#121828 70%)}
 </style>
 </head>
 <body>
@@ -1128,7 +1132,7 @@ async function renderBoard(){
   const allZero=teams.every(t=>!Number(t.points));
   const pod=[1,0,2].filter(k=>teams[k]).map(k=>{const t=teams[k];return `
     <div class="lb-pod p${k+1} ${MEDAL[k]}" style="--i:${k}">
-      <div class="lb-av ${MEDAL[k]}">${teamEmo(t.name)}${k===0?`<svg class="lb-crown"><use href="#i-crown"/></svg>`:""}</div>
+      <div class="lb-av ${MEDAL[k]}"><span class="lb-ini">${esc((t.name||"?").trim()[0]||"?")}</span>${k===0?`<svg class="lb-crown"><use href="#i-crown"/></svg>`:""}</div>
       <div class="lb-pn">${esc(t.name)}</div>
       <div class="lb-ps">${fmtPts(t.points)}</div>
       <div class="lb-step"><span>${k+1}</span></div>
@@ -1136,7 +1140,6 @@ async function renderBoard(){
   const rows=teams.map((t,k)=>{const me=mine&&t.name===mine;const w=Math.max(Number(t.points)>0?4:0,Math.round(Number(t.points)/max*100));
     return `<div class="lb-row ${me?"me":""}" style="--i:${k}">
       <div class="lb-rk">${k+1}</div>
-      <div class="lb-emo">${teamEmo(t.name)}</div>
       <div class="lb-mid"><div class="lb-nm">${esc(t.name)}${me?`<span class="lb-me">ваша</span>`:""}</div>
         <div class="lb-bar"><i style="--w:${w}%"></i></div></div>
       <div class="lb-sc">${fmtPts(t.points)}</div></div>`;}).join("");
