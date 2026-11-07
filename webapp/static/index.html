@@ -946,6 +946,7 @@
   .adm-ov{position:fixed;inset:0;z-index:50;background:rgba(0,0,0,.88);display:flex;align-items:center;justify-content:center;padding:24px}
   .adm-ov[hidden]{display:none}
   .adm-ov img{max-width:100%;max-height:100%;border-radius:12px}
+  .pg-ring .mring .em .fl-ic{width:24px;height:24px;filter:drop-shadow(0 0 6px rgba(249,115,22,.6))}
 </style>
 </head>
 <body>
@@ -1298,6 +1299,7 @@ function fillHead(d){
   $("head-sub").textContent=d.team_name?`Команда «${d.team_name}» • Марафон шагов`:"Командный зачёт • Марафон шагов";
 }
 function plural(n,a,b,c){const m=n%10,h=n%100;return m===1&&h!==11?a:m>=2&&m<=4&&(h<12||h>14)?b:c;}
+const FLAME=`<svg class="fl-ic" viewBox="0 0 24 24" aria-hidden="true"><defs><linearGradient id="flG" x1="0" y1="1" x2="0" y2="0"><stop offset="0" stop-color="#EA580C"/><stop offset=".6" stop-color="#FB923C"/><stop offset="1" stop-color="#FDE68A"/></linearGradient></defs><path fill="url(#flG)" d="M12 2c.6 3.2 3 4.9 4.6 7 1.4 1.8 2.4 3.6 2.4 5.9A7 7 0 0 1 5 14.9c0-2.3 1-4.2 2.6-5.6-.1 1.6.4 3 1.6 3.9C9 9 10.4 5.3 12 2z"/><path fill="#FFF7D6" opacity=".9" d="M12 12.5c1.6 1.4 2.8 2.6 2.8 4.3a2.8 2.8 0 0 1-5.6 0c0-1.5.9-2.6 2.8-4.3z"/></svg>`;
 function drawProgress(d){
   setAdminBtn(!!d.admin);
   if(!d.registered) return d.admin?adminHome(d):regNotice();
@@ -1393,7 +1395,7 @@ function drawProgress(d){
     <div class="pg-grid">
       <div class="pg-tile">
         <div class="pg-lbl">${A?"Лучшая серия":"Серия"}</div>
-        <div class="pg-ring">${ring("ring-streak",streakPct,ico("l-flame"))}
+        <div class="pg-ring">${ring("ring-streak",streakPct,FLAME)}
           <div class="pg-big">${streak}<small>${plural(streak,"день","дня","дней")}</small></div></div>
         <div class="pg-sub">${A?"у самого стабильного":streak>=7?"бонус недели взят":`до +${streak>=5?4:2} б. — ещё ${goalLeft} дн.`}</div>
       </div>
@@ -1681,22 +1683,25 @@ async function renderRules(){
 const BUDS_IMG=`<img class="pz-photo float" src="prize-buds.png" alt="Наушники Redmi Buds Essential">`;
 const POCO_SVG=`<svg class="pz-svg float2" viewBox="0 0 160 140" aria-label="Колонка POCO">
   <defs>
-    <linearGradient id="pb" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#1b1f2a"/><stop offset=".55" stop-color="#3a4152"/><stop offset="1" stop-color="#151821"/></linearGradient>
+    <linearGradient id="pb" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#3a4152"/><stop offset=".5" stop-color="#232834"/><stop offset="1" stop-color="#14171f"/></linearGradient>
+    <radialGradient id="pdrv" cx=".4" cy=".35" r=".7"><stop offset="0" stop-color="#4a5266"/><stop offset=".6" stop-color="#1a1e28"/><stop offset="1" stop-color="#0c0e14"/></radialGradient>
     <linearGradient id="py" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#ffd23f"/><stop offset="1" stop-color="#f5b400"/></linearGradient>
-    <linearGradient id="shine2" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#fff" stop-opacity="0"/><stop offset=".5" stop-color="#fff" stop-opacity=".45"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></linearGradient>
-    <clipPath id="spClip"><rect x="46" y="22" width="68" height="98" rx="30"/></clipPath>
+    <linearGradient id="shine2" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#fff" stop-opacity="0"/><stop offset=".5" stop-color="#fff" stop-opacity=".35"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></linearGradient>
+    <clipPath id="spClip"><rect x="14" y="44" width="132" height="66" rx="24"/></clipPath>
   </defs>
-  <ellipse cx="80" cy="128" rx="40" ry="6" fill="#ffc65c" opacity=".25"/>
-  <g class="wave"><path d="M128 52 q12 18 0 36" stroke="#ffd23f" stroke-width="3" fill="none" stroke-linecap="round"/></g>
-  <g class="wave w2"><path d="M138 44 q20 26 0 52" stroke="#ffd23f" stroke-width="3" fill="none" stroke-linecap="round"/></g>
-  <g class="wave"><path d="M32 52 q-12 18 0 36" stroke="#ffd23f" stroke-width="3" fill="none" stroke-linecap="round"/></g>
-  <g class="wave w2"><path d="M22 44 q-20 26 0 52" stroke="#ffd23f" stroke-width="3" fill="none" stroke-linecap="round"/></g>
-  <rect x="46" y="22" width="68" height="98" rx="30" fill="url(#pb)"/>
-  <g fill="#0e1118" opacity=".55">${Array.from({length:6},(_,r)=>Array.from({length:5},(_,c)=>`<circle cx="${60+c*10}" cy="${44+r*10}" r="2"/>`).join("")).join("")}</g>
-  <rect x="46" y="98" width="68" height="14" fill="url(#py)"/>
-  <text x="80" y="108.5" text-anchor="middle" font-size="10" font-weight="900" font-family="Arial,Helvetica,sans-serif" fill="#111" letter-spacing="1.5">POCO</text>
-  <rect x="68" y="16" width="24" height="8" rx="4" fill="#2a3040"/>
-  <g clip-path="url(#spClip)"><rect class="sweep s2" x="-60" y="20" width="36" height="104" fill="url(#shine2)" transform="skewX(-20)"/></g>
+  <ellipse cx="80" cy="122" rx="62" ry="6" fill="#ffc65c" opacity=".22"/>
+  <g class="wave"><path d="M150 62 q8 15 0 30" stroke="#ffd23f" stroke-width="3" fill="none" stroke-linecap="round"/></g>
+  <g class="wave w2"><path d="M157 54 q14 23 0 46" stroke="#ffd23f" stroke-width="3" fill="none" stroke-linecap="round"/></g>
+  <g class="wave"><path d="M10 62 q-8 15 0 30" stroke="#ffd23f" stroke-width="3" fill="none" stroke-linecap="round"/></g>
+  <g class="wave w2"><path d="M3 54 q-14 23 0 46" stroke="#ffd23f" stroke-width="3" fill="none" stroke-linecap="round"/></g>
+  <path d="M118 44 q0-14 14-14 q10 0 10 10" stroke="#2a3040" stroke-width="5" fill="none" stroke-linecap="round"/>
+  <rect x="14" y="44" width="132" height="66" rx="24" fill="url(#pb)" stroke="#454d60" stroke-width="1"/>
+  <g fill="#0b0d12" opacity=".5">${Array.from({length:4},(_,r)=>Array.from({length:22},(_,c)=>`<circle cx="${24+c*5.4}" cy="${58+r*12}" r="1.2"/>`).join("")).join("")}</g>
+  <circle cx="48" cy="77" r="19" fill="url(#pdrv)" stroke="#0a0c11" stroke-width="2"/><circle cx="48" cy="77" r="6" fill="#2b3142"/>
+  <circle cx="112" cy="77" r="19" fill="url(#pdrv)" stroke="#0a0c11" stroke-width="2"/><circle cx="112" cy="77" r="6" fill="#2b3142"/>
+  <rect x="62" y="96" width="36" height="10" rx="5" fill="url(#py)"/>
+  <text x="80" y="104" text-anchor="middle" font-size="7.5" font-weight="900" font-family="Arial,Helvetica,sans-serif" fill="#111" letter-spacing="1.2">POCO</text>
+  <g clip-path="url(#spClip)"><rect class="sweep s2" x="-60" y="40" width="36" height="76" fill="url(#shine2)" transform="skewX(-20)"/></g>
 </svg>`;
 
 // ---- Призы: объёмный hero с кубком. Анимации — CSS; наклон — палец/гироскоп Telegram.
