@@ -439,6 +439,85 @@
     filter:drop-shadow(0 0 1px rgba(255,255,255,.5))}
   .pz-mini svg{width:19px;height:19px}
   .pz-mini .wave,.pz-mini .sweep{display:none}
+  /* ---- Призы: сундук ---- */
+  .prizes .pz-hero{text-align:center;padding:22px 16px 18px;overflow:hidden;position:relative;
+    background:radial-gradient(120% 90% at 50% 0%,rgba(255,198,92,.16),transparent 60%),var(--card)}
+  .pz-kicker{font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:var(--gold);opacity:.9}
+  .pz-title{font-size:22px;font-weight:800;margin-top:6px;line-height:1.2;
+    background:linear-gradient(90deg,#fff1b0,#ffc844 40%,#fff1b0 60%,#ffc844);background-size:200% 100%;
+    -webkit-background-clip:text;background-clip:text;color:transparent;animation:goldShine 5s linear infinite}
+  .pz-sub{color:var(--muted);font-size:13px;margin-top:6px}
+  .pz-cd{display:flex;justify-content:center;gap:8px;margin-top:14px}
+  .cd-box{min-width:58px;padding:9px 6px 7px;border-radius:14px;background:rgba(255,198,92,.08);
+    border:1px solid rgba(255,198,92,.28);box-shadow:inset 0 1px 0 rgba(255,255,255,.06)}
+  .cd-box b{display:block;font-size:22px;font-variant-numeric:tabular-nums;color:#fff3c4}
+  .cd-box span{font-size:10.5px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em}
+  .cd-done{color:var(--gold);font-weight:700}
+  .chest-stage{position:relative;height:330px;margin:4px 0 6px;display:grid;place-items:center;cursor:pointer;overflow:hidden;transition:height .6s;
+    -webkit-tap-highlight-color:transparent;outline:none}
+  .ch-box{position:relative;width:230px;z-index:2;animation:chIdle 2.6s ease-in-out infinite;transform-origin:50% 90%}
+  .ch-svg{width:100%;height:auto;overflow:visible;filter:drop-shadow(0 14px 22px rgba(0,0,0,.55))}
+  .ch-lid{transform-box:fill-box;transform-origin:50% 100%;transition:transform .9s cubic-bezier(.2,1.4,.4,1)}
+  .ch-inner{opacity:0;transition:opacity .5s .25s}
+  .ch-lock{transition:opacity .3s,transform .4s}
+  .ch-halo{position:absolute;max-width:100%;width:250px;height:250px;border-radius:50%;
+    background:radial-gradient(circle,rgba(255,198,92,.45),rgba(255,122,89,.15) 45%,transparent 70%);
+    filter:blur(10px);animation:pzGlow 3s ease-in-out infinite}
+  .ch-rays{position:absolute;width:420px;height:420px;opacity:0;transition:opacity .6s .3s;
+    background:repeating-conic-gradient(from 0deg,rgba(255,214,120,.22) 0 7deg,transparent 7deg 22deg);
+    -webkit-mask:radial-gradient(circle,#000 18%,transparent 62%);mask:radial-gradient(circle,#000 18%,transparent 62%);
+    animation:spin 18s linear infinite}
+  .ch-sparks{position:absolute;inset:0;pointer-events:none}
+  .ch-sparks i{position:absolute;left:var(--x);bottom:24%;width:var(--s);height:var(--s);border-radius:50%;
+    background:#ffe08a;box-shadow:0 0 8px #ffc844;opacity:0;animation:spark 3.2s ease-out var(--d) infinite}
+  .ch-tap{position:absolute;bottom:4px;font-size:13px;font-weight:700;letter-spacing:.04em;color:#ffe9a8;
+    padding:7px 14px;border-radius:999px;background:rgba(255,198,92,.12);border:1px solid rgba(255,198,92,.35);
+    animation:tapPulse 1.6s ease-in-out infinite;transition:opacity .3s}
+  .ch-fly{position:absolute;inset:0;pointer-events:none;z-index:3}
+  .fly-card{position:absolute;left:50%;top:62%;width:142px;padding:12px 10px 12px;border-radius:18px;text-align:center;
+    background:linear-gradient(160deg,rgba(40,48,74,.92),rgba(18,22,36,.94));border:1px solid rgba(255,214,120,.45);
+    box-shadow:0 18px 40px rgba(0,0,0,.5),0 0 22px rgba(255,198,92,.25);
+    opacity:0;transform:translate(-50%,-20%) scale(.2);display:flex;flex-direction:column;align-items:center;gap:3px}
+  .fly-card b{font-size:13.5px;line-height:1.2}
+  .fly-card span{font-size:11.5px;color:var(--muted)}
+  .fc-img{width:96px;height:96px;object-fit:contain;position:relative;z-index:1;
+    filter:drop-shadow(0 0 1.5px rgba(255,255,255,.5)) drop-shadow(0 6px 10px rgba(0,0,0,.5))}
+  .fc-svg svg{width:96px;height:96px}
+  .fc-glow{position:absolute;top:10px;width:96px;height:96px;border-radius:50%;filter:blur(16px);opacity:.7;animation:pzGlow 3s ease-in-out infinite}
+  .fc-glow.tq{background:radial-gradient(circle,#00d1d2,#7a5cff 65%,transparent 75%)}
+  .fc-glow.gold{background:radial-gradient(circle,#ffc65c,#ff7a59 65%,transparent 75%)}
+  .chest-stage.open .ch-box{animation:chOpen .55s ease-out}
+  .chest-stage.open .ch-lid{transform:rotate(-24deg) translate(-8px,-26px)}
+  .chest-stage.open .ch-inner{opacity:1}
+  .chest-stage.open .ch-lock{opacity:0;transform:translateY(10px)}
+  .chest-stage.open .ch-rays{opacity:1}
+  .chest-stage.open .ch-tap{opacity:0}
+  .chest-stage.open .fc1{animation:fly1 1s cubic-bezier(.2,1.3,.4,1) .45s forwards, bob 3.4s ease-in-out 1.6s infinite}
+  .chest-stage.open .fc2{animation:fly2 1s cubic-bezier(.2,1.3,.4,1) .6s forwards, bob 3.4s ease-in-out 1.9s infinite}
+  .chest-stage.instant *{transition:none!important}
+  .chest-stage.instant .fc1,.chest-stage.instant .fc2{animation-delay:0s,.2s;animation-duration:.01s,3.4s}
+  .chest-stage.open{height:440px;align-items:end;padding-bottom:30px}
+  .pz-reveal{opacity:0;transform:translateY(16px);max-height:0;overflow:hidden;transition:opacity .6s 1.2s,transform .6s 1.2s}
+  .pz-reveal.show{opacity:1;transform:none;max-height:none;overflow:visible}
+  .pz-glass{background:linear-gradient(160deg,rgba(255,198,92,.06),transparent 60%),var(--card);border-color:rgba(255,198,92,.22)}
+  .pz-h{font-weight:800;font-size:16px}
+  .pz-sub2{color:var(--muted);font-size:13px;margin:4px 0 10px;line-height:1.45}
+  .pz-steps{display:flex;flex-direction:column;gap:10px;margin-top:10px;font-size:13.5px;line-height:1.45}
+  .pz-steps div{display:flex;gap:10px;align-items:flex-start}
+  .pz-steps p{margin:0}
+  .pz-steps span{flex:none;width:24px;height:24px;border-radius:50%;display:grid;place-items:center;font-weight:800;font-size:12px;
+    color:#1a1205;background:linear-gradient(135deg,#fff1b0,#ffc844)}
+  .pz-seat{text-align:center;padding:8px 2px;border-radius:12px;background:var(--card2);border:1px solid var(--line)}
+  @keyframes chIdle{0%,100%{transform:rotate(0)}6%{transform:rotate(-2.5deg)}12%{transform:rotate(2.5deg)}18%{transform:rotate(-1.5deg)}24%{transform:rotate(0)}}
+  @keyframes chOpen{0%{transform:scale(1)}35%{transform:scale(.94,1.06)}70%{transform:scale(1.04,.96)}100%{transform:scale(1)}}
+  @keyframes fly1{0%{opacity:0;transform:translate(-50%,-10%) scale(.2) rotate(0)}100%{opacity:1;transform:translate(-104%,-138%) scale(1) rotate(-6deg)}}
+  @keyframes fly2{0%{opacity:0;transform:translate(-50%,-10%) scale(.2) rotate(0)}100%{opacity:1;transform:translate(4%,-132%) scale(1) rotate(6deg)}}
+  @keyframes bob{0%,100%{margin-top:0}50%{margin-top:-8px}}
+  @keyframes spark{0%{opacity:0;transform:translateY(0) scale(.6)}20%{opacity:1}100%{opacity:0;transform:translateY(-170px) scale(1.2)}}
+  @keyframes tapPulse{0%,100%{transform:scale(1);box-shadow:0 0 0 0 rgba(255,198,92,.35)}50%{transform:scale(1.05);box-shadow:0 0 0 8px rgba(255,198,92,0)}}
+  @keyframes goldShine{to{background-position:200% 0}}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  @media (prefers-reduced-motion:reduce){.ch-box,.ch-rays,.ch-sparks i,.ch-tap,.pz-title,.fly-card{animation-duration:.01s!important;animation-iteration-count:1!important}}
 </style>
 </head>
 <body>
@@ -1078,43 +1157,114 @@ const POCO_SVG=`<svg class="pz-svg float2" viewBox="0 0 160 140" aria-label="К�
   <g clip-path="url(#spClip)"><rect class="sweep s2" x="-60" y="20" width="36" height="104" fill="url(#shine2)" transform="skewX(-20)"/></g>
 </svg>`;
 
+// ---- Призы: сундук открывается по нажатию, из него вылетают карточки ----
+const CHEST_SVG=`<svg class="ch-svg" viewBox="0 0 220 190" aria-label="Сундук с призами">
+  <defs>
+    <linearGradient id="chWood" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#7a3f1d"/><stop offset="1" stop-color="#4a230e"/></linearGradient>
+    <linearGradient id="chWood2" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#8f4a22"/><stop offset="1" stop-color="#5b2c12"/></linearGradient>
+    <linearGradient id="chGold" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#fff1b0"/><stop offset=".45" stop-color="#ffc844"/><stop offset="1" stop-color="#b8780e"/></linearGradient>
+    <radialGradient id="chLight" cx=".5" cy="1" r=".9"><stop offset="0" stop-color="#fff6c9"/><stop offset=".5" stop-color="#ffc65c" stop-opacity=".7"/><stop offset="1" stop-color="#ffc65c" stop-opacity="0"/></radialGradient>
+  </defs>
+  <ellipse cx="110" cy="178" rx="78" ry="8" fill="#000" opacity=".35"/>
+  <!-- свет изнутри (виден при открытии) -->
+  <ellipse class="ch-inner" cx="110" cy="92" rx="76" ry="22" fill="url(#chLight)"/>
+  <!-- корпус -->
+  <rect x="30" y="92" width="160" height="80" rx="10" fill="url(#chWood)"/>
+  <g stroke="#3a1a08" stroke-opacity=".45" stroke-width="2"><line x1="30" y1="118" x2="190" y2="118"/><line x1="30" y1="145" x2="190" y2="145"/></g>
+  <rect x="30" y="92" width="16" height="80" rx="4" fill="url(#chGold)"/>
+  <rect x="174" y="92" width="16" height="80" rx="4" fill="url(#chGold)"/>
+  <rect x="96" y="92" width="28" height="80" fill="url(#chGold)" opacity=".9"/>
+  <rect x="30" y="92" width="160" height="7" fill="url(#chGold)"/>
+  <!-- замок -->
+  <g class="ch-lock"><rect x="98" y="100" width="24" height="28" rx="5" fill="url(#chGold)" stroke="#8a5a0a" stroke-width="1.5"/>
+    <circle cx="110" cy="111" r="3.5" fill="#5a3a06"/><rect x="108.5" y="112" width="3" height="8" rx="1.5" fill="#5a3a06"/></g>
+  <!-- крышка -->
+  <g class="ch-lid">
+    <path d="M30 94 V68 Q30 30 110 30 Q190 30 190 68 V94 Z" fill="url(#chWood2)"/>
+    <path d="M30 94 V68 Q30 30 110 30 Q190 30 190 68 V94" fill="none" stroke="url(#chGold)" stroke-width="6"/>
+    <path d="M46 94 V66 Q46 36 50 34" fill="none" stroke="url(#chGold)" stroke-width="14" stroke-linecap="round" opacity=".9"/>
+    <path d="M174 94 V66 Q174 36 170 34" fill="none" stroke="url(#chGold)" stroke-width="14" stroke-linecap="round" opacity=".9"/>
+    <rect x="96" y="30" width="28" height="64" fill="url(#chGold)" opacity=".9"/>
+    <path d="M44 52 Q110 36 176 52" stroke="#fff" stroke-opacity=".18" stroke-width="3" fill="none"/>
+  </g>
+</svg>`;
+
+function prizeDeadline(){
+  // Абсолютный момент окончания: последний день марафона, 23:55 по Бишкеку (UTC+6).
+  const m=MARATHON||meCacheGet()?.marathon; const end=m?.end||"2026-11-15";
+  return {end, at:new Date(`${end}T23:55:00+06:00`)};
+}
+function fmtLeft(ms){
+  if(ms<=0) return null;
+  const d=Math.floor(ms/864e5), h=Math.floor(ms%864e5/36e5), mi=Math.floor(ms%36e5/6e4), se=Math.floor(ms%6e4/1e3);
+  const p=n=>String(n).padStart(2,"0");
+  return {d,h:p(h),m:p(mi),s:p(se)};
+}
+let prizeTimer=null;
+function tickPrize(){
+  const el=document.getElementById("pz-cd"); if(!el){ clearInterval(prizeTimer); prizeTimer=null; return; }
+  const {at}=prizeDeadline(); const L=fmtLeft(at-Date.now());
+  el.innerHTML = L ? `<div class="cd-box"><b>${L.d}</b><span>дн</span></div><div class="cd-box"><b>${L.h}</b><span>ч</span></div>
+     <div class="cd-box"><b>${L.m}</b><span>мин</span></div><div class="cd-box"><b>${L.s}</b><span>сек</span></div>`
+   : `<div class="cd-done">Розыгрыш завершён — итоги после проверки P&amp;C 🏆</div>`;
+}
+
 function renderPrizes(){
-  // Призы WE GROW — тот же текст, что в боте (texts.PRIZES_LINE).
-  const seat=(i)=>`<div class="pz-seat card d${Math.min(i,3)}"><div class="pz-n">${i}</div>
+  const {end}=prizeDeadline();
+  const seat=(i)=>`<div class="pz-seat"><div class="pz-n">${i}</div>
       <div class="pz-items"><img class="pz-mini" src="prize-buds.png" alt=""><span class="pz-mini">${POCO_SVG}</span></div></div>`;
-  V.innerHTML=`<div class="view">
-    <div class="card hero d1" style="padding:26px 18px">
-      <svg class="ic gift-ic"><use href="#i-gift"/></svg>
-      <div class="stage" style="font-size:19px">Призы WE GROW</div>
-      <p class="muted" style="margin:10px auto 0;max-width:360px;line-height:1.5">
-        Побеждает <b style="color:var(--text)">команда</b> с самым высоким средним баллом.
-        Приз получает <b style="color:var(--text)">каждый из 5 участников</b> команды-победителя 🏆</p>
+  V.innerHTML=`<div class="view prizes">
+    <div class="card pz-hero d1">
+      <div class="pz-kicker">WE GROW · главный приз</div>
+      <div class="pz-title">Сокровища команды-победителя</div>
+      <div class="pz-sub">Розыгрыш завершится <b>${fmtFull(end)} в 23:55</b></div>
+      <div class="pz-cd" id="pz-cd"></div>
     </div>
-    <div class="card d2">
-      ${secHead("trophy","Каждому в команде-победителе","Комплект на одного участника")}
-      <div class="pz-show">
-        <div class="pz-prod">
-          <div class="pz-stage glow-tq">${BUDS_IMG}</div>
-          <b>Redmi Buds Essential</b>
-          <div class="muted" style="font-size:12.5px">беспроводные наушники для прогулок под музыку</div>
-        </div>
-        <div class="pz-prod">
-          <div class="pz-stage glow-gold">${POCO_SVG}</div>
-          <b>Колонка POCO</b>
-          <div class="muted" style="font-size:12.5px">брендированная портативная колонка</div>
+
+    <div class="chest-stage" id="chest" role="button" tabindex="0" aria-label="Открыть сундук">
+      <div class="ch-rays"></div><div class="ch-halo"></div>
+      <div class="ch-sparks">${Array.from({length:14},(_,k)=>`<i style="--x:${(k*37)%100}%;--d:${(k%7)*.35}s;--s:${4+k%4}px"></i>`).join("")}</div>
+      <div class="ch-box">${CHEST_SVG}</div>
+      <div class="ch-fly">
+        <div class="fly-card fc1"><div class="fc-glow tq"></div>${BUDS_IMG.replace('pz-photo float','fc-img')}<b>Redmi Buds Essential</b><span>беспроводные наушники</span></div>
+        <div class="fly-card fc2"><div class="fc-glow gold"></div><div class="fc-img fc-svg">${POCO_SVG}</div><b>Колонка POCO</b><span>брендированная колонка</span></div>
+      </div>
+      <div class="ch-tap" id="ch-tap">Нажми на сундук</div>
+    </div>
+
+    <div class="pz-reveal" id="pz-reveal">
+      <div class="card pz-glass">
+        <div class="pz-h">Каждому из 5 участников</div>
+        <div class="pz-sub2">Комплект: наушники <b>Redmi Buds Essential</b> + брендированная колонка <b>POCO</b></div>
+        <div class="pz-seats">${[1,2,3,4,5].map(seat).join("")}</div>
+      </div>
+      <div class="card pz-glass">
+        <div class="pz-h">Как забрать сокровище</div>
+        <div class="pz-steps">
+          <div><span>1</span><p>Шагай каждый день и сдавай результат до <b>23:55</b></p></div>
+          <div><span>2</span><p>По воскресеньям — недельный отчёт, чтобы бонус за серию засчитался</p></div>
+          <div><span>3</span><p>Побеждает команда с самым высоким <b>средним</b> баллом — важен вклад каждого</p></div>
         </div>
       </div>
-    </div>
-    <div class="card d3">
-      ${secHead("users","5 комплектов","По одному на каждого участника команды")}
-      <div class="pz-seats">${[1,2,3,4,5].map(seat).join("")}</div>
-    </div>
-    <div class="card d3" style="text-align:center">
-      <div class="badge">${ico("sparkle")}Как победить</div>
-      <p class="muted" style="margin-top:10px;line-height:1.5">
-        Командный результат — среднее баллов участников, так что важен вклад <b style="color:var(--text)">каждого</b>.
-        Шагайте каждый день и не забывайте недельный отчёт в воскресенье 🚀</p>
+      <button class="btn-ghost" onclick="closeChest()">Закрыть сундук</button>
     </div></div>`;
+  const ch=document.getElementById("chest");
+  const open=()=>openChest();
+  ch.addEventListener("click",open);
+  ch.addEventListener("keydown",e=>{ if(e.key==="Enter"||e.key===" ") open(); });
+  clearInterval(prizeTimer); tickPrize(); prizeTimer=setInterval(tickPrize,1000);
+  try{ if(sessionStorage.getItem("chest_open")) openChest(true); }catch(e){}
+}
+function openChest(instant=false){
+  const ch=document.getElementById("chest"); if(!ch||ch.classList.contains("open")) return;
+  if(!instant){ haptic("heavy"); setTimeout(()=>{ try{ tg?.HapticFeedback?.notificationOccurred("success"); }catch(e){} },650); }
+  ch.classList.add("open"); if(instant) ch.classList.add("instant");
+  document.getElementById("pz-reveal").classList.add("show");
+  try{ sessionStorage.setItem("chest_open","1"); }catch(e){}
+}
+function closeChest(){
+  try{ sessionStorage.removeItem("chest_open"); }catch(e){}
+  hsel(); renderPrizes(); window.scrollTo({top:0,behavior:"smooth"});
 }
 
 function renderFAQ(){
