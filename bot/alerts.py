@@ -27,6 +27,21 @@ from collections.abc import Callable, Iterable
 SAME_ERROR_EVERY = 15 * 60      # сек между одинаковыми ошибками
 HOURLY_CAP = 20                 # максимум сообщений в час
 _IGNORE = ("bot.alerts", "aiogram.event")   # aiogram.event дублирует _on_error
+# «Failed to fetch updates»: aiogram сам повторяет запрос. Conflict — это
+# перекрытие старой и новой версии при деплое Render (настоящий второй
+# экземпляр ловит bot/instance.py:ConflictWatch с порогом 2 мин), сетевые
+# сбои getUpdates — кратковременные. Алерт на каждый такой повтор — шум.
+_NOISE = (("aiogram.dispatcher", "Failed to fetch updates"),)
+
+
+def is_noise(record: logging.LogRecord) -> bool:
+    if record.name.startswith(_IGNORE):
+        return True
+    try:
+        msg = record.getMessage()
+    except Exception:  # noqa: BLE001
+        return False
+    return any(record.name.startswith(n) and m in msg for n, m in _NOISE)
 
 
 def _esc_cut(s: str, limit: int, tail: bool = False) -> str:
@@ -90,7 +105,7 @@ class TelegramAlertHandler(logging.Handler):
         return text
 
     def emit(self, record: logging.LogRecord) -> None:
-        if record.name.startswith(_IGNORE):
+        if is_noise(record):
             return
         try:
             muted = self._allow(self.fingerprint(record), time.time())

@@ -102,3 +102,12 @@ def test_final_caption_champion_gets_prizes_others_get_place():
     assert "Это твоя команда" in champ and "Redmi Buds" in champ
     assert "3 место из 5" in other and "Redmi Buds" not in other
     assert "«Секвойи»" in other and len(champ) <= 1024
+
+
+def test_alert_skips_getupdates_conflict_during_deploy():
+    from bot.alerts import is_noise
+    conflict = logging.LogRecord(
+        "aiogram.dispatcher", logging.ERROR, __file__, 1,
+        "Failed to fetch updates - %s: %s", ("TelegramConflictError", "Conflict"), None)
+    real = logging.LogRecord("bot.main", logging.ERROR, __file__, 1, "Необработанная ошибка", (), None)
+    assert is_noise(conflict) and not is_noise(real)
