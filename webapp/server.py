@@ -9,6 +9,7 @@ from __future__ import annotations
 import hashlib
 import hmac
 import json
+import os
 import re
 import time
 from contextlib import asynccontextmanager
@@ -610,11 +611,14 @@ async def api_timing(request: Request):
 @app.get("/health")
 async def health():
     # Бот пингует /health каждые 10 минут — заодно держим пул БД «тёплым».
+    # commit — какой коммит сейчас в проде (RENDER_GIT_COMMIT ставит Render):
+    # по нему отслеживаем, докатился ли деплой.
+    commit = os.getenv("RENDER_GIT_COMMIT", "")[:7] or None
     try:
         await db.pool().fetchval("SELECT 1")
     except Exception:  # noqa: BLE001
-        return {"ok": True, "db": False}
-    return {"ok": True}
+        return {"ok": True, "db": False, "commit": commit}
+    return {"ok": True, "db": True, "commit": commit}
 
 
 @app.get("/")
