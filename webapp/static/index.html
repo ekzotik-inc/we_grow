@@ -746,6 +746,28 @@
   .tag .ic{width:15px;height:15px;stroke-width:2.2}
   .badge .gh{width:13px;height:13px}
   @media (prefers-reduced-motion:reduce){.aur{animation:none}.lbx-bar i{transition:none}}
+  /* ===== Шапка-баннер (hero) ===== */
+  body{padding-top:0}
+  .hero-bn{position:relative;max-width:620px;margin:0 auto 6px;min-height:calc(150px + var(--safe-top));
+    padding:calc(var(--safe-top) + 12px) 16px 14px;display:flex;flex-direction:column;justify-content:space-between;
+    background:linear-gradient(to bottom,rgba(11,15,23,.4) 0%,rgba(11,15,23,.95) 100%),url(hero.jpg) center 40%/cover no-repeat}
+  .hero-bn::after{content:"";position:absolute;left:0;right:0;bottom:-1px;height:24px;background:linear-gradient(to bottom,transparent,#0B0F17);pointer-events:none}
+  .hb-top{display:flex;align-items:center;justify-content:space-between;position:relative;z-index:1}
+  .hb-brand{font-size:11px;font-weight:800;letter-spacing:.2em;color:rgba(52,211,153,.8);text-shadow:0 1px 8px rgba(0,0,0,.6)}
+  .hero-bn .hbtn{width:32px;height:32px;background:rgba(11,15,23,.4);border:1px solid rgba(255,255,255,.08);
+    -webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px)}
+  .hero-bn .hbtn svg{width:16px;height:16px;stroke-width:1.8}
+  .hb-me{display:flex;align-items:center;gap:12px;position:relative;z-index:1;margin-top:46px}
+  .hb-av{width:36px;height:36px;flex:none;border-radius:12px;display:grid;place-items:center;font-weight:900;font-size:16px;
+    color:#ECFDF5;background:linear-gradient(135deg,rgba(16,185,129,.55),rgba(99,102,241,.45));border:1px solid rgba(255,255,255,.15);
+    box-shadow:0 4px 14px rgba(0,0,0,.35)}
+  .hb-tx{min-width:0;flex:1}
+  .hb-row{display:flex;align-items:center;gap:8px;min-width:0}
+  .hb-name{font-size:16px;font-weight:800;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-shadow:0 1px 10px rgba(0,0,0,.6)}
+  .hb-streak{flex:none;display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:800;padding:3px 8px;border-radius:99px;
+    color:#FED7AA;background:rgba(249,115,22,.18);border:1px solid rgba(249,115,22,.45)}
+  .hb-streak .ic{width:12px;height:12px;color:#FB923C;stroke-width:2.2}
+  .hb-sub{font-size:11px;color:#94A3B8;margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 </style>
 </head>
 <body>
@@ -832,35 +854,29 @@
   <symbol id="i-l-cal" viewBox="0 0 24 24"><rect width="18" height="18" x="3" y="4" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></symbol>
   <symbol id="i-l-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></symbol>
   <symbol id="i-l-check" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></symbol>
+  <symbol id="i-l-flame" viewBox="0 0 24 24"><path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.07-2.14-.22-4.05 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.15.43-2.29 1-3a2.5 2.5 0 0 0 2.5 2.5z"/></symbol>
   <symbol id="i-l-chev" viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/></symbol>
   <defs><linearGradient id="gGold" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#FDE68A"/><stop offset=".55" stop-color="#F59E0B"/><stop offset="1" stop-color="#B45309"/></linearGradient>
     <filter id="glow" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="1.4" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs>
 </svg>
 <div class="aur a1"></div><div class="aur a2"></div>
-<div class="wrap">
-  <div class="app-head">
-    <div class="logo" aria-hidden="true"><svg viewBox="0 0 48 48">
-      <defs>
-        <linearGradient id="lgBg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#10B981"/><stop offset="1" stop-color="#6366F1"/>
-          <animateTransform attributeName="gradientTransform" type="rotate" values="0 .5 .5;360 .5 .5" dur="8s" repeatCount="indefinite"/></linearGradient>
-      </defs>
-      <circle cx="24" cy="24" r="22" fill="url(#lgBg)"/>
-      <circle cx="24" cy="24" r="22" fill="none" stroke="#fff" stroke-opacity=".18"/>
-      <g fill="#fff"><g>
-        <animateTransform attributeName="transform" type="translate" values="0 0;0 -1.2;0 0" dur=".7s" repeatCount="indefinite"/>
-        <path transform="translate(9.2 7.4) scale(1.35)" d="M13.49 5.48c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm-3.6 13.9l1-4.4 2.1 2v6h2v-7.5l-2.1-2 .6-3c1.3 1.5 3.3 2.5 5.5 2.5v-2c-1.9 0-3.5-1-4.3-2.4l-1-1.6c-.4-.6-1-1-1.7-1-.3 0-.5.1-.8.1l-5.2 2.2v4.7h2v-3.4l1.8-.7-1.6 8.1-4.9-1-.4 2 7 1.4z"/>
-      </g></g>
-      <path d="M2 27 C10 23 16 31 24 27 C32 23 38 31 46 26" stroke="#ffc65c" stroke-width="2.4" fill="none" stroke-linecap="round">
-        <animate attributeName="d" dur="1.6s" repeatCount="indefinite"
-          values="M2 27 C10 23 16 31 24 27 C32 23 38 31 46 26;M2 25 C10 30 16 22 24 27 C32 31 38 23 46 28;M2 27 C10 23 16 31 24 27 C32 23 38 31 46 26"/>
-      </path>
-    </svg></div>
-    <div class="head-tx"><h1>Step Together</h1><p id="head-sub">марафон шагов со Stepy</p></div>
+<header class="hero-bn" id="hero">
+  <div class="hb-top">
+    <div class="hb-brand">STEP TOGETHER</div>
     <div class="hbtns">
       <button class="hbtn" data-tab="rules" aria-label="Правила"><svg viewBox="0 0 24 24"><use href="#i-l-book"/></svg></button>
       <button class="hbtn" data-tab="faq" aria-label="Помощь"><svg viewBox="0 0 24 24"><use href="#i-l-help"/></svg></button>
     </div>
   </div>
+  <div class="hb-me">
+    <div class="hb-av" id="hb-av">S</div>
+    <div class="hb-tx">
+      <div class="hb-row"><span class="hb-name" id="hb-name">Марафон шагов</span><span class="hb-streak" id="hb-streak" hidden></span></div>
+      <div class="hb-sub" id="head-sub">Командный зачёт • Марафон шагов</div>
+    </div>
+  </div>
+</header>
+<div class="wrap">
   <div id="view"><div class="spin"></div><div class="muted" id="load-hint" style="text-align:center;font-size:13px;margin-top:-6px"></div></div>
 </div>
 
@@ -1082,9 +1098,20 @@ async function renderProgress(){
   if(!window.__timingSent){ window.__timingSent=1; sendTiming(); }
 }
 
+// Шапка-баннер: имя, стрик, команда (из /api/me; без эмодзи команд).
+function fillHead(d){
+  const $=id=>document.getElementById(id);
+  const name=(d.full_name||"").trim();
+  $("hb-name").textContent=name||"Марафон шагов";
+  $("hb-av").textContent=((d.team_name||name||"S").trim()[0]||"S").toUpperCase();
+  const n=Number(d.current_streak)||0, st=$("hb-streak");
+  st.hidden=!n; if(n) st.innerHTML=`${ico("l-flame")}${n} ${plural(n,"день","дня","дней")} подряд`;
+  $("head-sub").textContent=d.team_name?`Команда «${d.team_name}» • Марафон шагов`:"Командный зачёт • Марафон шагов";
+}
+function plural(n,a,b,c){const m=n%10,h=n%100;return m===1&&h!==11?a:m>=2&&m<=4&&(h<12||h>14)?b:c;}
 function drawProgress(d){
   if(!d.registered) return regNotice();
-  document.getElementById("head-sub").textContent = d.team_name ? "Команда: "+d.team_name : "марафон шагов";
+  fillHead(d);
 
   const si=stageIndex(d.total_points,d.best_streak), st=STAGES[si];
   const nextAt=[5,15,30,50,9999][si];
@@ -1687,7 +1714,7 @@ function show(tab){
   V.dataset.tab=tab; loaded[tab]=true; views[tab]();
 }
 document.querySelectorAll(".nav button,.hbtn").forEach(b=>{
-  b.addEventListener("click",()=>{ hsel(); V.dataset.tab=""; show(b.dataset.tab); window.scrollTo({top:0}); });
+  b.addEventListener("click",()=>{ b.classList.contains("hbtn")?himp():hsel(); V.dataset.tab=""; show(b.dataset.tab); window.scrollTo({top:0}); });
 });
 // Фактическая высота панели навигации → нижний отступ контента, чтобы кнопки
 // в конце страниц никогда не пряталась под панелью (высота зависит от
