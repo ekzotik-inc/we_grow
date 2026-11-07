@@ -18,6 +18,9 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 
 TEST_DB = os.getenv("TEST_DATABASE_URL", "")
+# В CI интеграционные тесты обязаны идти на базе, а не тихо пропускаться.
+if os.getenv("GITHUB_ACTIONS") and not TEST_DB:
+    raise RuntimeError("TEST_DATABASE_URL не задан в CI — интеграционные тесты не запустятся")
 # config читает env при импорте — задаём ДО любых импортов bot.*
 os.environ["BOT_TOKEN"] = "123456:TEST"
 os.environ["ADMIN_IDS"] = "1"
