@@ -496,7 +496,7 @@
   .chest-stage.open .fc2{animation:fly2 1s cubic-bezier(.2,1.3,.4,1) .6s forwards, bob 3.4s ease-in-out 1.9s infinite}
   .chest-stage.instant *{transition:none!important}
   .chest-stage.instant .fc1,.chest-stage.instant .fc2{animation-delay:0s,.2s;animation-duration:.01s,3.4s}
-  .chest-stage.open{height:440px;align-items:end;padding-bottom:30px}
+  .chest-stage.open{height:460px;align-items:end;padding-bottom:40px}
   .pz-reveal{opacity:0;transform:translateY(16px);max-height:0;overflow:hidden;transition:opacity .6s 1.2s,transform .6s 1.2s}
   .pz-reveal.show{opacity:1;transform:none;max-height:none;overflow:visible}
   .pz-glass{background:linear-gradient(160deg,rgba(255,198,92,.06),transparent 60%),var(--card);border-color:rgba(255,198,92,.22)}
@@ -518,6 +518,11 @@
   @keyframes goldShine{to{background-position:200% 0}}
   @keyframes spin{to{transform:rotate(360deg)}}
   @media (prefers-reduced-motion:reduce){.ch-box,.ch-rays,.ch-sparks i,.ch-tap,.pz-title,.fly-card{animation-duration:.01s!important;animation-iteration-count:1!important}}
+  .ch-caption{position:absolute;bottom:2px;left:0;right:0;text-align:center;font-weight:800;font-size:15px;
+    color:#ffe9a8;text-shadow:0 0 14px rgba(255,198,92,.55);opacity:0;transform:translateY(8px);
+    transition:opacity .6s 1.4s,transform .6s 1.4s;z-index:4}
+  .chest-stage.open .ch-caption{opacity:1;transform:none}
+  .chest-stage.instant .ch-caption{transition:none}
 </style>
 </head>
 <body>
@@ -1230,14 +1235,10 @@ function renderPrizes(){
         <div class="fly-card fc2"><div class="fc-glow gold"></div><div class="fc-img fc-svg">${POCO_SVG}</div><b>Колонка POCO</b><span>брендированная колонка</span></div>
       </div>
       <div class="ch-tap" id="ch-tap">Нажми на сундук</div>
+      <div class="ch-caption">Каждому участнику команды-победителя 🏆</div>
     </div>
 
     <div class="pz-reveal" id="pz-reveal">
-      <div class="card pz-glass">
-        <div class="pz-h">Каждому из 5 участников</div>
-        <div class="pz-sub2">Комплект: наушники <b>Redmi Buds Essential</b> + брендированная колонка <b>POCO</b></div>
-        <div class="pz-seats">${[1,2,3,4,5].map(seat).join("")}</div>
-      </div>
       <div class="card pz-glass">
         <div class="pz-h">Как забрать сокровище</div>
         <div class="pz-steps">
