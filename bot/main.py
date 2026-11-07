@@ -77,6 +77,12 @@ async def main() -> None:
     await _connect_db_retry()
     await settings.load()
     await _one_time_migrations()
+    # ADMIN_IDS задан только у сервиса бота — публикуем его в settings, чтобы
+    # Mini App (отдельный сервис) узнавал владельцев без своей копии env.
+    try:
+        await settings.set("env_admins", ",".join(str(i) for i in sorted(config.admin_ids)))
+    except Exception as e:  # noqa: BLE001
+        logging.warning("env_admins: %s", e)
     # Пол по ФИО — для раздельных топов. Трогает только тех, у кого он пуст,
     # поэтому ручные правки админов переживают перезапуск.
     filled = await db.backfill_genders()

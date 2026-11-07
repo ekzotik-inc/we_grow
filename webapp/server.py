@@ -156,12 +156,16 @@ async def _auth(init_data: str | None, session: str | None = None) -> int:
 # ---- Вспомогательное -----------------------------------------------------
 
 async def _is_admin(tg_id: int) -> bool:
-    """Админ = env ADMIN_IDS + доп-админы из settings (как settings.is_admin
+    """Админ = env ADMIN_IDS (своя или опубликованная ботом) + доп-админы из settings (как settings.is_admin
     в боте; кеша настроек у webapp нет — читаем ключ напрямую)."""
     if tg_id in config.admin_ids:
         return True
-    raw = await db.pool().fetchval("SELECT value FROM settings WHERE key='extra_admins'")
-    return str(tg_id) in {x.strip() for x in (raw or "").split(",") if x.strip()}
+    # env_admins — копия ADMIN_IDS сервиса бота (у webapp своей env нет),
+    # extra_admins — назначенные через бот.
+    rows = await db.pool().fetch(
+        "SELECT value FROM settings WHERE key IN ('extra_admins','env_admins')")
+    ids = {x.strip() for r in rows for x in (r["value"] or "").split(",") if x.strip()}
+    return str(tg_id) in ids
 
 
 def _marathon() -> dict:

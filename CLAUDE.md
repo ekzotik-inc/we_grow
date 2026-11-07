@@ -124,7 +124,7 @@ Telegram-бот **Step Together** (@wegrowmarathon_bot) — корпоратив
   только админ-панель (`admin.panel_kb` добавляет «📝 Зарегистрироваться как
   участник» → `reg:start` → обычная регистрация `_start_registration`; ссылка
   `?start=register` делает то же). Mini App: `/api/me` и `/api/team` для
-  админа (`server._is_admin`: env `ADMIN_IDS` + settings `extra_admins`)
+  админа (`server._is_admin`: settings `env_admins` — копия ADMIN_IDS, бот пишет её на старте, у сервиса webapp своей env нет! — + `extra_admins`)
   отдают сводку: `/api/me` → `server._admin_view()` — тот же формат, что у
   участника, но `aggregate: true`, календарь = суммы принятых шагов/баллов
   ВСЕХ активных участников по дням (+ `accepted`/`pending` на день,
