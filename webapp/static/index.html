@@ -781,6 +781,12 @@
   .at-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:12px}
   .at-stats div{background:rgba(255,255,255,.04);border:1px solid var(--line);border-radius:14px;padding:10px;display:flex;flex-direction:column;gap:2px}
   .at-stats b{font-size:20px;font-weight:900;color:#fff}.at-stats span{font-size:10.5px;color:#94A3B8;line-height:1.25}
+  /* Подписанные кнопки «Правила»/«Помощь» — круглые иконки находили плохо */
+  .hero-bn .hbtn{width:auto;height:34px;padding:0 12px 0 10px;border-radius:99px;display:inline-flex;gap:6px;
+    align-items:center;font-size:12.5px;font-weight:700;color:#fff;background:rgba(11,15,23,.55);border-color:rgba(255,255,255,.18)}
+  .hero-bn .hbtn svg{width:15px;height:15px;color:#34D399}
+  .hero-bn .hbtn.on{background:rgba(16,185,129,.25);border-color:rgba(52,211,153,.6)}
+  .hero-bn .hbtns{gap:6px}
 </style>
 </head>
 <body>
@@ -877,8 +883,8 @@
   <div class="hb-top">
     <div class="hb-brand">STEP TOGETHER</div>
     <div class="hbtns">
-      <button class="hbtn" data-tab="rules" aria-label="Правила"><svg viewBox="0 0 24 24"><use href="#i-l-book"/></svg></button>
-      <button class="hbtn" data-tab="faq" aria-label="Помощь"><svg viewBox="0 0 24 24"><use href="#i-l-help"/></svg></button>
+      <button class="hbtn" data-tab="rules" aria-label="Правила"><svg viewBox="0 0 24 24"><use href="#i-l-book"/></svg><span>Правила</span></button>
+      <button class="hbtn" data-tab="faq" aria-label="Помощь"><svg viewBox="0 0 24 24"><use href="#i-l-help"/></svg><span>Помощь</span></button>
     </div>
   </div>
   <div class="hb-me">
