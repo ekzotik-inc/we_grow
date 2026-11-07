@@ -641,6 +641,22 @@
     box-shadow:0 0 18px rgba(34,197,94,.35),inset 0 0 0 1px rgba(34,197,94,.45)}
   .nav button.on::before{display:none}
   .nav button.on svg{transform:none;filter:drop-shadow(0 0 6px rgba(34,197,94,.8))}
+  /* ===== Упругая навигация: капсула перетекает между вкладками ===== */
+  .nav{--spring:cubic-bezier(.34,1.56,.64,1)}
+  .nav-ind{position:absolute;top:6px;bottom:6px;left:0;width:0;border-radius:20px;pointer-events:none;z-index:0;
+    background:linear-gradient(180deg,rgba(34,197,94,.24),rgba(16,185,129,.10));
+    box-shadow:0 0 18px rgba(34,197,94,.32),inset 0 0 0 1px rgba(34,197,94,.45),inset 0 1px 0 rgba(255,255,255,.08);
+    transition:transform .55s var(--spring),width .55s var(--spring),opacity .3s ease}
+  .nav-ind.off{opacity:0}
+  .nav button{position:relative;z-index:1;-webkit-tap-highlight-color:transparent;
+    transition:color .25s ease,transform .45s var(--spring)}
+  .nav button.on{background:none;box-shadow:none}
+  .nav button:active{transform:scale(.88)}
+  .nav button svg{transition:transform .5s var(--spring),filter .3s ease}
+  .nav button:not(.on) svg{transform:scale(.94)}
+  .nav button.pop svg{animation:navPop .6s var(--spring)}
+  @keyframes navPop{0%{transform:scale(.7) translateY(2px)}45%{transform:scale(1.2) translateY(-3px)}100%{transform:scale(1)}}
+  @media (prefers-reduced-motion:reduce){.nav-ind,.nav button,.nav button svg{transition:none}.nav button.pop svg{animation:none}}
   /* ===== Лидерборд ===== */
   .lbx-hero{position:relative;padding:22px 10px 0;margin-bottom:16px;border-radius:26px;overflow:hidden;
     background:radial-gradient(70% 60% at 50% 20%,rgba(245,158,11,.18),transparent 70%),rgba(255,255,255,.03);border:1px solid var(--line)}
@@ -1025,6 +1041,7 @@
 </div>
 
 <nav class="nav" id="nav">
+  <span class="nav-ind off" id="nav-ind" aria-hidden="true"></span>
   <button data-tab="progress" class="on">
     <svg viewBox="0 0 24 24"><use href="#i-l-foot"/></svg>Прогресс</button>
   <button data-tab="team">
@@ -2136,6 +2153,7 @@ const views={progress:renderProgress,team:renderTeam,board:renderBoard,rules:ren
 const loaded={};
 function show(tab){
   document.querySelectorAll(".nav button,.hbtn").forEach(b=>b.classList.toggle("on",b.dataset.tab===tab));
+  moveNavInd(tab);
   if(tab!=="admin") backBtn(null);
   if(tab!=="prizes") stopTilt();
   document.body.dataset.tab=tab;
@@ -2150,12 +2168,39 @@ document.querySelectorAll(".nav button,.hbtn").forEach(b=>{
 // Фактическая высота панели навигации → нижний отступ контента, чтобы кнопки
 // в конце страниц никогда не пряталась под панелью (высота зависит от
 // платформы, safe-area и масштаба шрифта).
+// Капсула под активной вкладкой: сначала растягивается от старой вкладки до
+// новой, затем пружиной сжимается на новой — «перетекание» вместо прыжка.
+let navCur=null, navT=null;
+function moveNavInd(tab, instant=false){
+  const ind=document.getElementById("nav-ind"), nav=document.getElementById("nav");
+  if(!ind||!nav) return;
+  const btn=nav.querySelector(`button[data-tab="${tab}"]`);
+  if(!btn){ ind.classList.add("off"); navCur=null; return; }     // вкладки из шапки
+  const x=btn.offsetLeft, w=btn.offsetWidth;
+  const place=(nx,nw)=>{ ind.style.transform=`translateX(${nx}px)`; ind.style.width=nw+"px"; };
+  clearTimeout(navT);
+  const prev=navCur&&nav.querySelector(`button[data-tab="${navCur}"]`);
+  if(instant||!prev||ind.classList.contains("off")||REDUCED()){
+    const t=ind.style.transition; if(instant) ind.style.transition="none";
+    place(x,w); ind.classList.remove("off");
+    if(instant){ void ind.offsetWidth; ind.style.transition=t; }
+  } else if(prev!==btn){
+    const a=Math.min(prev.offsetLeft,x), b=Math.max(prev.offsetLeft+prev.offsetWidth,x+w);
+    place(a,b-a);                                                   // растянулась на обе
+    navT=setTimeout(()=>place(x,w),170);                            // и стекла на новую
+  }
+  if(prev!==btn){ btn.classList.remove("pop"); void btn.offsetWidth; btn.classList.add("pop"); }
+  navCur=tab;
+}
+
 function fitNavPadding(){
   const nav=document.getElementById("nav");
   if(nav) document.documentElement.style.setProperty("--nav-h", nav.offsetHeight+"px");
+  if(navCur) moveNavInd(navCur,true);
 }
 fitNavPadding();
 window.addEventListener("resize",fitNavPadding);
+try{ document.fonts?.ready.then(()=>{ if(navCur) moveNavInd(navCur,true); }); }catch(e){}
 try{ tg?.onEvent?.("viewportChanged",fitNavPadding); }catch(e){}
 // Загрузка: если есть Telegram-авторизация или сохранённая сессия — сразу к
 // прогрессу; иначе показываем вход по номеру телефона.
