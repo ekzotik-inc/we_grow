@@ -3,6 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@500;600;700&family=Unbounded:wght@700;900&display=swap">
 <title>Step Together</title>
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
 <style>
@@ -787,6 +789,44 @@
   .hero-bn .hbtn svg{width:15px;height:15px;color:#34D399}
   .hero-bn .hbtn.on{background:rgba(16,185,129,.25);border-color:rgba(52,211,153,.6)}
   .hero-bn .hbtns{gap:6px}
+  /* ===== Команда: стеклянная карточка без вложенных коробок ===== */
+  body{font-family:Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif}
+  .tm-title{padding:4px 4px 12px}.tm-title h2{margin:0;font:700 22px/1.2 Unbounded,Inter,sans-serif;color:#fff}
+  .tm-title p{margin:4px 0 0;font:500 12px Inter,sans-serif;color:#64748B}
+  .tm-card{background:rgba(255,255,255,.03);-webkit-backdrop-filter:blur(20px);backdrop-filter:blur(20px);
+    border:1px solid rgba(255,255,255,.08);border-radius:24px;padding:16px;margin:0 0 14px;
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.08)}
+  .tm-card.mine{border-color:rgba(16,185,129,.35);box-shadow:inset 0 1px 0 rgba(255,255,255,.08),0 0 28px rgba(16,185,129,.12)}
+  .tm-head{display:flex;align-items:center;gap:12px}
+  .tm-head h3{margin:0;font:700 20px/1.2 Unbounded,Inter,sans-serif;color:#fff;letter-spacing:-.01em}
+  .tm-head p{margin:3px 0 0;font:500 12px Inter,sans-serif;color:#64748B}
+  .tm-place{width:38px;height:38px;flex:none;border-radius:12px;display:grid;place-items:center;font:900 16px Unbounded,sans-serif;
+    color:#CBD5E1;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1)}
+  .tm-place.gold,.tm-place.silver,.tm-place.bronze{color:#1b1406;background:var(--mgrad);border:none;box-shadow:0 0 16px var(--mg)}
+  .tm-metrics{display:grid;grid-template-columns:repeat(3,1fr);margin:16px 0 6px;padding:12px 0;
+    border-top:1px solid rgba(255,255,255,.06);border-bottom:1px solid rgba(255,255,255,.06)}
+  .tm-metrics>div{display:flex;flex-direction:column;align-items:center;text-align:center;gap:4px;padding:0 6px}
+  .tm-metrics>div+div{border-left:1px solid rgba(255,255,255,.07)}
+  .tm-metrics b{font:900 22px/1 Unbounded,Inter,sans-serif;color:#fff;font-variant-numeric:tabular-nums}
+  .tm-metrics b.em{color:#34D399}.tm-metrics b.au{color:#FBBF24}
+  .tm-metrics span{font:500 11px/1.25 Inter,sans-serif;color:#64748B}
+  .tm-list{margin-top:4px}
+  .tm-row{display:grid;grid-template-columns:22px 1fr auto;gap:12px;align-items:center;min-height:50px;padding:8px 6px;
+    border-radius:12px;border-bottom:1px solid rgba(255,255,255,.04);transition:transform .15s,background .15s;cursor:pointer}
+  .tm-row:last-child{border-bottom:none}
+  .tm-row:active{transform:scale(.98);background:rgba(255,255,255,.04)}
+  .tm-rk{width:22px;height:22px;border-radius:50%;display:grid;place-items:center;font:700 11px Inter,sans-serif;
+    color:#94A3B8;background:rgba(255,255,255,.06)}
+  .tm-rk.gold,.tm-rk.silver,.tm-rk.bronze{color:#1b1406;background:var(--mgrad);box-shadow:0 0 10px var(--mg)}
+  .tm-mid{min-width:0}
+  .tm-nm{font:600 15px/1.25 Inter,sans-serif;color:#F1F5F9;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .tm-bar{height:4px;border-radius:4px;background:rgba(255,255,255,.06);margin-top:7px;overflow:hidden}
+  .tm-bar i{display:block;height:100%;width:0;border-radius:4px;background:linear-gradient(90deg,#10B981,#2DD4BF);
+    box-shadow:0 0 8px rgba(45,212,191,.45);transition:width .6s cubic-bezier(.16,1,.3,1)}
+  .tm-pt{text-align:right;font:700 16px Inter,sans-serif;color:#34D399;font-variant-numeric:tabular-nums}
+  .tm-pt small{margin-left:3px;font:500 11px Inter,sans-serif;color:#64748B}
+  .tm-empty,.tm-note{font:500 12px Inter,sans-serif;color:#64748B;text-align:center;padding:10px 0}
+  @media (prefers-reduced-motion:reduce){.tm-bar i{transition:none}}
 </style>
 </head>
 <body>
@@ -1279,30 +1319,39 @@ function drawProgress(d){
   });
 }
 
+// ---- Карточка команды (общая для участника и админа) ---------------------
+function memberRows(list){
+  const max=Math.max(...list.map(m=>Number(m.points)||0),1);
+  return `<div class="tm-list">${list.map((m,i)=>{const p=Number(m.points)||0;
+    return `<div class="tm-row" onclick="hsel()">
+      <span class="tm-rk ${MEDAL[i]||""}">${i+1}</span>
+      <div class="tm-mid"><div class="tm-nm">${esc(m.name)}</div>
+        <div class="tm-bar"><i data-w="${p>0?Math.max(4,Math.round(p/max*100)):0}"></i></div></div>
+      <div class="tm-pt">${fmtPts(p)}<small>pts</small></div></div>`;}).join("")}</div>`;
+}
+function teamCard(t,rank,total,mine){
+  return `<section class="tm-card${mine?" mine":""}">
+    <header class="tm-head"><span class="tm-place ${MEDAL[rank-1]||""}">${rank||"—"}</span>
+      <div><h3>${esc(t.name)}</h3><p>${rank?`место ${rank} из ${total}`:"пока без рейтинга"}${mine?" · ваша команда":""}</p></div></header>
+    <div class="tm-metrics">
+      <div><b class="em">${fmtPts(t.points)}</b><span>средний балл</span></div>
+      <div><b>${t.members.length}</b><span>участников</span></div>
+      <div><b class="au">${t.full_days||0}</b><span>дней всей командой 10K+</span></div>
+    </div>
+    ${t.members.length?memberRows(t.members):`<div class="tm-empty">Пока никого</div>`}
+  </section>`;
+}
+function growBars(){
+  requestAnimationFrame(()=>requestAnimationFrame(()=>V.querySelectorAll(".tm-bar i").forEach(i=>i.style.width=i.dataset.w+"%")));
+}
 async function renderTeam(){
   const my=++renderGen;
   let d; try{ d=await api("/api/team"); }catch(e){ if(my===renderGen)notice(e); return; }
   if(my!==renderGen) return;
   if(!d.registered) return d.admin?adminTeams(d):regNotice();
-  const rows=bars(d.members,true);
-  V.innerHTML=`<div class="view">
-    <div class="card hero d1">
-      <div class="plant" style="font-size:60px">🌳</div>
-      <div class="stage">${esc(d.team_name)}</div>
-      <div class="rankbig"><b>${d.rank?"#"+d.rank:"—"}</b><span class="muted">из ${d.teams_count}</span></div>
-    </div>
-    <div class="stats">
-      <div class="tile card d1" style="margin:0"><div class="ti">${ico("sparkle")}</div>
-        <div class="n tq" id="t-pts">0</div><div class="l">Средний балл</div></div>
-      <div class="tile card d2" style="margin:0"><div class="ti">${ico("users")}</div>
-        <div class="n" id="t-mem">0</div><div class="l">Участников</div></div>
-      <div class="tile card d3" style="margin:0"><div class="ti">${ico("flame")}</div>
-        <div class="n" id="t-full">0</div><div class="l">Дней всей командой 10K+</div></div>
-    </div>
-    <div class="card d3">${secHead("users","Вклад участников","Длина полосы — доля от лучшего результата в команде")}${rows}</div></div>`;
-  requestAnimationFrame(()=>{ countUp(document.getElementById("t-pts"),Number(d.total_points)||0,900,fmtPts);
-    countUp(document.getElementById("t-mem"),d.members.length);
-    countUp(document.getElementById("t-full"),d.full_days||0); });
+  V.innerHTML=`<div class="view">${teamCard({name:d.team_name,points:d.total_points,full_days:d.full_days,members:d.members},d.rank,d.teams_count,true)}
+    <p class="tm-note">Длина полосы — доля от лучшего результата в команде.</p></div>`;
+  growBars();
 }
 
 // ---- Лидерборд: заголовок с SVG, подиум лиг и шкалы очков ----------------
@@ -1693,18 +1742,9 @@ function adminTeams(d){
   if(!teams.length){ V.innerHTML=`<div class="view">${emptyRow()}</div>`; return; }
   const total=teams.reduce((n,t)=>n+t.members.length,0);
   V.innerHTML=`<div class="view">
-    <div class="card">${secHead("users","Все команды",`${teams.length} команд · ${total} участников`)}</div>
-    ${teams.map((t,k)=>`<div class="card at-card">
-      <div class="at-head"><span class="lbx-rk ${MEDAL[k]||""}">${k+1}</span>
-        <div class="at-nm"><b>${esc(t.name)}</b><span>место ${k+1} из ${teams.length}</span></div></div>
-      <div class="at-stats">
-        <div><b>${fmtPts(t.points)}</b><span>средний балл</span></div>
-        <div><b>${t.members.length}</b><span>участников</span></div>
-        <div><b>${t.full_days||0}</b><span>дней всей командой 10K+</span></div>
-      </div>
-      ${t.members.length?bars(t.members,true):emptyRow()}
-    </div>`).join("")}
-  </div>`;
+    <div class="tm-title"><h2>Все команды</h2><p>${teams.length} команд · ${total} участников</p></div>
+    ${teams.map((t,k)=>teamCard(t,k+1,teams.length,false)).join("")}</div>`;
+  growBars();
 }
 
 const emptyRow=()=>`<div class="muted" style="padding:8px 0">— пока пусто —</div>`;
