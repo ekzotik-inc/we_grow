@@ -95,3 +95,18 @@ def update_streak(state: StreakState, entry_date: date, steps: int) -> StreakUpd
     if length < 7:
         return StreakUpdate(new, 7, 7 - length)
     return StreakUpdate(new, None, 0)
+
+
+def best_streak(steps_by_date: dict[date, int]) -> int:
+    """Лучшая серия: самый длинный отрезок дней ПОДРЯД с QUALIFYING_STEPS+.
+    Пропущенная дата (нет записи) рвёт серию так же, как день с малым числом шагов."""
+    best = cur = 0
+    prev: date | None = None
+    for d in sorted(steps_by_date):
+        if steps_by_date[d] >= QUALIFYING_STEPS:
+            cur = cur + 1 if (prev is not None and (d - prev).days == 1) else 1
+            best = max(best, cur)
+        else:
+            cur = 0
+        prev = d
+    return best

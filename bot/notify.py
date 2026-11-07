@@ -92,22 +92,21 @@ async def notify_join_request(bot: Bot, text: str, **kw) -> None:
     await notify_admins(bot, text, **kw)
 
 
-async def send_screenshot(bot: Bot, chat_id: int, file_id: str, caption: str, markup) -> None:
+async def send_screenshot(bot: Bot, chat_id: int, file_id: str, caption: str, markup):
     """Отправляет скриншот-заявку: фото или документ (префикс 'doc:')."""
     if file_id.startswith("doc:"):
-        await bot.send_document(chat_id, file_id[4:], caption=caption, reply_markup=markup)
-    else:
-        await bot.send_photo(chat_id, file_id, caption=caption, reply_markup=markup)
+        return await bot.send_document(chat_id, file_id[4:], caption=caption, reply_markup=markup)
+    return await bot.send_photo(chat_id, file_id, caption=caption, reply_markup=markup)
 
 
-async def admins_submission(bot: Bot, file_id: str, caption: str, markup) -> None:
+async def admins_submission(bot: Bot, file_id: str, caption: str, markup):
     """Шлёт результат на проверку: в канал проверки (если настроен через
-    админку), иначе — личкой всем админам."""
+    админку), иначе — личкой всем админам. Возвращает сообщение в канале
+    (чтобы потом снять с него кнопки) или None."""
     chat_id = settings.channel_id("review")
     if chat_id is not None:
         try:
-            await send_screenshot(bot, chat_id, file_id, caption, markup)
-            return
+            return await send_screenshot(bot, chat_id, file_id, caption, markup)
         except Exception as e:  # noqa: BLE001
             log.warning("submission to review channel %s failed: %s — шлю админам", chat_id, e)
     for admin_id in sorted(settings.admin_ids()):

@@ -684,6 +684,103 @@ async def treport_send(cb: CallbackQuery) -> None:
                             f"доставлено сообщений — <b>{delivered}</b>.")
 
 
+# ---- 🏁 Финал марафона: победитель + личный итог каждому -------------------
+
+async def _final_view() -> tuple[str, object]:
+    from bot import final
+    st = await final.standings()
+    sent = settings.get(final.SENT_KEY)
+    lines = ["🏁 <b>Финал марафона</b>"]
+    if not final.is_finished():
+        lines.append(f"⏳ Марафон ещё идёт (до {config.marathon_end.strftime('%d.%m')}) — "
+                     "таблица ниже предварительная, объявить итоги можно после финиша.")
+    medals = ["🥇", "🥈", "🥉"]
+    for i, t in enumerate(st.board[:5]):
+        mark = medals[i] if i < 3 else f"{i + 1}."
+        lines.append(f"{mark} {escape(t['name'])} — <b>{texts.fmt_points(t['points'])}</b>"
+                     f" (дней всей командой 10K+: {t['full_days']})")
+    if not st.board:
+        lines.append("Команд пока нет.")
+    lines.append("")
+    lines.append(f"⏳ На проверке: <b>{st.pending}</b>" + (
+        " — проверьте их до объявления, от них зависит итог." if st.pending else " ✅"))
+    b = InlineKeyboardBuilder()
+    b.button(text="🖼 Превью моего итога", callback_data="adm:final_prev")
+    if sent:
+        lines.append(f"\n✅ Итоги уже объявлены ({escape(sent.replace('T', ' '))}).")
+    elif final.is_finished() and st.winner:
+        b.button(text="📣 Объявить итоги всем", callback_data="adm:final_ask")
+    b.button(text="⬅️ Назад", callback_data="adm:back")
+    b.adjust(1)
+    return "\n".join(lines), b.as_markup()
+
+
+@router.callback_query(F.data == "adm:final")
+async def final_open(cb: CallbackQuery) -> None:
+    if not _is_admin(cb.from_user.id):
+        return await cb.answer()
+    await cb.answer()
+    text, kb = await _final_view()
+    await cb.message.answer(text, reply_markup=kb)
+
+
+@router.callback_query(F.data == "adm:final_prev")
+async def final_preview(cb: CallbackQuery) -> None:
+    if not _is_admin(cb.from_user.id):
+        return await cb.answer()
+    await cb.answer("Рисую картинку…")
+    from bot import final
+    name = await final.preview(cb.bot, cb.from_user.id)
+    if name is None:
+        await cb.message.answer("Активных участников нет — показывать нечего.")
+    else:
+        await cb.message.answer(f"👆 Так выглядит итог участника <b>{escape(name)}</b>. "
+                                "Каждый получит свою картинку и подпись.")
+
+
+@router.callback_query(F.data == "adm:final_ask")
+async def final_ask(cb: CallbackQuery) -> None:
+    if not _is_admin(cb.from_user.id):
+        return await cb.answer()
+    from bot import final
+    st = await final.standings()
+    if not final.is_finished() or not st.winner:
+        return await cb.answer("Объявить можно после финиша марафона.", show_alert=True)
+    n = len(await db.final_rows())
+    warn = (f"\n\n⚠️ На проверке ещё <b>{st.pending}</b> — после рассылки итоги не "
+            "поменяются. Лучше сначала проверить." if st.pending else "")
+    b = InlineKeyboardBuilder()
+    b.button(text=f"✅ Да, отправить {n} участникам", callback_data="adm:final_go")
+    b.button(text="✖️ Отмена", callback_data="adm:treport_x")
+    b.adjust(1)
+    await cb.answer()
+    await cb.message.answer(
+        f"📣 <b>Объявить итоги?</b>\nПобедитель — <b>«{escape(st.winner['name'])}»</b> "
+        f"({texts.fmt_points(st.winner['points'])}).\nКаждый из <b>{n}</b> участников получит "
+        "свою картинку «Мой марафон». Повторно разослать будет нельзя." + warn,
+        reply_markup=b.as_markup())
+
+
+@router.callback_query(F.data == "adm:final_go")
+async def final_send(cb: CallbackQuery) -> None:
+    if not _is_admin(cb.from_user.id):
+        return await cb.answer()
+    from bot import final
+    await cb.message.edit_reply_markup(reply_markup=None)   # защита от двойного нажатия
+    st = await final.standings()
+    if not final.is_finished() or not st.winner:
+        return await cb.answer("Объявить можно после финиша марафона.", show_alert=True)
+    if not await final.claim_send(st.winner["name"]):
+        return await cb.answer("Итоги уже объявлены.", show_alert=True)
+    await cb.answer("Рассылаю итоги…")
+    await cb.message.answer("📤 Рассылка итогов началась — пришлю отчёт, когда закончу.")
+    total, delivered = await final.send_all(cb.bot)
+    await notify.notify_admins(
+        cb.bot, f"🏁 <b>Итоги марафона объявлены</b> ({escape(cb.from_user.first_name)}).\n"
+                f"Победитель — «{escape(st.winner['name'])}». Доставлено: "
+                f"<b>{delivered}</b> из {total}.")
+
+
 # ---- 🖼 Картинки дня: расписание и превью ----------------------------------
 
 @router.callback_query(F.data == "adm:daily")

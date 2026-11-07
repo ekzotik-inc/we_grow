@@ -76,6 +76,9 @@ async def main() -> None:
     config.validate()
     await _connect_db_retry()
     await settings.load()
+    # Ошибки — сразу владельцам в Telegram (не чаще раза в 15 мин на одну).
+    from bot import alerts
+    alerts.install(config.bot_token, settings.owner_ids, "бот")
     await _one_time_migrations()
     # ADMIN_IDS задан только у сервиса бота — публикуем его в settings, чтобы
     # Mini App (отдельный сервис) узнавал владельцев без своей копии env.

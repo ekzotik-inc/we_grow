@@ -1,0 +1,34 @@
+# Тесты на каждый push и PR: чистые + интеграционные на настоящем PostgreSQL
+# (серии, бонусы, командный зачёт, модерация, финал, SQL админки Mini App).
+name: tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  pytest:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: wegrow
+          POSTGRES_PASSWORD: wegrow
+          POSTGRES_DB: wegrow_test
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U wegrow"
+          --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      TEST_DATABASE_URL: postgresql://wegrow:wegrow@localhost:5432/wegrow_test
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+      - run: pip install -r requirements.txt pytest httpx
+      - run: python -m pytest backend tests -q

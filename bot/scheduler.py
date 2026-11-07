@@ -168,6 +168,9 @@ def setup_scheduler(bot: Bot) -> AsyncIOScheduler:
     from bot.daily import send_daily_card
     sched.add_job(send_daily_card, "cron", hour=9, minute=0, args=[bot])
     sched.add_job(nightly_backup, "cron", hour=23, minute=59, args=[bot])
+    # Финал: после последнего дня — напомнить админам объявить итоги (bot/final.py).
+    from bot.final import remind_admins
+    sched.add_job(remind_admins, "cron", hour=9, minute=5, args=[bot])
 
     # Отложенные рассылки админов — проверяем каждую минуту.
     sched.add_job(send_due_broadcasts, "interval", minutes=1, args=[bot])

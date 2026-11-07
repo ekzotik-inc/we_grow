@@ -21,7 +21,7 @@ from aiogram.types import (
 )
 
 from backend.scoring import needs_review, points_for_steps
-from bot import db, keyboards, notify, premium_emoji, settings, textfmt, texts
+from bot import db, keyboards, moderation, notify, premium_emoji, settings, textfmt, texts
 from bot.config import config
 
 router = Router()
@@ -32,10 +32,8 @@ def _is_admin(tg_id: int) -> bool:
 
 
 async def _flashmob_sync(bot, day) -> None:
-    """Пересчёт командного флешмоба после любой правки результатов за день
-    (импорт локальный — модуль флешмоба тянет keyboards/notify)."""
-    from bot.handlers.flashmob import sync
-    await sync(bot, day)
+    """Пересчёт командного флешмоба после любой правки результатов за день."""
+    await moderation.flashmob_sync(bot, day)
 
 
 class Media(StatesGroup):
@@ -851,76 +849,30 @@ async def _mark_caption(cb: CallbackQuery, suffix: str) -> None:
 
 
 async def _bonus_sync(bot, tg_id: int, day) -> int:
-    """Пересчёт недельного бонуса + пуш: «заработал, пришли отчёт» или
-    «засчитан» (если отчёт за неделю уже есть)."""
-    ch = await db.recompute_weekly_bonus_change(tg_id, day)
-    note = texts.bonus_notice(ch)
-    if note:
-        try:
-            await bot.send_message(tg_id, note)
-        except Exception:  # noqa: BLE001 — участник заблокировал бота
-            pass
-    return ch.new
+    """Пересчёт недельного бонуса + пуш (см. moderation.bonus_sync)."""
+    return await moderation.bonus_sync(bot, tg_id, day)
 
 
+# Принять / отклонить — общая логика в bot/moderation.py (её же вызывает
+# админка Mini App); здесь только ответ админу и пометка карточки.
 @router.callback_query(F.data.startswith("mod_ok:"))
 async def mod_accept(cb: CallbackQuery) -> None:
     if not _is_admin(cb.from_user.id):
         return await cb.answer()
-    e = await db.entry_by_id(int(cb.data.split(":")[1]))
-    if e is None:
-        return await cb.answer("Запись не найдена.", show_alert=True)
-    if e["status"] != "pending":
-        await _mark_caption(cb, "\n\nℹ️ уже обработано")
-        return await cb.answer("Уже обработано.")
-    # Карточка могла уйти в канал до дисквалификации: принимать такой результат
-    # нельзя — баллы дисквалифицированного нигде не учитываются. Статус
-    # оставляем pending: если участника восстановят, результат вернётся в очередь.
-    p = await db.get_participant(e["participant_id"])
-    if p is not None and p["disqualified_at"]:
-        await _mark_caption(cb, "\n\n⛔ Участник дисквалифицирован — результат не засчитан")
-        return await cb.answer("Участник дисквалифицирован — результат не засчитывается.",
-                               show_alert=True)
-    # Тайный челлендж: множитель зависит от дня, команды и времени ОТПРАВКИ
-    # результата — не от момента модерации.
-    mult, _ch = await db.challenge_multiplier(e["participant_id"], e["entry_date"],
-                                              e["created_at"])
-    pts = points_for_steps(e["steps"]) * mult
-    await db.set_entry_status(e["id"], "accepted", pts)
-    st = await db.recompute_streak(e["participant_id"])
-    try:
-        await cb.bot.send_message(e["participant_id"],
-                                  texts.accepted_note(e["steps"], pts, st.current_len, mult))
-    except Exception:  # noqa: BLE001
-        pass
-    # После «принято» — поздравление с бонусом, если этот день его дал.
-    await _bonus_sync(cb.bot, e["participant_id"], e["entry_date"])
-    await _flashmob_sync(cb.bot, e["entry_date"])
-    x = f" ×{mult} 🎲" if mult > 1 else ""
-    await _mark_caption(cb, f"\n\n✅ Принято, +{pts}{x} ({escape(cb.from_user.first_name)})")
-    await cb.answer("Принято ✅")
+    res = await moderation.accept(cb.bot, int(cb.data.split(":")[1]))
+    if res.code != "not_found":
+        await _mark_caption(cb, moderation.verdict_suffix(res, cb.from_user.first_name))
+    await cb.answer(res.message, show_alert=res.code in ("not_found", "disqualified"))
 
 
 @router.callback_query(F.data.startswith("mod_no:"))
 async def mod_reject(cb: CallbackQuery) -> None:
     if not _is_admin(cb.from_user.id):
         return await cb.answer()
-    e = await db.entry_by_id(int(cb.data.split(":")[1]))
-    if e is None:
-        return await cb.answer("Запись не найдена.", show_alert=True)
-    if e["status"] != "pending":
-        await _mark_caption(cb, "\n\nℹ️ уже обработано")
-        return await cb.answer("Уже обработано.")
-    await db.set_entry_status(e["id"], "rejected", 0)
-    await db.recompute_streak(e["participant_id"])
-    await db.recompute_weekly_bonus(e["participant_id"], e["entry_date"])
-    await _flashmob_sync(cb.bot, e["entry_date"])
-    try:
-        await cb.bot.send_message(e["participant_id"], texts.REJECTED_NOTE)
-    except Exception:  # noqa: BLE001
-        pass
-    await _mark_caption(cb, f"\n\n❌ Отклонено ({escape(cb.from_user.first_name)})")
-    await cb.answer("Отклонено ❌")
+    res = await moderation.reject(cb.bot, int(cb.data.split(":")[1]))
+    if res.code != "not_found":
+        await _mark_caption(cb, moderation.verdict_suffix(res, cb.from_user.first_name))
+    await cb.answer(res.message, show_alert=res.code == "not_found")
 
 
 def _private_ctx(state: FSMContext, bot_id: int, admin_id: int) -> FSMContext:
@@ -939,13 +891,8 @@ def _private_ctx(state: FSMContext, bot_id: int, admin_id: int) -> FSMContext:
 
 
 async def _submission_caption(e) -> str:
-    """Пересобирает подпись карточки модерации (с анти-дубль-предупреждением)."""
-    caption = texts.admin_new_submission(e)
-    if e["screenshot_unique_id"]:
-        dup = await db.duplicate_screenshot(e["screenshot_unique_id"], e["id"])
-        if dup:
-            caption += texts.admin_duplicate_warn(dup)
-    return caption
+    """Подпись карточки модерации (см. moderation.submission_caption)."""
+    return await moderation.submission_caption(e)
 
 
 @router.callback_query(F.data.startswith("mod_warn:"))

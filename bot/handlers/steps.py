@@ -6,6 +6,8 @@
 """
 from __future__ import annotations
 
+import logging
+
 from datetime import datetime
 
 from aiogram import F, Router
@@ -142,8 +144,13 @@ async def on_screenshot(message: Message, state: FSMContext) -> None:
     dup = await db.duplicate_screenshot(unique_id, entry_id)
     if dup:
         caption += texts.admin_duplicate_warn(dup)
-    await notify.admins_submission(message.bot, file_id, caption,
-                                   keyboards.moderate_kb(entry_id))
+    card = await notify.admins_submission(message.bot, file_id, caption,
+                                          keyboards.moderate_kb(entry_id))
+    if card is not None:      # карточка в канале — запомним для модерации из Mini App
+        try:
+            await db.set_review_message(entry_id, card.chat.id, card.message_id)
+        except Exception as e:  # noqa: BLE001 — не мешаем сдаче результата
+            logging.getLogger(__name__).warning("review msg for %s: %s", entry_id, e)
 
 
 @router.message(Steps.screenshot)

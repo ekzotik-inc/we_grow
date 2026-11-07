@@ -562,6 +562,58 @@ async def pending_submissions_count() -> int:
             WHERE d.status='pending' AND p.disqualified_at IS NULL"""))
 
 
+async def transition_entry(entry_id: int, status: str, points: int) -> bool:
+    """Атомарно переводит заявку из pending в status. False — её уже обработал
+    кто-то другой (два админа: один в канале, другой в Mini App, или двойное
+    нажатие). Так результат не принимается дважды и пуши не дублируются."""
+    return bool(await pool().fetchval(
+        """UPDATE daily_entries SET status=$2, points=$3, reviewed_at=now()
+            WHERE id=$1 AND status='pending' RETURNING id""",
+        entry_id, status, points))
+
+
+async def set_review_message(entry_id: int, chat_id: int, msg_id: int) -> None:
+    await pool().execute(
+        "UPDATE daily_entries SET review_chat=$2, review_msg=$3 WHERE id=$1",
+        entry_id, chat_id, msg_id)
+
+
+async def final_rows() -> list[asyncpg.Record]:
+    """Итоги марафона по каждому активному участнику команды — одним запросом:
+    баллы (дневные + засчитанные бонусы), шаги и дни по принятым результатам,
+    лучший день. Лучшую серию считает Python по final_qualifying_days."""
+    return await pool().fetch(
+        """SELECT p.telegram_id, p.full_name, p.team_id, t.name AS team_name,
+                  COALESCE(d.pts,0) + COALESCE(w.bonus,0) AS points,
+                  COALESCE(d.steps,0) AS steps, COALESCE(d.days,0) AS days,
+                  COALESCE(d.best,0) AS best_day
+             FROM participants p
+             JOIN teams t ON t.id=p.team_id
+             LEFT JOIN (SELECT participant_id, sum(points) AS pts, sum(steps) AS steps,
+                               count(*) AS days, max(steps) AS best
+                          FROM daily_entries WHERE status='accepted'
+                         GROUP BY participant_id) d ON d.participant_id=p.telegram_id
+             LEFT JOIN (SELECT participant_id, sum(bonus_points) AS bonus
+                          FROM weekly_summaries GROUP BY participant_id) w
+                    ON w.participant_id=p.telegram_id
+            WHERE p.approved_at IS NOT NULL AND p.disqualified_at IS NULL
+            ORDER BY t.name, points DESC, p.full_name""")
+
+
+async def final_qualifying_days() -> dict[int, dict]:
+    """{participant_id: {date: steps}} — принятые дни активных участников
+    (для лучшей серии в личных итогах)."""
+    rows = await pool().fetch(
+        """SELECT d.participant_id, d.entry_date, d.steps
+             FROM daily_entries d JOIN participants p ON p.telegram_id=d.participant_id
+            WHERE d.status='accepted' AND p.approved_at IS NOT NULL
+              AND p.disqualified_at IS NULL""")
+    out: dict[int, dict] = {}
+    for r in rows:
+        out.setdefault(r["participant_id"], {})[r["entry_date"]] = r["steps"]
+    return out
+
+
 async def set_entry_status(entry_id: int, status: str, points: int) -> None:
     await pool().execute(
         "UPDATE daily_entries SET status=$2, points=$3, reviewed_at=now() WHERE id=$1",

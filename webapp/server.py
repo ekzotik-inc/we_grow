@@ -24,7 +24,7 @@ from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
-from backend.scoring import QUALIFYING_STEPS
+from backend.scoring import best_streak
 from bot import db
 from bot.config import config
 
@@ -34,11 +34,61 @@ MARATHON_END = config.marathon_end
 _STATIC = Path(__file__).with_name("static")
 
 
+_tg_bot = None          # aiogram Bot только для отправки (пуши после модерации)
+
+
+def _owner_ids() -> set[int]:
+    """Владельцы для алертов: у webapp нет своей ADMIN_IDS — берём копию,
+    которую публикует бот (env_admins), + назначенных владельцев."""
+    from bot import settings
+    env = {int(x) for x in (settings.get("env_admins") or "").split(",") if x.strip().isdigit()}
+    return env | settings.owner_ids()
+
+
+async def _settings_refresher() -> None:
+    """Кэш настроек (админы, эмодзи, URL) — раз в минуту из БД."""
+    from bot import settings
+    while True:
+        await asyncio.sleep(60)
+        try:
+            await settings.load()
+        except Exception as e:  # noqa: BLE001 — БД моргнула, попробуем через минуту
+            _log.warning("settings refresh: %s", e)
+
+
+async def _setup_bot() -> None:
+    """Бот для пушей из админки Mini App — с теми же премиум-эмодзи, что у бота."""
+    global _tg_bot
+    from aiogram import Bot
+    from aiogram.client.default import DefaultBotProperties
+    from bot import premium_emoji, settings
+    from bot.premium_emoji import EmojiMiddleware
+    _tg_bot = Bot(config.bot_token, default=DefaultBotProperties(parse_mode="HTML"))
+    _tg_bot.session.middleware(EmojiMiddleware())
+    if not premium_emoji.ENABLED:
+        return
+    try:
+        await premium_emoji.validate(_tg_bot)
+        saved = settings.get("emoji_pack")
+        if saved:
+            premium_emoji.apply_pack(json.loads(saved))
+    except Exception as e:  # noqa: BLE001 — без премиум-эмодзи пуши всё равно уйдут
+        _log.warning("premium emoji in webapp: %s", e)
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     config.validate()
     await db.connect(config.database_url)
+    from bot import alerts, settings
+    await settings.load()
+    alerts.install(config.bot_token, _owner_ids, "Mini App")
+    refresher = asyncio.create_task(_settings_refresher())
+    await _setup_bot()
     yield
+    refresher.cancel()
+    if _tg_bot is not None:
+        await _tg_bot.session.close()
     if _http is not None and not _http.closed:
         await _http.close()
     await db.close()
@@ -258,17 +308,7 @@ async def _admin_view() -> dict:
         "calendar": calendar, "marathon": _marathon(), "leader": leader,
     }
 
-def _best_streak(steps_by_date: dict[date, int]) -> int:
-    best = cur = 0
-    prev: date | None = None
-    for d in sorted(steps_by_date):
-        if steps_by_date[d] >= QUALIFYING_STEPS:
-            cur = cur + 1 if (prev and (d - prev).days == 1) else 1
-            best = max(best, cur)
-        else:
-            cur = 0
-        prev = d
-    return best
+_best_streak = best_streak      # общая чистая функция, покрыта тестами
 
 
 # ---- API -----------------------------------------------------------------
@@ -389,7 +429,19 @@ async def api_leaderboard(x_init_data: str | None = Header(default=None),
     return {
         "teams": [{"name": t["name"], "points": t["points"],
                    "members": t["members"], "full_days": t["full_days"]} for t in teams],
+        "final": _final_state(),
     }
+
+
+def _final_state() -> dict:
+    """Фаза финала для Mini App: марафон завершён? итоги объявлены? победитель —
+    только после объявления P&C (до этого идёт проверка последних результатов)."""
+    from bot import settings
+    from bot.final import SENT_KEY, WINNER_KEY
+    finished = datetime.now(config.tz).date() > MARATHON_END
+    announced = bool(settings.get(SENT_KEY))
+    return {"finished": finished, "announced": announced,
+            "winner": (settings.get(WINNER_KEY) or None) if announced else None}
 
 
 # ---- Админка Mini App (только просмотр) -----------------------------------
@@ -479,6 +531,37 @@ async def api_admin_queue(x_init_data: str | None = Header(default=None),
                            "username": r["username"], "team": r["team_name"],
                            "created": _iso(r["created_at"])} for r in regs],
     }
+
+
+_MOD_ACTIONS = {"accept", "reject"}
+
+
+@app.post("/api/admin/moderate")
+async def api_admin_moderate(request: Request, x_init_data: str | None = Header(default=None),
+                             x_session: str | None = Header(default=None)):
+    """Принять / отклонить результат из Mini App — та же логика, что у кнопок
+    в канале проверки (bot/moderation.py): серия, бонус, флешмоб, пуши.
+    Карточка в канале после решения теряет кнопки и получает подпись."""
+    admin_id = await _require_admin(x_init_data, x_session)
+    try:
+        body = await request.json()
+        entry_id, action = int(body["entry_id"]), str(body["action"])
+    except (ValueError, KeyError, TypeError):
+        raise HTTPException(status_code=400, detail="bad request")
+    if action not in _MOD_ACTIONS:
+        raise HTTPException(status_code=400, detail="bad action")
+    if _tg_bot is None:
+        raise HTTPException(status_code=503, detail="bot not ready")
+    from bot import moderation
+    res = await (moderation.accept if action == "accept" else moderation.reject)(_tg_bot, entry_id)
+    if res.ok:
+        me = await db.get_participant(admin_id)
+        who = ((me["full_name"] or "").split() or ["P&C"])[0] if me else "P&C"
+        await moderation.close_review_card(_tg_bot, entry_id, res, who)
+        _log.info("модерация из Mini App: %s #%s → %s", admin_id, entry_id, res.code)
+    return {"ok": res.ok, "code": res.code, "message": res.message,
+            "points": res.points, "mult": res.mult,
+            "left": await db.pending_submissions_count()}
 
 
 @app.get("/api/admin/participants")

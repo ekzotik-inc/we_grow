@@ -60,6 +60,10 @@ ALTER TABLE daily_entries ADD COLUMN IF NOT EXISTS reviewed_at timestamptz;
 -- Анти-дубль: file_unique_id скриншота одинаков у одного и того же файла
 -- независимо от того, кто и когда его прислал.
 ALTER TABLE daily_entries ADD COLUMN IF NOT EXISTS screenshot_unique_id text;
+-- Карточка заявки в канале проверки: после модерации из Mini App бот
+-- снимает с неё кнопки и пишет, кто и что решил.
+ALTER TABLE daily_entries ADD COLUMN IF NOT EXISTS review_chat bigint;
+ALTER TABLE daily_entries ADD COLUMN IF NOT EXISTS review_msg bigint;
 CREATE INDEX IF NOT EXISTS daily_shot_uid_idx ON daily_entries(screenshot_unique_id)
     WHERE screenshot_unique_id IS NOT NULL;
 

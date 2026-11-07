@@ -942,6 +942,31 @@
   .chip.dq{color:#FCA5A5;background:rgba(239,68,68,.15)}
   .adm-q{display:flex;gap:12px;padding:12px 0;border-top:1px solid var(--line)}
   .adm-q:first-of-type{border-top:0}
+  /* Модерация прямо в очереди */
+  .adm-q{flex-wrap:wrap;transition:opacity .3s ease,transform .3s ease}
+  .adm-q.gone{opacity:0;transform:translateX(40px)}
+  .adm-act{flex-basis:100%;display:flex;gap:8px;margin-top:2px}
+  .adm-act button{flex:1;border:0;border-radius:12px;padding:11px 8px;font:800 13.5px Inter,sans-serif;cursor:pointer;
+    -webkit-tap-highlight-color:transparent;transition:transform .2s cubic-bezier(.34,1.56,.64,1),opacity .2s,background .2s}
+  .adm-act button:active{transform:scale(.95)}
+  .adm-ok{color:#04210f;background:linear-gradient(90deg,#10B981,#22C55E)}
+  .adm-no{color:#FCA5A5;background:rgba(239,68,68,.12);box-shadow:inset 0 0 0 1px rgba(239,68,68,.35)}
+  .adm-no.arm{color:#fff;background:#DC2626;box-shadow:none}
+  .adm-q.busy .adm-act button{opacity:.45;pointer-events:none}
+  .adm-done{flex:1;text-align:center;padding:11px 8px;border-radius:12px;font:700 13.5px Inter,sans-serif;background:rgba(255,255,255,.05);color:#CBD5E1}
+  .adm-done.accepted{color:#6EE7B7;background:rgba(16,185,129,.14)}
+  .adm-done.rejected{color:#FCA5A5;background:rgba(239,68,68,.12)}
+  .adm-done.err{color:#FCD34D;background:rgba(245,158,11,.12)}
+  /* Финал: команда-чемпион */
+  .pz-win{display:inline-flex;flex-direction:column;align-items:center;gap:2px;margin-top:6px;padding:10px 22px;border-radius:18px;
+    background:linear-gradient(135deg,rgba(245,158,11,.18),rgba(234,179,8,.08));box-shadow:inset 0 0 0 1px rgba(251,191,36,.45)}
+  .pz-win small{font:700 11px Inter,sans-serif;letter-spacing:.2em;text-transform:uppercase;color:#E7C46F}
+  .pz-win b{font:800 20px Unbounded,Inter,sans-serif;color:#FDE68A}
+  .lbx-win{display:flex;align-items:center;gap:12px;margin-bottom:14px;padding:14px 16px;border-radius:20px;
+    background:linear-gradient(135deg,rgba(245,158,11,.16),rgba(234,179,8,.05));box-shadow:inset 0 0 0 1px rgba(251,191,36,.4)}
+  .lbx-win .ic{width:28px;height:28px;color:#FBBF24;flex:none}
+  .lbx-win small{display:block;font:700 11px Inter,sans-serif;letter-spacing:.16em;text-transform:uppercase;color:#E7C46F}
+  .lbx-win b{font:800 17px Unbounded,Inter,sans-serif;color:#FDE68A}
   .adm-th{width:64px;height:86px;flex:none;border-radius:12px;background:rgba(255,255,255,.05);object-fit:cover;box-sizing:border-box;border:1px solid var(--line);cursor:zoom-in}
   .adm-th.none{display:grid;place-items:center;font-size:10px;color:#64748B;cursor:default;text-align:center}
   .adm-search{width:100%;box-sizing:border-box;padding:12px 14px;border-radius:14px;border:1px solid var(--line);background:rgba(255,255,255,.04);
@@ -1584,6 +1609,12 @@ const teamEmo=n=>TEAM_EMOJI[(n||"").trim().toLowerCase()]||"🌱";
 const MEDAL=["gold","silver","bronze"];
 function renderBoard(){ return cachedView("board","/api/leaderboard",drawBoard); }
 function drawBoard(d){
+  drawBoardBody(d);
+  const f=d.final;
+  if(f?.announced&&f.winner) V.querySelector(".view")?.insertAdjacentHTML("afterbegin",
+    `<div class="lbx-win">${ico("l-trophy")}<div><small>Марафон завершён · чемпион</small><b>«${esc(f.winner)}»</b></div></div>`);
+}
+function drawBoardBody(d){
   const teams=d.teams||[]; const mine=(meCacheGet()?.team_name||"").trim();
   if(!teams.length){ V.innerHTML=`<div class="view">${emptyRow()}</div>`; return; }
   const max=Math.max(...teams.map(t=>Number(t.points)||0),1);
@@ -1825,9 +1856,23 @@ function fmtLeft(ms){
   const p=n=>String(n).padStart(2,"0");
   return {d,h:p(h),m:p(mi),s:p(se)};
 }
-let prizeTimer=null;
+let prizeTimer=null, FINAL=null;
+// Итоги объявлены P&C (bot/final.py) — вместо таймера команда-чемпион.
+function applyFinal(f){
+  if(!f) return; FINAL=f;
+  const el=document.getElementById("pz-cd"); if(!el||!(f.announced&&f.winner)) return;
+  clearInterval(prizeTimer); prizeTimer=null;
+  el.innerHTML=`<div class="pz-win"><small>Команда-чемпион</small><b>«${esc(f.winner)}»</b></div>`;
+  const n=document.querySelector(".cd-note"); if(n) n.textContent="Марафон завершён · поздравляем победителей!";
+}
+function loadFinal(){
+  applyFinal(cacheGet(CK("board"))?.final);
+  fetchT("/api/leaderboard",{headers:{"X-Init-Data":getInit(),"X-Session":session()}},15000)
+    .then(r=>r.ok?r.json():null).then(d=>{ if(d){ cacheSet(CK("board"),d); applyFinal(d.final); } }).catch(()=>{});
+}
 function tickPrize(){
   const el=document.getElementById("pz-cd"); if(!el){ clearInterval(prizeTimer); prizeTimer=null; return; }
+  if(FINAL?.announced&&FINAL.winner) return;
   const {at}=prizeDeadline(); const L=fmtLeft(at-Date.now());
   el.innerHTML = L ? `<span class="cd-pill">${L.d}<small>дн</small><i>:</i>${L.h}<small>ч</small><i>:</i>${L.m}<small>мин</small><i>:</i>${L.s}<small>сек</small></span>`
    : `<div class="cd-done">Финиш пройден — итоги после проверки P&amp;C 🏆</div>`;
@@ -1871,6 +1916,7 @@ function renderPrizes(){
   });
   V.querySelector(".pz-acc")?.addEventListener("toggle",()=>hsel());
   clearInterval(prizeTimer); tickPrize(); prizeTimer=setInterval(tickPrize,1000);
+  loadFinal();
   startTilt();
 }
 
@@ -1999,7 +2045,7 @@ function admErr(e){
   admShell(`<div class="center">${m.includes("403")?"Раздел доступен только администраторам.":"Не удалось загрузить 😔<br><span class='muted'>"+esc(m)+"</span>"}
     <br><br><button class="btn-grad" style="max-width:220px;margin:0 auto" onclick="renderAdmin()">Обновить</button></div>`);
 }
-const actNote=()=>`<p class="adm-note">Здесь только просмотр. Принять или отклонить результат, внести или отменить день — в боте: <b style="color:#CBD5E1">/admin</b>.</p>
+const actNote=()=>`<p class="adm-note">Результаты можно принять или отклонить прямо здесь — участник получит то же уведомление, что из бота, а карточка в канале проверки закроется. Внести или отменить день, предупреждение, заявки на регистрацию — в боте: <b style="color:#CBD5E1">/admin</b>.</p>
   <button class="btn-ghost" style="margin-top:10px" onclick="openBot()">Открыть бота</button>`;
 const lastTxt=(iso)=>iso?"последняя сдача "+fmtDM(iso):"ещё не сдавал";
 const teamsTxt=(n)=>n?n+" "+plural(n,"команда","команды","команд"):"все команды";
@@ -2057,16 +2103,51 @@ function admQueue(d){
     ${regs.length?`<div class="card"><div class="sec-title">${ico("l-users")}Заявки на регистрацию · ${regs.length}</div>
       ${regs.map(r=>`<div class="adm-row" onclick="admOpen(${Number(r.tg_id)})"><div class="adm-mid"><div class="adm-nm">${esc(r.name)}</div>
         <div class="adm-sub">${esc(r.team||"—")}${r.username?" · @"+esc(r.username):""}</div></div>${ico("l-chev")}</div>`).join("")}</div>`:""}
-    <div class="card"><div class="sec-title">${ico("l-cam")}На проверке · ${d.total}</div>
+    <div class="card"><div class="sec-title">${ico("l-cam")}На проверке · <span id="adm-qn">${d.total}</span></div>
       ${es.length?es.map(e=>`<div class="adm-q">
         ${e.shot?`<img class="adm-th" loading="lazy" decoding="async" alt="" src="${e.shot}" onclick="admShot('${e.shot}')">`:`<div class="adm-th none">без<br>скрина</div>`}
         <div class="adm-mid" onclick="admOpen(${Number(e.tg_id)})" style="cursor:pointer">
           <div class="adm-nm">${esc(e.name)}</div><div class="adm-sub">${esc(e.team||"—")}</div>
           <div style="margin-top:8px;font:800 18px Unbounded,Inter,sans-serif;color:#fff">${nfmt(e.steps)} <small style="font:600 12px Inter,sans-serif;color:#94A3B8">шагов</small></div>
-          <div class="adm-sub">за ${fmtFull(e.date)}${e.big?' · <span class="chip wt">больше 30 000</span>':""}</div></div></div>`).join("")
+          <div class="adm-sub">за ${fmtFull(e.date)}${e.big?' · <span class="chip wt">больше 30 000</span>':""}</div></div>
+        <div class="adm-act">${modBtns(e.id)}</div></div>`).join("")
         :`<p class="muted" style="margin:8px 0 0">Очередь пуста — всё проверено ✅</p>`}
       ${d.total>es.length?`<p class="adm-note">Показаны первые ${es.length} из ${d.total}.</p>`:""}</div>
     ${actNote()}`);
+}
+
+// ---- Модерация из Mini App: та же логика, что у кнопок в канале (bot/moderation.py)
+const modBtns=id=>`<button class="adm-no" onclick="admMod(this,${Number(id)},'reject')">Отклонить</button><button class="adm-ok" onclick="admMod(this,${Number(id)},'accept')">Принять</button>`;
+async function apiPost(path, body){
+  const r=await fetchT(path,{method:"POST",headers:{"Content-Type":"application/json","X-Init-Data":getInit(),"X-Session":session()},
+    body:JSON.stringify(body)},15000);
+  if(r.status===401){ clearSession(); meCacheClear(); renderLogin(); throw new Error("HTTP 401"); }
+  let d={}; try{ d=await r.json(); }catch(_){}
+  if(!r.ok) throw new Error(d.detail||("HTTP "+r.status));
+  return d;
+}
+async function admMod(btn, id, action){
+  const row=btn.closest(".adm-q"); if(!row||row.classList.contains("busy")) return;
+  // «Отклонить» — по второму нажатию: случайный тап не должен стоить участнику дня.
+  if(action==="reject" && !btn.classList.contains("arm")){
+    btn.classList.add("arm"); btn.textContent="Точно отклонить?"; himp();
+    setTimeout(()=>{ if(btn.isConnected&&!row.classList.contains("busy")){ btn.classList.remove("arm"); btn.textContent="Отклонить"; } },3000);
+    return;
+  }
+  row.classList.add("busy"); himp();
+  const act=row.querySelector(".adm-act");
+  try{
+    const d=await apiPost("/api/admin/moderate",{entry_id:id,action});
+    const txt=d.code==="accepted"?`✓ Принято · +${d.points}${d.mult>1?" ×"+d.mult:""}`:d.code==="rejected"?"✕ Отклонено":d.message;
+    act.innerHTML=`<div class="adm-done ${esc(d.code)}">${esc(txt)}</div>`;
+    if(d.ok) hok();
+    const n=document.getElementById("adm-qn"); if(n&&d.left!=null) n.textContent=d.left;
+    if(d.code==="disqualified"){ row.classList.remove("busy"); return; }
+    setTimeout(()=>{ row.classList.add("gone"); setTimeout(()=>row.remove(),320); },900);
+  }catch(e){
+    act.innerHTML=`<div class="adm-done err">Не получилось: ${esc(e.message||e)}</div>`;
+    setTimeout(()=>{ if(act.isConnected){ act.innerHTML=modBtns(id); row.classList.remove("busy"); } },2500);
+  }
 }
 
 let admTimer=null;
