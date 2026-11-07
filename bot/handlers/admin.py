@@ -649,7 +649,9 @@ async def treport_preview(cb: CallbackQuery) -> None:
         await cb.bot.send_media_group(cb.from_user.id, [
             InputMediaPhoto(media=BufferedInputFile(t["png"], filename=f"t{t['team_id']}.jpg"))
             for t in chunk])
-    await cb.bot.send_message(cb.from_user.id, teams[0]["caption"])
+    from bot.keyboards import open_app_kb
+    await cb.bot.send_message(cb.from_user.id, teams[0]["caption"],
+                              reply_markup=open_app_kb("🌱 Мой личный прогресс"))
     reach = sum(t["members"] for t in teams)
     lines = [f"• {escape(t['name'])} — {t['members']} чел." for t in teams]
     b = InlineKeyboardBuilder()

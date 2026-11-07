@@ -22,7 +22,8 @@ from aiogram.types import BufferedInputFile
 from PIL import Image, ImageDraw, ImageFilter, ImageFont
 
 from bot import db
-from bot.texts import PRIZES_LINE, fmt_points, stepy
+from bot.keyboards import open_app_kb
+from bot.texts import fmt_points, stepy
 
 log = logging.getLogger(__name__)
 
@@ -193,7 +194,6 @@ def caption(team: str, rank: int | None, total: int, points) -> str:
             "<b>все</b> прошли 10 000+. Так что поддерживайте друг друга и "
             "напоминайте сдать шаги до <b>23:55</b> 🤝"
         )
-        + f"\n\n🎁 {PRIZES_LINE}"
     )
 
 
@@ -216,7 +216,8 @@ async def build_all() -> list[dict]:
 
 async def _send(bot: Bot, chat_id: int, photo, cap: str):
     try:
-        return await bot.send_photo(chat_id, photo, caption=cap)
+        return await bot.send_photo(chat_id, photo, caption=cap,
+                                    reply_markup=open_app_kb("🌱 Мой личный прогресс"))
     except TelegramRetryAfter as e:
         await asyncio.sleep(e.retry_after)
         return await _send(bot, chat_id, photo, cap)
