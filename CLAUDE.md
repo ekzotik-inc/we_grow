@@ -171,7 +171,7 @@ Telegram-бот **Step Together** (@wegrowmarathon_bot) — корпоратив
 - **Призы WE GROW**: каждому из 5 участников команды-победителя — наушники
   Redmi Buds Essential и брендированная колонка POCO. Текст —
   `texts.PRIZES_LINE` (раздел «🎁 Призы» в правилах, вопрос в помощи); в
-  Mini App — вкладка «Призы» (`renderPrizes`), блок на «Лидерборде», FAQ.
+  Mini App — вкладка «Призы» (`renderPrizes`: векторные иллюстрации `BUDS_SVG`/`POCO_SVG` с CSS-анимацией — парение, пульсирующее свечение, блик, звуковые волны; prefers-reduced-motion отключает), блок на «Лидерборде», FAQ.
 - **Пол** — вспомогательное поле `participants.gender` ('f'/'m'/NULL):
   заполняется эвристикой `backend/gender.py` при регистрации и на старте
   (`db.backfill_genders`, трогает только пустые), правится кнопкой «⚧ Пол»
