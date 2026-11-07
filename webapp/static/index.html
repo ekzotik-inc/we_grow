@@ -429,6 +429,16 @@
   @keyframes pzBlink{0%,100%{opacity:.3}50%{opacity:1}}
   @keyframes pzWave{0%{opacity:0;transform:scale(.8)}40%{opacity:1}100%{opacity:0;transform:scale(1.15)}}
   @media (prefers-reduced-motion:reduce){.pz-stage::before,.float,.float2,.bud-l,.bud-r,.sweep,.blink,.wave{animation:none}}
+  .pz-photo{position:relative;width:86%;height:auto;object-fit:contain;
+    filter:drop-shadow(0 0 1.5px rgba(255,255,255,.55)) drop-shadow(0 0 14px rgba(0,209,210,.45)) drop-shadow(0 10px 14px rgba(0,0,0,.5))}
+  .pz-items{align-items:center}
+  .pz-seats{gap:6px}
+  .pz-seat{min-width:0;padding:8px 2px}
+  .pz-items{gap:1px}
+  .pz-mini{width:19px;height:19px;display:inline-block;object-fit:contain;
+    filter:drop-shadow(0 0 1px rgba(255,255,255,.5))}
+  .pz-mini svg{width:19px;height:19px}
+  .pz-mini .wave,.pz-mini .sweep{display:none}
 </style>
 </head>
 <body>
@@ -1046,22 +1056,8 @@ async function renderRules(){
 }
 
 // Иллюстрации призов (векторные, анимируются CSS: парение, свечение, блик).
-const BUDS_SVG=`<svg class="pz-svg float" viewBox="0 0 160 140" aria-label="Наушники Redmi Buds Essential">
-  <defs>
-    <linearGradient id="bw" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ffffff"/><stop offset="1" stop-color="#cfd6e4"/></linearGradient>
-    <linearGradient id="bc" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#f4f6fb"/><stop offset="1" stop-color="#b9c2d4"/></linearGradient>
-    <linearGradient id="shine" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#fff" stop-opacity="0"/><stop offset=".5" stop-color="#fff" stop-opacity=".85"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></linearGradient>
-    <clipPath id="caseClip"><rect x="40" y="62" width="80" height="58" rx="26"/></clipPath>
-  </defs>
-  <ellipse cx="80" cy="128" rx="46" ry="6" fill="#00d1d2" opacity=".25"/>
-  <rect x="40" y="62" width="80" height="58" rx="26" fill="url(#bc)"/>
-  <rect x="40" y="62" width="80" height="20" rx="10" fill="#e9edf5"/>
-  <line x1="44" y1="82" x2="116" y2="82" stroke="#9aa5ba" stroke-width="1.5"/>
-  <circle cx="80" cy="100" r="2.6" fill="#00d1d2" class="blink"/>
-  <g clip-path="url(#caseClip)"><rect class="sweep" x="-60" y="60" width="40" height="64" fill="url(#shine)" transform="skewX(-20)"/></g>
-  <g class="bud-l"><ellipse cx="52" cy="40" rx="17" ry="15" fill="url(#bw)"/><rect x="47" y="44" width="9" height="26" rx="4.5" fill="url(#bw)"/><ellipse cx="46" cy="37" rx="6" ry="5" fill="#2a3346"/></g>
-  <g class="bud-r"><ellipse cx="108" cy="40" rx="17" ry="15" fill="url(#bw)"/><rect x="104" y="44" width="9" height="26" rx="4.5" fill="url(#bw)"/><ellipse cx="114" cy="37" rx="6" ry="5" fill="#2a3346"/></g>
-</svg>`;
+// Наушники — настоящее фото (prize-buds.png, фон убран); колонка — вектор.
+const BUDS_IMG=`<img class="pz-photo float" src="prize-buds.png" alt="Наушники Redmi Buds Essential">`;
 const POCO_SVG=`<svg class="pz-svg float2" viewBox="0 0 160 140" aria-label="Колонка POCO">
   <defs>
     <linearGradient id="pb" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#1b1f2a"/><stop offset=".55" stop-color="#3a4152"/><stop offset="1" stop-color="#151821"/></linearGradient>
@@ -1085,7 +1081,7 @@ const POCO_SVG=`<svg class="pz-svg float2" viewBox="0 0 160 140" aria-label="К�
 function renderPrizes(){
   // Призы WE GROW — тот же текст, что в боте (texts.PRIZES_LINE).
   const seat=(i)=>`<div class="pz-seat card d${Math.min(i,3)}"><div class="pz-n">${i}</div>
-      <div class="pz-items"><span>🎧</span><span>🔊</span></div></div>`;
+      <div class="pz-items"><img class="pz-mini" src="prize-buds.png" alt=""><span class="pz-mini">${POCO_SVG}</span></div></div>`;
   V.innerHTML=`<div class="view">
     <div class="card hero d1" style="padding:26px 18px">
       <svg class="ic gift-ic"><use href="#i-gift"/></svg>
@@ -1098,7 +1094,7 @@ function renderPrizes(){
       ${secHead("trophy","Каждому в команде-победителе","Комплект на одного участника")}
       <div class="pz-show">
         <div class="pz-prod">
-          <div class="pz-stage glow-tq">${BUDS_SVG}</div>
+          <div class="pz-stage glow-tq">${BUDS_IMG}</div>
           <b>Redmi Buds Essential</b>
           <div class="muted" style="font-size:12.5px">беспроводные наушники для прогулок под музыку</div>
         </div>
