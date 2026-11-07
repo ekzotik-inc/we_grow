@@ -1134,6 +1134,25 @@ async def team_members(team_id: int) -> list[asyncpg.Record]:
     )
 
 
+async def members_by_team() -> dict[int, list[asyncpg.Record]]:
+    """Составы ВСЕХ команд одним запросом (вместо team_members на каждую —
+    N+1 в админском экране «Команда»). Порядок внутри — как в team_members."""
+    rows = await pool().fetch(
+        """SELECT p.team_id, p.full_name,
+                  COALESCE((SELECT sum(d.points) FROM daily_entries d
+                             WHERE d.participant_id=p.telegram_id AND d.status='accepted'),0)
+                + COALESCE((SELECT sum(w.bonus_points) FROM weekly_summaries w
+                             WHERE w.participant_id=p.telegram_id),0) AS points
+             FROM participants p
+            WHERE p.team_id IS NOT NULL AND p.approved_at IS NOT NULL
+              AND p.disqualified_at IS NULL
+            ORDER BY p.team_id, points DESC, p.full_name""")
+    out: dict[int, list[asyncpg.Record]] = {}
+    for r in rows:
+        out.setdefault(r["team_id"], []).append(r)
+    return out
+
+
 # ---- Отложенные рассылки ---------------------------------------------------
 
 async def add_scheduled_broadcast(admin_id: int, draft: dict, when: datetime) -> int:

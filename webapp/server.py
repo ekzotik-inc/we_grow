@@ -6,18 +6,21 @@
 """
 from __future__ import annotations
 
+import asyncio
 import hashlib
 import hmac
 import json
 import os
 import re
 import time
+from collections import OrderedDict
 from contextlib import asynccontextmanager
 from datetime import date, datetime, timedelta
 from pathlib import Path
 from urllib.parse import parse_qsl
 
 from fastapi import Body, FastAPI, Header, HTTPException, Request
+from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
@@ -36,10 +39,15 @@ async def lifespan(app: FastAPI):
     config.validate()
     await db.connect(config.database_url)
     yield
+    if _http is not None and not _http.closed:
+        await _http.close()
     await db.close()
 
 
 app = FastAPI(title="Step Together Mini App", lifespan=lifespan)
+# index.html ~170 КБ → ~40 КБ по сети: на мобильном интернете это главная
+# задержка первого открытия. JSON API тоже сжимается.
+app.add_middleware(GZipMiddleware, minimum_size=1024)
 
 import logging  # noqa: E402
 
@@ -169,6 +177,22 @@ async def _is_admin(tg_id: int) -> bool:
     return str(tg_id) in ids
 
 
+# Командный рейтинг одинаков для всех, а после пуша Mini App открывают
+# десятки людей разом. Держим результат несколько секунд и делим один
+# запрос между одновременными вызовами (задача, а не значение).
+_BOARD_TTL = 8.0
+_board: tuple[float, asyncio.Task] | None = None
+
+
+async def _leaderboard() -> list[dict]:
+    global _board
+    now = time.monotonic()
+    if _board is None or now - _board[0] > _BOARD_TTL or \
+            (_board[1].done() and _board[1].exception() is not None):
+        _board = (now, asyncio.ensure_future(db.team_leaderboard()))
+    return await asyncio.shield(_board[1])
+
+
 def _marathon() -> dict:
     return {"start": MARATHON_START.isoformat(), "end": MARATHON_END.isoformat()}
 
@@ -176,7 +200,7 @@ def _marathon() -> dict:
 async def _admin_view() -> dict:
     """«Прогресс» для админа без анкеты: тот же экран, что у участника, но
     по ВСЕМ активным участникам (подтверждён, не DQ) — суммы за каждый день."""
-    rows = await db.pool().fetch(
+    q_days = db.pool().fetch(
         """SELECT d.entry_date,
                   sum(d.steps) FILTER (WHERE d.status='accepted') AS acc_steps,
                   sum(d.points) FILTER (WHERE d.status='accepted') AS acc_points,
@@ -187,19 +211,21 @@ async def _admin_view() -> dict:
              FROM daily_entries d JOIN participants p ON p.telegram_id=d.participant_id
             WHERE p.approved_at IS NOT NULL AND p.disqualified_at IS NULL
             GROUP BY d.entry_date""")
-    by = {r["entry_date"]: r for r in rows}
-    bonus = await db.pool().fetchval(
+    q_bonus = db.pool().fetchval(
         """SELECT COALESCE(sum(w.bonus_points),0) FROM weekly_summaries w
              JOIN participants p ON p.telegram_id=w.participant_id
             WHERE p.approved_at IS NOT NULL AND p.disqualified_at IS NULL""")
-    active = await db.pool().fetchval(
+    q_active = db.pool().fetchval(
         """SELECT count(*) FROM participants WHERE team_id IS NOT NULL
               AND approved_at IS NOT NULL AND disqualified_at IS NULL""")
-    streak = await db.pool().fetchval(
+    q_streak = db.pool().fetchval(
         """SELECT COALESCE(max(s.current_len),0) FROM streaks s
              JOIN participants p ON p.telegram_id=s.participant_id
             WHERE p.approved_at IS NOT NULL AND p.disqualified_at IS NULL""")
-    board = await db.team_leaderboard()
+    # Пять независимых запросов — параллельно (раньше шли по очереди).
+    rows, bonus, active, streak, board = await asyncio.gather(
+        q_days, q_bonus, q_active, q_streak, _leaderboard())
+    by = {r["entry_date"]: r for r in rows}
     leader = ({"name": board[0]["name"], "points": board[0]["points"]}
               if board and board[0]["points"] else None)
     today = datetime.now(config.tz).date()
@@ -277,7 +303,10 @@ async def api_me(x_init_data: str | None = Header(default=None),
             return await _admin_view()
         return {"registered": False}
 
-    entries = await db.entries_list(tg_id)
+    # Записи, сводка и флаг админа не зависят друг от друга — параллельно.
+    entries, summary, is_admin = await asyncio.gather(
+        db.entries_list(tg_id), db.participant_summary(tg_id), _is_admin(tg_id))
+    summary = summary or {}
     steps_by_date = {e["entry_date"]: e["steps"] for e in entries}
     points_by_date = {e["entry_date"]: e["points"] for e in entries}
     status_by_date = {e["entry_date"]: e["status"] for e in entries}
@@ -299,10 +328,9 @@ async def api_me(x_init_data: str | None = Header(default=None),
 
     # Личное место, баллы и живая серия — одним запросом (как в главном меню
     # бота), без командного рейтинга: на экране «Прогресс» он не нужен.
-    summary = await db.participant_summary(tg_id) or {}
     return {
         "registered": True,
-        "admin": await _is_admin(tg_id),          # показать вкладку «Админка»
+        "admin": is_admin,          # показать вкладку «Админка»
         "full_name": card["full_name"],
         "team_name": card["team_name"],
         "total_points": int(summary.get("points") or 0),
@@ -330,15 +358,14 @@ async def api_team(x_init_data: str | None = Header(default=None),
         if not await _is_admin(tg_id):
             return {"registered": False}
         # Админ без анкеты: все команды с составом.
-        board = await db.team_leaderboard()
+        board, by_team = await asyncio.gather(_leaderboard(), db.members_by_team())
         return {"registered": False, "admin": True, "teams": [
             {"name": t["name"], "points": t["points"], "full_days": t["full_days"],
              "members": [{"name": m["full_name"] or "—", "points": m["points"]}
-                         for m in await db.team_members(t["id"])]}
+                         for m in by_team.get(t["id"], [])]}
             for t in board]}
 
-    members = await db.team_members(card["team_id"])
-    board = await db.team_leaderboard()
+    members, board = await asyncio.gather(db.team_members(card["team_id"]), _leaderboard())
     rank = next((i for i, t in enumerate(board, 1) if t["name"] == card["team_name"]), None)
     mine = board[rank - 1] if rank else {}
     return {
@@ -358,7 +385,7 @@ async def api_leaderboard(x_init_data: str | None = Header(default=None),
                           x_session: str | None = Header(default=None)):
     await _auth(x_init_data, x_session)
     # Только командный зачёт: личного топа в WE GROW нет.
-    teams = await db.team_leaderboard()
+    teams = await _leaderboard()
     return {
         "teams": [{"name": t["name"], "points": t["points"],
                    "members": t["members"], "full_days": t["full_days"]} for t in teams],
@@ -542,28 +569,52 @@ async def api_admin_participant(tg_id: int, x_init_data: str | None = Header(def
     }
 
 
+_http = None                     # общая aiohttp-сессия (keep-alive к api.telegram.org)
+_SHOT_CACHE: OrderedDict[str, tuple[bytes, str]] = OrderedDict()
+_SHOT_CACHE_MAX = 60             # ~60 скринов по 100–300 КБ — до ~15 МБ памяти
+
+
+async def _session():
+    global _http
+    import aiohttp
+    if _http is None or _http.closed:
+        _http = aiohttp.ClientSession()
+    return _http
+
+
 async def _serve_screenshot(file_id: str):
     """Скачивает файл у Telegram на сервере и отдаёт как изображение —
-    токен бота наружу не попадает."""
+    токен бота наружу не попадает. Последние скрины держим в памяти:
+    очередь проверки и карточки участников открывают одни и те же."""
     import aiohttp
     from fastapi.responses import Response
 
     if file_id.startswith("doc:"):          # скрин, присланный файлом
         file_id = file_id[4:]
+    hit = _SHOT_CACHE.get(file_id)
+    if hit:
+        _SHOT_CACHE.move_to_end(file_id)
+        return Response(content=hit[0], media_type=hit[1],
+                        headers={"Cache-Control": "private, max-age=3600"})
 
     api = f"https://api.telegram.org/bot{config.bot_token}"
-    async with aiohttp.ClientSession() as s:
-        async with s.get(f"{api}/getFile", params={"file_id": file_id},
-                         timeout=aiohttp.ClientTimeout(total=20)) as r:
-            meta = await r.json()
-        if not meta.get("ok"):
-            raise HTTPException(status_code=404, detail="file expired")
-        path = meta["result"]["file_path"]
-        async with s.get(f"https://api.telegram.org/file/bot{config.bot_token}/{path}",
-                         timeout=aiohttp.ClientTimeout(total=30)) as r:
-            data = await r.read()
+    s = await _session()
+    async with s.get(f"{api}/getFile", params={"file_id": file_id},
+                     timeout=aiohttp.ClientTimeout(total=20)) as r:
+        meta = await r.json()
+    if not meta.get("ok"):
+        raise HTTPException(status_code=404, detail="file expired")
+    path = meta["result"]["file_path"]
+    async with s.get(f"https://api.telegram.org/file/bot{config.bot_token}/{path}",
+                     timeout=aiohttp.ClientTimeout(total=30)) as r:
+        if r.status != 200:                 # ошибку Telegram не кэшируем и не отдаём как картинку
+            raise HTTPException(status_code=502, detail="file download failed")
+        data = await r.read()
     ext = path.rsplit(".", 1)[-1].lower()
     media = {"png": "image/png", "webp": "image/webp"}.get(ext, "image/jpeg")
+    _SHOT_CACHE[file_id] = (data, media)
+    while len(_SHOT_CACHE) > _SHOT_CACHE_MAX:
+        _SHOT_CACHE.popitem(last=False)
     return Response(content=data, media_type=media,
                     headers={"Cache-Control": "private, max-age=3600"})
 
@@ -629,4 +680,16 @@ async def index():
                         headers={"Cache-Control": "no-cache"})
 
 
-app.mount("/", StaticFiles(directory=_STATIC), name="static")
+class _CachedStatic(StaticFiles):
+    """Картинки (hero.jpg, prize-buds.png) раньше перезапрашивались при каждом
+    открытии. Час — из кэша без запроса, ещё сутки — показ из кэша с фоновой
+    проверкой. index.html отдаётся отдельно с no-cache."""
+
+    async def get_response(self, path, scope):
+        resp = await super().get_response(path, scope)
+        if resp.status_code == 200:
+            resp.headers["Cache-Control"] = "public, max-age=3600, stale-while-revalidate=86400"
+        return resp
+
+
+app.mount("/", _CachedStatic(directory=_STATIC), name="static")
