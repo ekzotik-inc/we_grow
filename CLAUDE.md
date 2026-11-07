@@ -342,6 +342,13 @@ Telegram-бот **Step Together** (@wegrowmarathon_bot) — корпоратив
   `.stage` с бейджем Google Health и тегами «Скачать/Скриншот/Отправить»
   (`openSteps()`), ниже — прежние аккордеоны. Появление вкладки — staggered
   `fadeUp` на `.view>*`; нажатия — scale .95/.98.
+  Иконки — инлайн Lucide (ISC) в спрайте `#i-l-*` (`ico("l-foot")` и т.п.):
+  таббар Footprints/Users/Trophy/Gift, шапка BookOpen/HelpCircle, этапы
+  Download/Smartphone/Camera/Send. Корона 1-го места — SVG с `#gGold` +
+  `filter #glow`. Очки подиума нарастают `lbCount` (НЕ путать с `countUp`
+  прогресса). Haptics: `hsel` (табы), `himp` (тап по строке), `hok` (успех).
+  Aurora — два `.aur` (blur 80, opacity .15). Логотипа Apple Health нет
+  намеренно: принимается только Google Health.
 - **Перекрытие навигацией (решено, НЕ регрессировать)**: нижний отступ под
   фиксированную навигацию живёт на `.wrap` (растёт с контентом), а НЕ на
   `body`; у body только `min-height:100%` — с `height:100%` контент вытекает

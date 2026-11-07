@@ -717,6 +717,35 @@
   .tag.alt{color:#E0F2FE;background:rgba(56,189,248,.12);border-color:rgba(56,189,248,.35)}
   .tag.vi{color:#EDE9FE;background:rgba(139,92,246,.14);border-color:rgba(139,92,246,.38)}
   @media (prefers-reduced-motion:reduce){body::before,.view>*,.lbx-col,.lbx-row,.lbx-bar i,.lbx-crown,.c1 .lbx-av::after,.sp-hero .sp-av{animation:none}}
+  /* Lucide-иконки, haptics, тонкая настройка */
+  html,body{overscroll-behavior:none}
+  .nav svg,.hbtn svg{fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+  .nav{padding-bottom:6px;bottom:max(12px,var(--safe-bottom))}
+  body::before{inset:0;filter:none;animation:none;background:none}
+  .aur{position:fixed;width:70vmax;height:70vmax;border-radius:50%;filter:blur(80px);opacity:.15;pointer-events:none;z-index:-1}
+  .aur.a1{background:#10B981;top:-30vmax;left:-25vmax;animation:aurora 24s ease-in-out infinite alternate}
+  .aur.a2{background:#6366F1;bottom:-35vmax;right:-30vmax;animation:aurora 28s ease-in-out infinite alternate-reverse}
+  .card,.acc,.lbx-row,.stage{box-shadow:inset 0 1px 0 rgba(255,255,255,.12),0 10px 30px rgba(0,0,0,.25)}
+  .lbx-num{font-family:"Inter Tight","SF Pro Rounded",ui-rounded,-apple-system,sans-serif}
+  .lbx-crown{fill:none;stroke:none;width:34px;height:34px;top:-30px}
+  .lbx-list{gap:0;border-radius:22px;overflow:hidden;border:1px solid var(--line);background:rgba(255,255,255,.04);
+    -webkit-backdrop-filter:blur(16px);backdrop-filter:blur(16px);box-shadow:inset 0 1px 0 rgba(255,255,255,.12)}
+  .lbx-list .lbx-row{border:none;border-radius:0;background:none;box-shadow:none;-webkit-backdrop-filter:none;backdrop-filter:none;cursor:pointer}
+  .lbx-list .lbx-row+.lbx-row{box-shadow:inset 0 1px 0 rgba(255,255,255,.06)}
+  .lbx-list .lbx-row.me{background:linear-gradient(90deg,rgba(34,197,94,.14),transparent);box-shadow:inset 3px 0 0 #22C55E}
+  .lbx-list .lbx-row:active{background:rgba(255,255,255,.04)}
+  .lbx-bar{height:8px}
+  .lbx-bar i{animation:none;transition:width .7s cubic-bezier(.16,1,.3,1)}
+  .lbx-row:nth-child(2) .lbx-bar i{transition-delay:.06s}.lbx-row:nth-child(3) .lbx-bar i{transition-delay:.12s}
+  .lbx-row:nth-child(n+4) .lbx-bar i{transition-delay:.18s}
+  .sp-chips span{display:inline-flex;align-items:center;gap:6px}
+  .sp-chips .ic{width:14px;height:14px;color:#34D399}
+  .stage-ic{width:34px;height:34px;border-radius:11px;display:grid;place-items:center;color:#34D399;
+    background:rgba(16,185,129,.12);border:1px solid rgba(16,185,129,.3)}
+  .stage-ic .ic{width:18px;height:18px;stroke-width:2}
+  .tag .ic{width:15px;height:15px;stroke-width:2.2}
+  .badge .gh{width:13px;height:13px}
+  @media (prefers-reduced-motion:reduce){.aur{animation:none}.lbx-bar i{transition:none}}
 </style>
 </head>
 <body>
@@ -790,7 +819,24 @@
     <path d="M7 3.5h10M7 20.5h10"/><path d="M7.6 3.5v3.2c0 2 4.4 3.6 4.4 5.3s-4.4 3.3-4.4 5.3v3.2"/>
     <path d="M16.4 3.5v3.2c0 2-4.4 3.6-4.4 5.3s4.4 3.3 4.4 5.3v3.2"/></symbol>
   <symbol id="i-cross" viewBox="0 0 24 24"><path d="M7 7l10 10M17 7 7 17"/></symbol>
+  <symbol id="i-l-foot" viewBox="0 0 24 24"><path d="M4 16v-2.38C4 11.5 2.97 10.5 3 8c.03-2.72 1.49-6 4.5-6C9.37 2 10 3.8 10 5.5c0 3.11-2 5.66-2 8.68V16a2 2 0 1 1-4 0Z"/><path d="M20 20v-2.38c0-2.12 1.03-3.12 1-5.62-.03-2.72-1.49-6-4.5-6C14.63 6 14 7.8 14 9.5c0 3.11 2 5.66 2 8.68V20a2 2 0 1 0 4 0Z"/><path d="M16 17h4"/><path d="M4 13h4"/></symbol>
+  <symbol id="i-l-users" viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></symbol>
+  <symbol id="i-l-trophy" viewBox="0 0 24 24"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/><path d="M4 22h16"/><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"/><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"/><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"/></symbol>
+  <symbol id="i-l-gift" viewBox="0 0 24 24"><rect x="3" y="8" width="18" height="4" rx="1"/><path d="M12 8v13"/><path d="M19 12v7a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2v-7"/><path d="M7.5 8a2.5 2.5 0 0 1 0-5A4.8 8 0 0 1 12 8a4.8 8 0 0 1 4.5-5 2.5 2.5 0 0 1 0 5"/></symbol>
+  <symbol id="i-l-book" viewBox="0 0 24 24"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></symbol>
+  <symbol id="i-l-help" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><path d="M12 17h.01"/></symbol>
+  <symbol id="i-l-download" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m7 10 5 5 5-5"/><path d="M12 15V3"/></symbol>
+  <symbol id="i-l-phone" viewBox="0 0 24 24"><rect width="14" height="20" x="5" y="2" rx="2"/><path d="M12 18h.01"/></symbol>
+  <symbol id="i-l-cam" viewBox="0 0 24 24"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/><circle cx="12" cy="13" r="3"/></symbol>
+  <symbol id="i-l-send" viewBox="0 0 24 24"><path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/></symbol>
+  <symbol id="i-l-cal" viewBox="0 0 24 24"><rect width="18" height="18" x="3" y="4" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></symbol>
+  <symbol id="i-l-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></symbol>
+  <symbol id="i-l-check" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></symbol>
+  <symbol id="i-l-chev" viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/></symbol>
+  <defs><linearGradient id="gGold" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#FDE68A"/><stop offset=".55" stop-color="#F59E0B"/><stop offset="1" stop-color="#B45309"/></linearGradient>
+    <filter id="glow" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="1.4" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs>
 </svg>
+<div class="aur a1"></div><div class="aur a2"></div>
 <div class="wrap">
   <div class="app-head">
     <div class="logo" aria-hidden="true"><svg viewBox="0 0 48 48">
@@ -811,8 +857,8 @@
     </svg></div>
     <div class="head-tx"><h1>Step Together</h1><p id="head-sub">марафон шагов со Stepy</p></div>
     <div class="hbtns">
-      <button class="hbtn" data-tab="rules" aria-label="Правила"><svg viewBox="0 0 24 24"><path d="M6 3h9l4 4v14a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1z"/><path d="M14 3v5h5"/><path d="M9 13h6M9 17h6"/></svg></button>
-      <button class="hbtn" data-tab="faq" aria-label="Помощь"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M9.2 9.3a2.8 2.8 0 0 1 5.4 1c0 1.9-2.6 2.2-2.6 3.7"/><path d="M12 17.2h.01"/></svg></button>
+      <button class="hbtn" data-tab="rules" aria-label="Правила"><svg viewBox="0 0 24 24"><use href="#i-l-book"/></svg></button>
+      <button class="hbtn" data-tab="faq" aria-label="Помощь"><svg viewBox="0 0 24 24"><use href="#i-l-help"/></svg></button>
     </div>
   </div>
   <div id="view"><div class="spin"></div><div class="muted" id="load-hint" style="text-align:center;font-size:13px;margin-top:-6px"></div></div>
@@ -820,13 +866,13 @@
 
 <nav class="nav" id="nav">
   <button data-tab="progress" class="on">
-    <svg viewBox="0 0 24 24"><path d="M3 12h4l2 6 4-14 2 8h6"/></svg>Прогресс</button>
+    <svg viewBox="0 0 24 24"><use href="#i-l-foot"/></svg>Прогресс</button>
   <button data-tab="team">
-    <svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.2"/><path d="M3.5 19a5.5 5.5 0 0 1 11 0"/><path d="M16 5.2a3 3 0 0 1 0 5.6"/><path d="M18 19a5.5 5.5 0 0 0-3-4.9"/></svg>Команда</button>
+    <svg viewBox="0 0 24 24"><use href="#i-l-users"/></svg>Команда</button>
   <button data-tab="board">
-    <svg viewBox="0 0 24 24"><path d="M8 21h8"/><path d="M12 17v4"/><path d="M7 4h10v5a5 5 0 0 1-10 0z"/><path d="M17 5h3v2a3 3 0 0 1-3 3"/><path d="M7 5H4v2a3 3 0 0 0 3 3"/></svg>Лидеры</button>
+    <svg viewBox="0 0 24 24"><use href="#i-l-trophy"/></svg>Лидеры</button>
   <button data-tab="prizes">
-    <svg viewBox="0 0 24 24"><rect x="3" y="8" width="18" height="4" rx="1"/><path d="M5 12v8a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-8"/><path d="M12 8v13"/><path d="M12 8S10.5 3 8 3a2.5 2.5 0 0 0 0 5z"/><path d="M12 8s1.5-5 4-5a2.5 2.5 0 0 1 0 5z"/></svg>Призы</button>
+    <svg viewBox="0 0 24 24"><use href="#i-l-gift"/></svg>Призы</button>
 </nav>
 
 <script>
@@ -873,6 +919,8 @@ async function waitInit(ms=3000){
 }
 const haptic = (t="light")=>{ try{ tg?.HapticFeedback?.impactOccurred(t); }catch(e){} };
 const hsel = ()=>{ try{ tg?.HapticFeedback?.selectionChanged(); }catch(e){} };
+const himp = ()=>{ try{ tg?.HapticFeedback?.impactOccurred('light'); }catch(e){} };
+const hok = ()=>{ try{ tg?.HapticFeedback?.notificationOccurred('success'); }catch(e){} };
 
 const FIT_A="https://play.google.com/store/apps/details?id=com.fitbit.FitbitMobile";
 const FIT_I="https://apps.apple.com/us/app/fitbit-health-fitness/id462638897";
@@ -1245,9 +1293,9 @@ async function renderBoard(){
   const ini=t=>esc((t.name||"?").trim()[0]||"?");
   const pod=[1,0,2].filter(k=>teams[k]).map(k=>{const t=teams[k];return `
     <div class="lbx-col c${k+1} ${MEDAL[k]}" style="--i:${k}">
-      <div class="lbx-av">${ini(t)}${k===0?`<svg class="lbx-crown"><use href="#i-crown"/></svg>`:""}</div>
+      <div class="lbx-av">${ini(t)}${k===0?`<svg class="lbx-crown" viewBox="0 0 24 24"><path filter="url(#glow)" fill="url(#gGold)" stroke="#FDE68A" stroke-width="1.2" stroke-linejoin="round" d="m2 6 4 10h12l4-10-6 5-4-7-4 7z"/><rect x="5" y="18" width="14" height="2.4" rx="1.2" fill="url(#gGold)"/></svg>`:""}</div>
       <div class="lbx-nm">${esc(t.name)}</div>
-      <div class="lbx-num">${fmtPts(t.points)}</div><div class="lbx-u">баллов</div>
+      <div class="lbx-num" data-n="${Number(t.points)||0}">${fmtPts(0)}</div><div class="lbx-u">баллов</div>
       <div class="lbx-step"><b>${k+1}</b></div>
     </div>`;}).join("");
   const rows=teams.map((t,k)=>{const me=mine&&t.name===mine;
@@ -1268,6 +1316,20 @@ async function renderBoard(){
     <div class="lbx-list">${rows}</div>
     <div class="lbx-note">Средний балл участника. При равенстве — дни, когда вся команда прошла 10 000+.</div>
   </div>`;
+  lbCount(V.querySelectorAll(".lbx-num[data-n]"));
+  V.querySelectorAll(".lbx-bar i").forEach(i=>{ const w=i.style.getPropertyValue("--w"); i.style.width="0";
+    requestAnimationFrame(()=>requestAnimationFrame(()=>{ i.style.width=w; })); });
+  V.querySelectorAll(".lbx-row").forEach(r=>r.addEventListener("click",himp));
+}
+// Плавное нарастание счётчика (ease-out), уважает prefers-reduced-motion.
+function lbCount(els,ms=900){
+  const still=matchMedia("(prefers-reduced-motion: reduce)").matches;
+  els.forEach(el=>{ const to=Number(el.dataset.n)||0;
+    if(still||!to){ el.textContent=fmtPts(to); return; }
+    const t0=performance.now();
+    const step=now=>{ const p=Math.min(1,(now-t0)/ms), e=1-Math.pow(1-p,3);
+      el.textContent=fmtPts(p<1?Math.round(to*e*10)/10:to); if(p<1) requestAnimationFrame(step); };
+    requestAnimationFrame(step); });
 }
 
 function stepyBox(html){
@@ -1294,6 +1356,7 @@ function MARATHON_TEXT(){
   return `${d1} ${MONTHS_GEN[m1-1]} — ${d2} ${MONTHS_GEN[m2-1]} ${y2}`;
 }
 
+const GH_MARK=`<svg class="gh" viewBox="0 0 24 24" aria-hidden="true"><path fill="#EA4335" d="M12 21.3 3.5 13A5.3 5.3 0 0 1 12 6.6z"/><path fill="#4285F4" d="M12 6.6A5.3 5.3 0 0 1 20.5 13L12 21.3z"/><path fill="#FBBC05" d="M3.5 13A5.3 5.3 0 0 1 3 10.4h9v2.6z" opacity=".95"/><path fill="#34A853" d="M12 13v-2.6h9a5.3 5.3 0 0 1-.5 2.6z"/></svg>`;
 async function renderRules(){
   if(!MARATHON){ try{ MARATHON=(await api("/api/me")).marathon||null; }catch(e){} }
   const r=[
@@ -1318,22 +1381,25 @@ async function renderRules(){
     <div class="sp-hero">
       <div class="sp-av">🪴</div>
       <h2>Привет, я Stepy!</h2>
-      <p>Шагаем командой: каждый день — шаги и скриншот, а я расту вместе с вашими баллами. Всё просто — 3 этапа 👇</p>
-      <div class="sp-chips"><span>📅 ${MARATHON_TEXT()}</span><span>⏰ до 23:55</span><span>👥 5 в команде</span></div>
+      <p>Шагаем командой: каждый день — шаги и скриншот, а я расту вместе с вашими баллами. Всё просто — 3 этапа.</p>
+      <div class="sp-chips"><span>${ico("l-cal")}${MARATHON_TEXT()}</span><span>${ico("l-clock")}до 23:55</span><span>${ico("l-users")}5 в команде</span></div>
     </div>
     <div class="stages">
-      <div class="stage"><div class="stage-top"><span class="stage-n">Этап 1</span><span class="badge"><i></i>Google Health</span></div>
+      <div class="stage"><div class="stage-top"><span class="stage-ic">${ico("l-download")}</span><span class="stage-n">Этап 1</span><span class="badge">${GH_MARK}Google Health</span></div>
         <h3>Установи приложение</h3>
         <p>Google Health (бывший Fitbit) считает шаги сам — просто носи телефон с собой и разреши доступ к шагам.</p>
-        <div class="tags"><a class="tag" href="${FIT_A}" onclick="return openExt(FIT_A)">⬇️ Скачать · Android</a><a class="tag" href="${FIT_I}" onclick="return openExt(FIT_I)">⬇️ Скачать · iOS</a></div></div>
-      <div class="stage"><div class="stage-top"><span class="stage-n">Этап 2</span><span class="badge"><i></i>«Все источники»</span></div>
+        <div class="tags"><a class="tag" href="${FIT_A}" onclick="return openExt(FIT_A)">${ico("l-download")}Android</a><a class="tag" href="${FIT_I}" onclick="return openExt(FIT_I)">${ico("l-download")}iOS</a></div></div>
+      <div class="stage"><div class="stage-top"><span class="stage-ic">${ico("l-phone")}</span><span class="stage-n">Каждый день</span></div>
+        <h3>Просто ходи</h3>
+        <p>Носи телефон с собой — шаги посчитаются автоматически. Цель дня — <b>10 000+</b>.</p></div>
+      <div class="stage"><div class="stage-top"><span class="stage-ic">${ico("l-cam")}</span><span class="stage-n">Этап 2 · вечером</span><span class="badge">${GH_MARK}«Все источники»</span></div>
         <h3>Сделай скриншот</h3>
         <p>Плитка «Шаги» → меню (⋮ / ⋯) → «Посмотреть источники» → <b>«Все источники»</b>. На скрине должны быть видны <b>дата</b> и <b>число шагов</b>.</p>
-        <div class="tags"><span class="tag alt">📸 Скриншот</span></div></div>
-      <div class="stage"><div class="stage-top"><span class="stage-n">Этап 3</span><span class="badge">до 23:55</span></div>
+        <div class="tags"><span class="tag alt">${ico("l-cam")}Скриншот</span></div></div>
+      <div class="stage"><div class="stage-top"><span class="stage-ic">${ico("l-send")}</span><span class="stage-n">Этап 3</span><span class="badge">до 23:55</span></div>
         <h3>Отправь в бот</h3>
         <p>Кнопка «👟 Шаги за сегодня» → число шагов + скриншот. P&amp;C проверит — день станет ✅, капнут баллы.</p>
-        <div class="tags"><span class="tag vi" onclick="openSteps()">🚀 Отправить</span></div></div>
+        <div class="tags"><span class="tag vi" onclick="hok();openSteps()">${ico("l-send")}Отправить</span></div></div>
     </div>
     <div class="note" style="margin-bottom:12px">${ico("camera")}<b>Как сделать скриншот:</b><br>
       • <b>iPhone</b> без «Домой»: боковая + громкость вверх.<br>
