@@ -169,8 +169,60 @@ def _marathon() -> dict:
 
 
 async def _admin_view() -> dict:
-    """Ответ для админа без анкеты участника: видит всё, но без личных данных."""
-    return {"registered": False, "admin": True, "marathon": _marathon()}
+    """«Прогресс» для админа без анкеты: тот же экран, что у участника, но
+    по ВСЕМ активным участникам (подтверждён, не DQ) — суммы за каждый день."""
+    rows = await db.pool().fetch(
+        """SELECT d.entry_date,
+                  sum(d.steps) FILTER (WHERE d.status='accepted') AS acc_steps,
+                  sum(d.points) FILTER (WHERE d.status='accepted') AS acc_points,
+                  count(*) FILTER (WHERE d.status='accepted') AS n_acc,
+                  count(*) FILTER (WHERE d.status='pending') AS n_pend,
+                  count(*) FILTER (WHERE d.status='rejected') AS n_rej,
+                  sum(d.steps) AS all_steps
+             FROM daily_entries d JOIN participants p ON p.telegram_id=d.participant_id
+            WHERE p.approved_at IS NOT NULL AND p.disqualified_at IS NULL
+            GROUP BY d.entry_date""")
+    by = {r["entry_date"]: r for r in rows}
+    bonus = await db.pool().fetchval(
+        """SELECT COALESCE(sum(w.bonus_points),0) FROM weekly_summaries w
+             JOIN participants p ON p.telegram_id=w.participant_id
+            WHERE p.approved_at IS NOT NULL AND p.disqualified_at IS NULL""")
+    active = await db.pool().fetchval(
+        """SELECT count(*) FROM participants WHERE team_id IS NOT NULL
+              AND approved_at IS NOT NULL AND disqualified_at IS NULL""")
+    streak = await db.pool().fetchval(
+        """SELECT COALESCE(max(s.current_len),0) FROM streaks s
+             JOIN participants p ON p.telegram_id=s.participant_id
+            WHERE p.approved_at IS NOT NULL AND p.disqualified_at IS NULL""")
+    today = datetime.now(config.tz).date()
+    calendar, d, total = [], MARATHON_START, 0
+    while d <= MARATHON_END:
+        r = by.get(d)
+        status = None
+        if r:
+            status = ("pending" if r["n_pend"] else "accepted" if r["n_acc"]
+                      else "rejected" if r["n_rej"] else None)
+        pts = int(r["acc_points"] or 0) if r else 0
+        total += pts
+        calendar.append({
+            "date": d.isoformat(),
+            "steps": int((r["acc_steps"] if r and r["n_acc"] else r["all_steps"]) or 0) if r else 0,
+            "points": pts, "status": status,
+            "accepted": int(r["n_acc"]) if r else 0,
+            "pending": int(r["n_pend"]) if r else 0,
+            "is_today": d == today, "future": d > today,
+        })
+        d = d.fromordinal(d.toordinal() + 1)
+    return {
+        "registered": True, "admin": True, "aggregate": True,
+        "full_name": "Все участники", "team_name": None,
+        "participants": int(active or 0),
+        "total_points": total + int(bonus or 0),
+        "hour": datetime.now(config.tz).hour,
+        "today_status": next((c["status"] for c in calendar if c["is_today"]), None),
+        "current_streak": int(streak or 0), "best_streak": int(streak or 0),
+        "calendar": calendar, "marathon": _marathon(),
+    }
 
 def _best_streak(steps_by_date: dict[date, int]) -> int:
     best = cur = 0

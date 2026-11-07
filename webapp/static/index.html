@@ -776,6 +776,11 @@
   .tile2:active{transform:scale(.97)}
   .adm-card .sec-title .ic{color:#34D399}
   .btn-grad .ic{width:18px;height:18px;vertical-align:-4px;margin-right:6px}
+  .at-head{display:flex;align-items:center;gap:12px;margin-bottom:14px}
+  .at-nm{display:flex;flex-direction:column}.at-nm b{font-size:17px;color:#fff}.at-nm span{font-size:12px;color:#94A3B8}
+  .at-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:12px}
+  .at-stats div{background:rgba(255,255,255,.04);border:1px solid var(--line);border-radius:14px;padding:10px;display:flex;flex-direction:column;gap:2px}
+  .at-stats b{font-size:20px;font-weight:900;color:#fff}.at-stats span{font-size:10.5px;color:#94A3B8;line-height:1.25}
 </style>
 </head>
 <body>
@@ -1031,6 +1036,12 @@ const nfmt=(n)=>String(n).replace(/\B(?=(\d{3})+(?!\d))/g," ");
 // Полоса «сегодня»: статус дня + понятное следующее действие.
 function todayStrip(d){
   const t=d.calendar.find(c=>c.is_today);
+  if(d.aggregate){                      // админ: сводка дня по всем участникам
+    if(!t) return "";
+    const n=d.participants||0, a=t.accepted||0, p=t.pending||0;
+    return `<div class="tdy ${p?"wait":a?"ok":"none"}"><div class="tic">${ico(p?"hourglass":"check")}</div>
+      <div class="tt"><b>Сегодня: принято ${a} из ${n}</b><span>${p?`на проверке ${p} · `:""}${nfmt(t.steps||0)} шагов · +${t.points||0} б.</span></div></div>`;
+  }
   const st=d.today_status;
   if(st==="accepted") return `<div class="tdy ok"><div class="tic">${ico("check")}</div>
     <div class="tt"><b>Сегодня засчитано</b><span>${nfmt(t?.steps||0)} шагов · +${t?.points||0} балл(а)</span></div></div>`;
@@ -1120,6 +1131,10 @@ function plural(n,a,b,c){const m=n%10,h=n%100;return m===1&&h!==11?a:m>=2&&m<=4&
 function drawProgress(d){
   if(!d.registered) return d.admin?adminHome(d):regNotice();
   fillHead(d);
+  const A=!!d.aggregate;   // админ: суммы по всем участникам
+  if(A){ const $=id=>document.getElementById(id);
+    $("hb-name").textContent="Администратор"; $("hb-av").textContent="A"; $("hb-streak").hidden=true;
+    $("head-sub").textContent=`Режим P&C • ${d.participants||0} участников`; }
 
   const si=stageIndex(d.total_points,d.best_streak), st=STAGES[si];
   const nextAt=[5,15,30,50,9999][si];
@@ -1166,14 +1181,15 @@ function drawProgress(d){
     <div class="bento">
       <div class="gc w2 d1">
         <div class="hi">
-          <div><div class="gl">${hello},</div><h2>${esc(first)}</h2></div>
+          <div><div class="gl">${A?"Сводка марафона":hello+","}</div><h2>${A?"Все участники":esc(first)}</h2></div>
           <div class="pill">${ico("sparkle")}${d.total_points} балл(ов)</div>
         </div>
-        <div class="gsub">${done?`Шаги за ${done} дн. марафона`:"Здесь появится твоя динамика шагов"}</div>
+        <div class="gsub">${A?`Суммарные шаги всех участников по дням`:done?`Шаги за ${done} дн. марафона`:"Здесь появится твоя динамика шагов"}</div>
         ${spark(d.calendar.filter(c=>!c.future).map(c=>c.steps||0))}
       </div>
 
-      <div class="gc d1">
+      ${A?`<div class="gc d1"><div class="gl">Участников</div>
+        <div class="gv">${d.participants||0}</div><div class="gsub">подтверждены, без дисквалификации</div></div>`:`<div class="gc d1">
         <div class="gl">Стадия растения</div>
         <div class="mini" style="margin-top:10px">
           ${ring("ring-stage",stagePct,st.e)}
@@ -1181,14 +1197,14 @@ function drawProgress(d){
             <div class="gsub">${si<4?`ещё <b style="color:var(--text)">${Math.max(0,nextAt-d.total_points)}</b> б. до «${STAGES[si+1].n}»`
                                     :"максимальная стадия"}</div></div>
         </div>
-      </div>
+      </div>`}
 
       <div class="gc vi d2">
-        <div class="gl">Серия дней</div>
+        <div class="gl">${A?"Лучшая серия сейчас":"Серия дней"}</div>
         <div class="mini" style="margin-top:10px">
           ${ring("ring-streak",streakPct,ico("flame"))}
           <div style="min-width:0"><div class="gv sm">${streak} дн.</div>
-            <div class="gsub">${streak>=7?"бонус недели взят"
+            <div class="gsub">${A?"дней подряд 10 000+ у лидера":streak>=7?"бонус недели взят"
               :`до <b style="color:var(--text)">+${streak>=5?4:2}</b> ещё ${goalLeft} дн.`}</div></div>
         </div>
       </div>
@@ -1197,11 +1213,13 @@ function drawProgress(d){
 
       <div class="gc d1"><div class="gl">Шагов пройдено</div>
         <div class="gv" id="s-steps">0</div>
-        <div class="gsub">принято дней: <b style="color:var(--text)">${acc.length}</b></div></div>
+        <div class="gsub">${A?"принятые результаты всех участников":`принято дней: <b style="color:var(--text)">${acc.length}</b>`}</div></div>
 
-      <div class="gc d2"><div class="gl">Место команды</div>
+      ${A?`<div class="gc d2" onclick="show('team')" style="cursor:pointer"><div class="gl">Команды</div>
+        <div class="gv">${ico("l-users")}</div><div class="gsub">составы и результаты →</div></div>`
+      :`<div class="gc d2"><div class="gl">Место команды</div>
         <div class="gv">${d.team_rank?"#"+d.team_rank:"—"}</div>
-        <div class="gsub">${d.teams_total?`из ${d.teams_total} команд`:"пока без рейтинга"}</div></div>
+        <div class="gsub">${d.teams_total?`из ${d.teams_total} команд`:"пока без рейтинга"}</div></div>`}
 
       <div class="gc w2 d3">
         <div class="row"><div class="sec-title">${ico("bolt")}Активность недели</div>
@@ -1216,9 +1234,10 @@ function drawProgress(d){
           <div>СБ</div><div>ВС</div></div>
         <div class="cal">${cal}</div>
         <div class="calsum">
-          <span>сдано <b>${done}</b> из ${d.calendar.length}</span>
-          <span>принято <b>${acc.length}</b></span>
-          ${missed?`<span>пропущено <b>${missed}</b></span>`:""}
+          ${A?`<span>дней с результатами <b>${done}</b> из ${d.calendar.length}</span>`
+            :`<span>сдано <b>${done}</b> из ${d.calendar.length}</span>
+          <span>принято <b>${acc.length}</b></span>`}
+          ${missed&&!A?`<span>пропущено <b>${missed}</b></span>`:""}
           ${left?`<span>впереди <b>${left}</b> дн.</span>`:""}
         </div>
         <div class="legend">
@@ -1242,7 +1261,10 @@ function drawProgress(d){
            <div class="chip">Старт ${fmtDM(d.marathon.start)}</div>
          </div></div>`
     : body;
-  V.innerHTML=`<div class="view">${inner}</div>`;
+  const reg=A?`<div class="card" style="text-align:center">
+      <p class="muted" style="margin:0 0 12px">Хочешь сам шагать в марафоне? Регистрация — как у всех участников, в боте.</p>
+      <button class="btn-grad" onclick="openRegister()">${ico("l-foot")}Зарегистрироваться как участник</button></div>`:"";
+  V.innerHTML=`<div class="view">${inner}${reg}</div>`;
   requestAnimationFrame(()=>{
     const set=(id,pct)=>{const r=document.getElementById(id);
       if(r)r.style.strokeDashoffset=(C*(1-pct/100)).toFixed(1);};
@@ -1663,12 +1685,19 @@ function adminHome(d){
 function adminTeams(d){
   const teams=d.teams||[];
   if(!teams.length){ V.innerHTML=`<div class="view">${emptyRow()}</div>`; return; }
+  const total=teams.reduce((n,t)=>n+t.members.length,0);
   V.innerHTML=`<div class="view">
-    <div class="card">${secHead("users","Все команды","Режим администратора: составы и личный вклад")}</div>
-    ${teams.map((t,k)=>`<details class="acc"${k===0?" open":""}><summary>
-        <span class="acc-ic"><span class="lbx-rk ${MEDAL[k]||""}" style="width:30px;height:30px;font-size:13px">${k+1}</span></span>
-        <span class="acc-t">${esc(t.name)}<small>${fmtPts(t.points)} pts · ${t.members.length} участн.</small></span>${CHEV}</summary>
-      <div class="acc-body">${t.members.length?bars(t.members,true):emptyRow()}</div></details>`).join("")}
+    <div class="card">${secHead("users","Все команды",`${teams.length} команд · ${total} участников`)}</div>
+    ${teams.map((t,k)=>`<div class="card at-card">
+      <div class="at-head"><span class="lbx-rk ${MEDAL[k]||""}">${k+1}</span>
+        <div class="at-nm"><b>${esc(t.name)}</b><span>место ${k+1} из ${teams.length}</span></div></div>
+      <div class="at-stats">
+        <div><b>${fmtPts(t.points)}</b><span>средний балл</span></div>
+        <div><b>${t.members.length}</b><span>участников</span></div>
+        <div><b>${t.full_days||0}</b><span>дней всей командой 10K+</span></div>
+      </div>
+      ${t.members.length?bars(t.members,true):emptyRow()}
+    </div>`).join("")}
   </div>`;
 }
 
